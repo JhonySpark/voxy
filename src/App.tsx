@@ -11,7 +11,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/app" element={<Dashboard />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Navigate to={localStorage.getItem('voxy_token') ? "/app" : "/login"} replace />} />
+        <Route path="*" element={<Navigate to={localStorage.getItem('voxy_token') ? "/app" : "/login"} replace />} />
       </Routes>
     </HashRouter>
   );

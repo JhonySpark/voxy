@@ -7,15 +7,18 @@ import { useTranslation } from 'react-i18next';
 import heroLogo from '../assets/logo.png';
 
 export default function Register() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError('');
     try {
       await api.post('/auth/register', { email, username, password });
       // After registration, auto-login or redirect to login
@@ -24,6 +27,8 @@ export default function Register() {
       navigate('/app');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -72,9 +77,9 @@ export default function Register() {
             />
           </div>
 
-          <button type="submit" className="btn-primary">
-            <UserPlus size={18} />
-            {t('auth.register.button')}
+          <button type="submit" className="btn-primary" disabled={isLoading}>
+            {isLoading ? <span className="btn-spinner" /> : <UserPlus size={18} />}
+            {isLoading ? (i18n.language === 'pt' ? 'Criando conta...' : 'Creating account...') : t('auth.register.button')}
           </button>
         </form>
         

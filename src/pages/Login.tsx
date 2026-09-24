@@ -7,22 +7,25 @@ import { useTranslation } from 'react-i18next';
 import heroLogo from '../assets/logo.png';
 
 export default function Login() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError('');
     try {
       const res = await api.post('/auth/login', { email, password });
       localStorage.setItem('voxy_token', res.data.access_token);
-      
-      // Save user info (parsing token ideally, but we'll fetch profile later)
       navigate('/app');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -60,9 +63,9 @@ export default function Login() {
             />
           </div>
 
-          <button type="submit" className="btn-primary">
-            <LogIn size={18} />
-            {t('auth.login.button')}
+          <button type="submit" className="btn-primary" disabled={isLoading}>
+            {isLoading ? <span className="btn-spinner" /> : <LogIn size={18} />}
+            {isLoading ? (i18n.language === 'pt' ? 'Entrando...' : 'Logging in...') : t('auth.login.button')}
           </button>
         </form>
         

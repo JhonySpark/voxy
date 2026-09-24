@@ -71,6 +71,13 @@ export default function Dashboard() {
   const [showChannelModal, setShowChannelModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  // Loading States
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [isCreatingServer, setIsCreatingServer] = useState(false);
+  const [isJoiningServer, setIsJoiningServer] = useState(false);
+  const [isAddingFriend, setIsAddingFriend] = useState(false);
+  const [isCreatingChannel, setIsCreatingChannel] = useState(false);
   
   const [modalInput, setModalInput] = useState('');
   const [inviteInput, setInviteInput] = useState('');
@@ -138,8 +145,20 @@ export default function Dashboard() {
       }));
     });
 
-    fetchFriends();
-    fetchServers();
+    // Initial load
+    const initData = async () => {
+      try {
+        await Promise.allSettled([fetchFriends(), fetchServers()]);
+      } catch (err) {
+        console.error('Error in initial load', err);
+      } finally {
+        setTimeout(() => {
+          setInitialLoading(false);
+        }, 500);
+      }
+    };
+
+    initData();
 
     return () => {
       newSocket.close();
@@ -289,52 +308,64 @@ export default function Dashboard() {
 
   const handleCreateServer = async () => {
     if (!modalInput.trim()) return;
+    setIsCreatingServer(true);
     try {
       await api.post('/servers', { name: modalInput });
-      fetchServers();
+      await fetchServers();
       setShowServerModal(false);
       setModalInput('');
     } catch (err) {
       console.error('Error creating server', err);
+    } finally {
+      setIsCreatingServer(false);
     }
   };
 
   const handleJoinServer = async () => {
     if (!inviteInput.trim()) return;
+    setIsJoiningServer(true);
     try {
       await api.post('/servers/join', { inviteCode: inviteInput });
-      fetchServers();
+      await fetchServers();
       setShowServerModal(false);
       setInviteInput('');
     } catch (err) {
       console.error('Error joining server', err);
       alert('Invalid or expired invite code');
+    } finally {
+      setIsJoiningServer(false);
     }
   };
 
   const handleAddFriend = async () => {
     if (!modalInput.trim()) return;
+    setIsAddingFriend(true);
     try {
       const res = await api.post('/friends/request', { username: modalInput });
       setShowFriendModal(false);
       setModalInput('');
-      fetchFriends();
+      await fetchFriends();
       socket?.emit('friendAction', { targetId: res.data.targetId });
     } catch (err) {
       console.error('Error adding friend', err);
       alert('Error adding friend or user not found');
+    } finally {
+      setIsAddingFriend(false);
     }
   };
 
   const handleCreateChannel = async () => {
     if (!modalInput.trim() || !activeServer) return;
+    setIsCreatingChannel(true);
     try {
       await api.post(`/channels/${activeServer.id}`, { name: modalInput, type: channelType });
-      fetchServers(); 
+      await fetchServers(); 
       setShowChannelModal(false);
       setModalInput('');
     } catch (err) {
       console.error('Error creating channel', err);
+    } finally {
+      setIsCreatingChannel(false);
     }
   };
 
@@ -342,6 +373,20 @@ export default function Dashboard() {
     localStorage.removeItem('voxy_token');
     navigate('/login');
   };
+
+  const totalUnreadDMs = Object.entries(unreadDMs).reduce((sum, [friendId, count]) => {
+    if (activeView === 'DM' && activeFriend?.id === friendId) return sum;
+    return sum + count;
+  }, 0);
+
+  if (initialLoading) {
+    return (
+      <div className="app-initial-loader">
+        <img src={heroLogo} alt="Voxy Logo" className="pulsing-logo" />
+        <div className="loader-spinner-subtle" />
+      </div>
+    );
+  }
 
   return (
     <div className="app-container">
@@ -351,23 +396,37 @@ export default function Dashboard() {
           className={`server-icon ${activeView === 'DM' ? 'active' : ''}`}
           onClick={() => { setActiveView('DM'); setActiveServer(null); setActiveChannel(null); }}
           title={t('sidebar.directMessages')}
-          style={{ padding: 0, backgroundColor: 'transparent' }}
+          style={{ padding: 0, backgroundColor: 'transparent', position: 'relative' }}
         >
           <img src={heroLogo} alt="Home" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
+          {totalUnreadDMs > 0 && (
+            <div className="server-badge">{totalUnreadDMs > 99 ? '99+' : totalUnreadDMs}</div>
+          )}
         </div>
         
         <div style={{ width: '32px', height: '2px', backgroundColor: 'var(--border-subtle)', borderRadius: '2px' }} />
 
-        {servers.map(server => (
-          <div 
-            key={server.id} 
-            className={`server-icon ${activeServer?.id === server.id ? 'active' : ''}`}
-            onClick={() => { setActiveView('SERVER'); setActiveServer(server); setActiveChannel(server.channels[0]); }}
-            title={server.name}
-          >
-            {server.name.substring(0, 2).toUpperCase()}
-          </div>
-        ))}
+        {servers.map(server => {
+          const unreadCount = server.channels?.reduce((sum, ch) => {
+            if (activeView === 'SERVER' && activeChannel?.id === ch.id) return sum;
+            return sum + (unreadChannels[ch.id] || 0);
+          }, 0) || 0;
+
+          return (
+            <div 
+              key={server.id} 
+              className={`server-icon ${activeServer?.id === server.id ? 'active' : ''}`}
+              onClick={() => { setActiveView('SERVER'); setActiveServer(server); setActiveChannel(server.channels[0]); }}
+              title={server.name}
+              style={{ position: 'relative' }}
+            >
+              {server.name.substring(0, 2).toUpperCase()}
+              {unreadCount > 0 && (
+                <div className="server-badge">{unreadCount > 99 ? '99+' : unreadCount}</div>
+              )}
+            </div>
+          );
+        })}
 
         <div className="server-icon" style={{ backgroundColor: 'transparent', border: '1px dashed var(--text-muted)', color: 'var(--brand-primary)' }} onClick={() => { setModalInput(''); setShowServerModal(true); }} title={t('server.addServer')}>
           <Plus size={24} />
@@ -536,7 +595,7 @@ export default function Dashboard() {
               {messages.map(msg => (
                 <div key={msg.id} className={`message-group ${msg.senderId === myId ? 'me' : 'other'}`}>
                   <div className="avatar" style={{ backgroundColor: msg.senderId === myId ? 'var(--brand-primary)' : 'var(--bg-tertiary)' }}>
-                    {msg.senderId === myId ? t('chat.you') : activeFriend.username.charAt(0).toUpperCase()}
+                    {msg.senderId === myId ? (myUsername ? myUsername.charAt(0).toUpperCase() : 'V') : activeFriend.username.charAt(0).toUpperCase()}
                   </div>
                   <div className="message-content">
                     <div className="message-header">
@@ -586,7 +645,7 @@ export default function Dashboard() {
               {messages.map(msg => (
                 <div key={msg.id} className={`message-group ${msg.senderId === myId ? 'me' : 'other'}`}>
                   <div className="avatar" style={{ backgroundColor: msg.senderId === myId ? 'var(--brand-primary)' : 'var(--bg-tertiary)' }}>
-                    {msg.senderId === myId ? t('chat.you') : (msg.sender?.username?.charAt(0).toUpperCase() || 'U')}
+                    {msg.senderId === myId ? (myUsername ? myUsername.charAt(0).toUpperCase() : 'V') : (msg.sender?.username?.charAt(0).toUpperCase() || 'U')}
                   </div>
                   <div className="message-content">
                     <div className="message-header">
@@ -661,7 +720,10 @@ export default function Dashboard() {
               <input type="text" className="text-input" value={modalInput} onChange={e => setModalInput(e.target.value)} />
             </div>
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-              <button className="btn-primary" onClick={handleCreateServer}>{t('server.createServerButton')}</button>
+              <button className="btn-primary" onClick={handleCreateServer} disabled={isCreatingServer}>
+                {isCreatingServer && <span className="btn-spinner" />}
+                {t('server.createServerButton')}
+              </button>
             </div>
 
             <div style={{ margin: '1rem 0', display: 'flex', alignItems: 'center', color: 'var(--text-muted)' }}>
@@ -676,7 +738,10 @@ export default function Dashboard() {
             </div>
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
               <button className="btn-primary" style={{ backgroundColor: 'var(--bg-tertiary)' }} onClick={() => setShowServerModal(false)}>{t('voice.cancel')}</button>
-              <button className="btn-primary" onClick={handleJoinServer}>{t('server.joinServerButton')}</button>
+              <button className="btn-primary" onClick={handleJoinServer} disabled={isJoiningServer}>
+                {isJoiningServer && <span className="btn-spinner" />}
+                {t('server.joinServerButton')}
+              </button>
             </div>
           </div>
         </div>
@@ -706,7 +771,10 @@ export default function Dashboard() {
             </div>
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
               <button className="btn-primary" style={{ backgroundColor: 'var(--bg-tertiary)' }} onClick={() => setShowFriendModal(false)}>{t('voice.cancel')}</button>
-              <button className="btn-primary" onClick={handleAddFriend}>{t('friends.addFriendButton')}</button>
+              <button className="btn-primary" onClick={handleAddFriend} disabled={isAddingFriend}>
+                {isAddingFriend && <span className="btn-spinner" />}
+                {t('friends.addFriendButton')}
+              </button>
             </div>
           </div>
         </div>
@@ -729,7 +797,10 @@ export default function Dashboard() {
             </div>
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
               <button className="btn-primary" style={{ backgroundColor: 'var(--bg-tertiary)' }} onClick={() => setShowChannelModal(false)}>{t('voice.cancel')}</button>
-              <button className="btn-primary" onClick={handleCreateChannel}>{t('server.createServerButton')}</button>
+              <button className="btn-primary" onClick={handleCreateChannel} disabled={isCreatingChannel}>
+                {isCreatingChannel && <span className="btn-spinner" />}
+                {t('server.createServerButton')}
+              </button>
             </div>
           </div>
         </div>
