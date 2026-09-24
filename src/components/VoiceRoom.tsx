@@ -13,6 +13,7 @@ interface VoiceRoomProps {
   serverId: string;
   myId: string;
   myUsername: string;
+  onDisconnect: () => void;
   onParticipantsChange: (participants: { id: string; username: string }[]) => void;
   onMuteChange?: (isMuted: boolean) => void;
 }
