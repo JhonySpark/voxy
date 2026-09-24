@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import heroLogo from '../assets/logo.png';
 import { io, Socket } from 'socket.io-client';
 import api from '../api';
-import { Users, LogOut, Send, Plus, Hash, Volume2, PhoneCall, PhoneOff, Check, X, Settings } from 'lucide-react';
+import { Users, LogOut, Send, Plus, Hash, Volume2, PhoneCall, PhoneOff, Check, X, Settings, MicOff } from 'lucide-react';
 import VoiceRoom from '../components/VoiceRoom';
 import { useTranslation } from 'react-i18next';
 
@@ -32,6 +32,7 @@ interface Channel {
 interface Server {
   id: string;
   name: string;
+  ownerId: string;
   channels: Channel[];
 }
 
@@ -50,7 +51,7 @@ export default function Dashboard() {
   // Server State
   const [activeServer, setActiveServer] = useState<Server | null>(null);
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
-  const [serverVoiceStates, setServerVoiceStates] = useState<{ [channelId: string]: { id: string; username: string }[] }>({});
+  const [serverVoiceStates, setServerVoiceStates] = useState<{ [channelId: string]: { userId: string; username: string; isMuted?: boolean }[] }>({});
   
   // Badges & Persistent Voice State
   const [unreadDMs, setUnreadDMs] = useState<{ [userId: string]: number }>({});
@@ -119,7 +120,11 @@ export default function Dashboard() {
     newSocket.on('messageSent', (msg: Message) => {
       // Sender side of a DM
       if (activeViewRef.current === 'DM' && activeFriendIdRef.current === msg.receiverId) {
-        setMessages(prev => [...prev, msg]);
+        setMessages(prev => {
+          const filtered = prev.filter(m => !(m.id.startsWith('temp-') && m.content === msg.content));
+          if (filtered.some(m => m.id === msg.id)) return filtered;
+          return [...filtered, msg];
+        });
         scrollToBottom();
       }
     });
@@ -127,7 +132,11 @@ export default function Dashboard() {
     newSocket.on('newChannelMessage', (msg: Message) => {
       if (!msg.channelId) return;
       if (activeViewRef.current === 'SERVER' && activeChannelIdRef.current === msg.channelId) {
-        setMessages(prev => [...prev, msg]);
+        setMessages(prev => {
+          const filtered = prev.filter(m => !(m.id.startsWith('temp-') && m.content === msg.content && m.senderId === msg.senderId));
+          if (filtered.some(m => m.id === msg.id)) return filtered;
+          return [...filtered, msg];
+        });
         scrollToBottom();
       } else {
         setUnreadChannels(prev => ({ ...prev, [msg.channelId as string]: (prev[msg.channelId as string] || 0) + 1 }));
@@ -138,7 +147,11 @@ export default function Dashboard() {
       fetchFriends();
     });
 
-    newSocket.on('serverVoiceUpdate', (data: { channelId: string, participants: { id: string; username: string }[] }) => {
+    newSocket.on('serverUpdated', () => {
+      fetchServers();
+    });
+
+    newSocket.on('serverVoiceUpdate', (data: { channelId: string, participants: { userId: string; username: string; isMuted?: boolean }[] }) => {
       setServerVoiceStates(prev => ({
         ...prev,
         [data.channelId]: data.participants
@@ -292,12 +305,26 @@ export default function Dashboard() {
     e.preventDefault();
     if (!newMessage.trim() || !socket) return;
 
+    const tempMsg: Message = {
+      id: `temp-${Date.now()}`,
+      content: newMessage,
+      senderId: myId,
+      createdAt: new Date().toISOString(),
+      sender: { id: myId, username: myUsername, email: '' }
+    };
+
     if (activeView === 'DM' && activeFriend) {
+      tempMsg.receiverId = activeFriend.id;
+      setMessages(prev => [...prev, tempMsg]);
+      scrollToBottom();
       socket.emit('sendMessage', {
         receiverId: activeFriend.id,
         content: newMessage
       });
     } else if (activeView === 'SERVER' && activeChannel) {
+      tempMsg.channelId = activeChannel.id;
+      setMessages(prev => [...prev, tempMsg]);
+      scrollToBottom();
       socket.emit('sendChannelMessage', {
         channelId: activeChannel.id,
         content: newMessage
@@ -360,6 +387,7 @@ export default function Dashboard() {
     try {
       await api.post(`/channels/${activeServer.id}`, { name: modalInput, type: channelType });
       await fetchServers(); 
+      socket?.emit('channelCreated', { serverId: activeServer.id });
       setShowChannelModal(false);
       setModalInput('');
     } catch (err) {
@@ -495,7 +523,13 @@ export default function Dashboard() {
                 <button className="icon-btn" title={t('server.inviteFriends')} onClick={() => setShowInviteModal(true)}>
                   <Users size={20} />
                 </button>
-                <button className="icon-btn" title="Create Channel" onClick={() => { setModalInput(''); setChannelType('TEXT'); setShowChannelModal(true); }}>
+                <button 
+                  className="icon-btn" 
+                  title="Create Channel" 
+                  onClick={() => { setModalInput(''); setChannelType('TEXT'); setShowChannelModal(true); }}
+                  disabled={activeServer?.ownerId !== myId}
+                  style={{ opacity: activeServer?.ownerId !== myId ? 0.3 : 1, cursor: activeServer?.ownerId !== myId ? 'not-allowed' : 'pointer' }}
+                >
                   <Plus size={20} />
                 </button>
               </div>
@@ -524,11 +558,12 @@ export default function Dashboard() {
                   {channel.type === 'VOICE' && serverVoiceStates[channel.id]?.length > 0 && (
                     <div style={{ paddingLeft: '2.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
                       {serverVoiceStates[channel.id].map((p: any) => (
-                        <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        <div key={p.userId} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                           <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'var(--brand-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.6rem', fontWeight: 'bold' }}>
                             {p.username.charAt(0).toUpperCase()}
                           </div>
-                          {p.username}
+                          <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.username}</span>
+                          {p.isMuted && <MicOff size={14} color="var(--danger)" />}
                         </div>
                       ))}
                     </div>
@@ -572,14 +607,22 @@ export default function Dashboard() {
       {/* Chat Area */}
       <div className="chat-area">
         {connectedVoiceChannel && (
-          <div style={{ display: activeChannel?.id === connectedVoiceChannel.channelId ? 'flex' : 'none', flex: 1, flexDirection: 'column' }}>
+          <div style={{ display: activeChannel?.id === connectedVoiceChannel.channelId ? 'flex' : 'none', flex: 1, flexDirection: 'column', minHeight: 0 }}>
             <VoiceRoom 
+              key={connectedVoiceChannel.channelId}
               channelId={connectedVoiceChannel.channelId}
               serverId={connectedVoiceChannel.serverId}
               myId={myId} 
               myUsername={myUsername}
               onDisconnect={() => setConnectedVoiceChannel(null)}
               onParticipantsChange={() => {}}
+              onMuteChange={(isMuted) => {
+                socket?.emit('updateVoiceMute', {
+                  serverId: connectedVoiceChannel.serverId,
+                  channelId: connectedVoiceChannel.channelId,
+                  isMuted
+                });
+              }}
             />
           </div>
         )}

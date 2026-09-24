@@ -3,7 +3,7 @@ import { Mic, MicOff, MonitorUp, MonitorOff, PhoneOff, Maximize, Minimize } from
 import { ipcRenderer } from 'electron';
 import { useTranslation } from 'react-i18next';
 import { LiveKitRoom, useParticipants, useLocalParticipant, RoomAudioRenderer } from '@livekit/components-react';
-import { Track, TrackEvent, LocalVideoTrack } from 'livekit-client';
+import { Track, TrackEvent, LocalVideoTrack, LocalAudioTrack } from 'livekit-client';
 import api from '../api';
 import chatConnectedSound from '../assets/sounds/chat_connected.wav';
 import chatDisconnectedSound from '../assets/sounds/chat_disconected.wav';
@@ -13,8 +13,8 @@ interface VoiceRoomProps {
   serverId: string;
   myId: string;
   myUsername: string;
-  onDisconnect: () => void;
   onParticipantsChange: (participants: { id: string; username: string }[]) => void;
+  onMuteChange?: (isMuted: boolean) => void;
 }
 
 export default function VoiceRoomWrapper(props: VoiceRoomProps) {
@@ -23,6 +23,7 @@ export default function VoiceRoomWrapper(props: VoiceRoomProps) {
 
   const handleDisconnect = () => {
     const audio = new Audio(chatDisconnectedSound);
+    audio.volume = 0.3;
     audio.play().catch(console.error);
     props.onDisconnect();
   };
@@ -56,7 +57,7 @@ export default function VoiceRoomWrapper(props: VoiceRoomProps) {
       token={token}
       serverUrl={import.meta.env.VITE_LIVEKIT_URL}
       onDisconnected={handleDisconnect}
-      style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
+      style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
     >
       <VoiceRoomInner {...props} onDisconnect={handleDisconnect} />
       <RoomAudioRenderer />
@@ -64,7 +65,7 @@ export default function VoiceRoomWrapper(props: VoiceRoomProps) {
   );
 }
 
-function VoiceRoomInner({ onDisconnect, onParticipantsChange }: VoiceRoomProps) {
+function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange }: VoiceRoomProps) {
   const { t } = useTranslation();
   const { localParticipant } = useLocalParticipant();
   const participants = useParticipants();
@@ -83,14 +84,17 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange }: VoiceRoomProps) 
     if (prevParticipantsCount.current > 0) {
       if (participants.length > prevParticipantsCount.current) {
         const audio = new Audio(chatConnectedSound);
+        audio.volume = 0.3;
         audio.play().catch(console.error);
       } else if (participants.length < prevParticipantsCount.current) {
         const audio = new Audio(chatDisconnectedSound);
+        audio.volume = 0.3;
         audio.play().catch(console.error);
       }
     } else if (participants.length > 0) {
       // First time loading and we have participants (local user joined)
       const audio = new Audio(chatConnectedSound);
+      audio.volume = 0.3;
       audio.play().catch(console.error);
     }
     
@@ -102,6 +106,7 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange }: VoiceRoomProps) 
       const audioEnabled = localParticipant.isMicrophoneEnabled;
       localParticipant.setMicrophoneEnabled(!audioEnabled);
       setIsMuted(audioEnabled);
+      if (onMuteChange) onMuteChange(audioEnabled);
     }
   };
 
@@ -115,11 +120,18 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange }: VoiceRoomProps) 
     }
   };
 
+  const [screenAudioTrack, setScreenAudioTrack] = useState<any | null>(null);
+
   const toggleScreenShare = async () => {
     if (screenTrack) {
       await localParticipant.unpublishTrack(screenTrack);
       screenTrack.stop();
       setScreenTrack(null);
+      if (screenAudioTrack) {
+        await localParticipant.unpublishTrack(screenAudioTrack);
+        screenAudioTrack.stop();
+        setScreenAudioTrack(null);
+      }
     } else {
       fetchDesktopSources();
     }
@@ -129,7 +141,12 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange }: VoiceRoomProps) 
     setShowSources(false);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
+        audio: {
+          mandatory: {
+            chromeMediaSource: 'desktop',
+            chromeMediaSourceId: sourceId
+          }
+        } as any,
         video: {
           mandatory: {
             chromeMediaSource: 'desktop',
@@ -146,6 +163,12 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange }: VoiceRoomProps) 
       await localParticipant.publishTrack(track, { source: Track.Source.ScreenShare });
       setScreenTrack(track);
 
+      const audioTracks = stream.getAudioTracks();
+      if (audioTracks.length > 0) {
+        const audioTrack = new LocalAudioTrack(audioTracks[0]);
+        await localParticipant.publishTrack(audioTrack, { source: Track.Source.ScreenShareAudio });
+        setScreenAudioTrack(audioTrack);
+      }
       track.on(TrackEvent.Muted, () => toggleScreenShare());
     } catch (e) {
       console.error(e);
@@ -184,6 +207,21 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange }: VoiceRoomProps) 
     activeMaximizedId = null;
   }
 
+  const assignStream = (el: HTMLVideoElement | null, stream: MediaStream | null) => {
+    if (!el) return;
+    if (!stream) {
+      if (el.srcObject) el.srcObject = null;
+      return;
+    }
+    const currentStream = el.srcObject as MediaStream | null;
+    const newTrack = stream.getVideoTracks()[0];
+    const currentTrack = currentStream?.getVideoTracks()[0];
+    
+    if (newTrack !== currentTrack) {
+      el.srcObject = stream;
+    }
+  };
+
   const renderParticipantBox = (p: any, isHorizontal: boolean = false) => (
     <div 
        key={p.id} 
@@ -209,7 +247,7 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange }: VoiceRoomProps) 
        }}
     >
       {p.hasVideo ? (
-        <video autoPlay muted={p.isLocal} style={{ width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000' }} ref={(el) => { if (el && p.stream) el.srcObject = p.stream; }} />
+        <video autoPlay muted={p.isLocal} style={{ width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000' }} ref={(el) => assignStream(el, p.stream)} />
       ) : (
         <div style={{ width: isHorizontal ? '60px' : '80px', height: isHorizontal ? '60px' : '80px', borderRadius: '50%', backgroundColor: 'var(--brand-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isHorizontal ? '1.5rem' : '2rem', margin: 'auto' }}>
           {p.username === t('chat.you') ? 'ME' : p.username.charAt(0).toUpperCase()}
@@ -225,12 +263,12 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange }: VoiceRoomProps) 
   );
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)', minHeight: 0, height: '100%' }}>
       {maximizedParticipant ? (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '1rem', gap: '1rem', overflow: 'hidden' }}>
-          <div style={{ flex: 1, backgroundColor: 'black', borderRadius: '12px', overflow: 'hidden', position: 'relative' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '1rem', gap: '1rem', overflow: 'hidden', minHeight: 0 }}>
+          <div style={{ flex: 1, backgroundColor: 'black', borderRadius: '12px', overflow: 'hidden', position: 'relative', minHeight: 0 }}>
              {maximizedParticipant.hasVideo ? (
-               <video autoPlay muted={maximizedParticipant.isLocal} style={{ width: '100%', height: '100%', objectFit: 'contain' }} ref={(el) => { if (el && maximizedParticipant.stream) el.srcObject = maximizedParticipant.stream; }} />
+               <video autoPlay muted={maximizedParticipant.isLocal} style={{ width: '100%', height: '100%', objectFit: 'contain' }} ref={(el) => assignStream(el, maximizedParticipant.stream)} />
              ) : (
                <div style={{ width: '120px', height: '120px', borderRadius: '50%', backgroundColor: 'var(--brand-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', margin: 'auto', position: 'absolute', inset: 0 }}>
                  {maximizedParticipant.username === t('chat.you') ? 'ME' : maximizedParticipant.username.charAt(0).toUpperCase()}
@@ -243,7 +281,7 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange }: VoiceRoomProps) 
                <Minimize size={20} />
              </button>
           </div>
-          <div style={{ height: '140px', display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+          <div style={{ height: '140px', display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem', flexShrink: 0 }}>
             {allParticipants.filter(p => p.id !== activeMaximizedId).map(p => renderParticipantBox(p, true))}
           </div>
         </div>
@@ -253,7 +291,7 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange }: VoiceRoomProps) 
         </div>
       )}
 
-      <div style={{ padding: '1.5rem', backgroundColor: 'var(--bg-tertiary)', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+      <div style={{ padding: '1.5rem', backgroundColor: 'var(--bg-tertiary)', display: 'flex', justifyContent: 'center', gap: '1rem', flexShrink: 0 }}>
         <button onClick={toggleMute} className="icon-btn" style={{ backgroundColor: isMuted ? 'var(--danger)' : 'var(--bg-secondary)', width: '48px', height: '48px', borderRadius: '50%', color: 'white' }}>
           {isMuted ? <MicOff /> : <Mic />}
         </button>

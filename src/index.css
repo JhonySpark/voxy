@@ -459,6 +459,7 @@ input {
   display: flex;
   flex-direction: column;
   background-color: var(--bg-primary);
+  min-height: 0;
 }
 
 .chat-header {
