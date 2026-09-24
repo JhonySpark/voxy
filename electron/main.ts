@@ -27,7 +27,6 @@ async function createWindow() {
     win.webContents.openDevTools()
   } else {
     win.loadFile(join(__dirname, '../dist/index.html'))
-    win.webContents.openDevTools()
   }
 }
 

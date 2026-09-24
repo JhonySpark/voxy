@@ -54,7 +54,7 @@ export default function VoiceRoomWrapper(props: VoiceRoomProps) {
       video={false}
       audio={true}
       token={token}
-      serverUrl="ws://localhost:7880"
+      serverUrl={import.meta.env.VITE_LIVEKIT_URL}
       onDisconnected={handleDisconnect}
       style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
     >

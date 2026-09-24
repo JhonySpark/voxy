@@ -16,6 +16,7 @@
   "build": {
     "appId": "com.voxy.app",
     "productName": "Voxy",
+    "icon": "build/icon.ico",
     "directories": {
       "output": "release/"
     },

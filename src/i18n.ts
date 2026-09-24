@@ -5,7 +5,7 @@ const resources = {
   en: {
     translation: {
       "app.title": "Voxy",
-      "auth.login.title": "Welcome Back",
+      "auth.login.title": "Welcome to Voxy",
       "auth.login.subtitle": "We're so excited to see you again!",
       "auth.login.email": "Email",
       "auth.login.password": "Password",
@@ -57,7 +57,7 @@ const resources = {
   pt: {
     translation: {
       "app.title": "Voxy",
-      "auth.login.title": "Bem-vindo(a) de volta",
+      "auth.login.title": "Bem-vindo(a) ao Voxy",
       "auth.login.subtitle": "Estamos muito felizes em te ver novamente!",
       "auth.login.email": "E-mail",
       "auth.login.password": "Senha",
