@@ -23,13 +23,22 @@ export default function VoiceRoomWrapper(props: VoiceRoomProps) {
   const [error, setError] = useState<string | null>(null);
 
   const handleDisconnect = () => {
-    const audio = new Audio(chatDisconnectedSound);
-    audio.volume = 0.3;
-    audio.play().catch(console.error);
     props.onDisconnect();
   };
 
   useEffect(() => {
+    let mounted = true;
+    let playedConnect = false;
+
+    const timer = setTimeout(() => {
+      if (mounted) {
+        const audio = new Audio(chatConnectedSound);
+        audio.volume = 0.3;
+        audio.play().catch(console.error);
+        playedConnect = true;
+      }
+    }, 100);
+
     // Fetch token from backend
     const fetchToken = async () => {
       try {
@@ -46,6 +55,16 @@ export default function VoiceRoomWrapper(props: VoiceRoomProps) {
       }
     };
     fetchToken();
+
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+      if (playedConnect) {
+        const audioDisconnect = new Audio(chatDisconnectedSound);
+        audioDisconnect.volume = 0.3;
+        audioDisconnect.play().catch(console.error);
+      }
+    };
   }, [props.channelId]);
 
   if (error) return <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--danger)' }}>Error: {error}</div>;
@@ -78,11 +97,19 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange }: Vo
   const [maximizedId, setMaximizedId] = useState<string | null>(null);
   const [screenTrack, setScreenTrack] = useState<LocalVideoTrack | null>(null);
 
+  const isInitialLoad = useRef(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      isInitialLoad.current = false;
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     onParticipantsChange(participants.map(p => ({ id: p.identity, username: p.name || p.identity })));
     
-    // First render edge case: if we start with participants, don't trigger connect sound immediately unless it's the local user
-    if (prevParticipantsCount.current > 0) {
+    if (!isInitialLoad.current && prevParticipantsCount.current > 0) {
       if (participants.length > prevParticipantsCount.current) {
         const audio = new Audio(chatConnectedSound);
         audio.volume = 0.3;
@@ -92,11 +119,6 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange }: Vo
         audio.volume = 0.3;
         audio.play().catch(console.error);
       }
-    } else if (participants.length > 0) {
-      // First time loading and we have participants (local user joined)
-      const audio = new Audio(chatConnectedSound);
-      audio.volume = 0.3;
-      audio.play().catch(console.error);
     }
     
     prevParticipantsCount.current = participants.length;
