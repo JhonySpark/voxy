@@ -1,11 +1,11 @@
 {
-  "name": "frontend",
+  "name": "voxy",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "main": "dist-electron/main.js",
-  "author": "Voxy Team",
-  "description": "Voxy Discord Alternative",
+  "author": "D4rk Side",
+  "description": "Voxy - Plataforma de Comunicação",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -14,18 +14,23 @@
     "dist": "npm run build && electron-builder --win"
   },
   "build": {
-    "appId": "com.voxy.app",
+    "appId": "br.com.d4rkside.voxy",
     "productName": "Voxy",
+    "copyright": "Copyright © 2026 D4rk Side",
     "icon": "build/icon.ico",
     "directories": {
       "output": "release/"
     },
     "win": {
-      "target": [
-        "nsis"
-      ]
+      "target": ["nsis"],
+      "publisherName": "D4rk Side"
     },
     "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Voxy",
       "deleteAppDataOnUninstall": true
     },
     "files": [
