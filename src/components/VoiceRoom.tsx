@@ -115,6 +115,8 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audi
   const [maximizedId, setMaximizedId] = useState<string | null>(null);
   const [showStreamSettingsId, setShowStreamSettingsId] = useState<string | null>(null);
   const [screenTrack, setScreenTrack] = useState<LocalVideoTrack | null>(null);
+  const [streamRes, setStreamRes] = useState<'720' | '1080'>('720');
+  const [streamFps, setStreamFps] = useState<'30' | '60'>('30');
   const fullscreenContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -236,6 +238,8 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audi
   const selectSource = async (sourceId: string) => {
     setShowSources(false);
     try {
+      const is1080 = streamRes === '1080';
+      const fps = parseInt(streamFps, 10);
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           mandatory: {
@@ -247,16 +251,21 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audi
           mandatory: {
             chromeMediaSource: 'desktop',
             chromeMediaSourceId: sourceId,
-            minWidth: 1280,
-            maxWidth: 1920,
-            minHeight: 720,
-            maxHeight: 1080
+            maxWidth: is1080 ? 1920 : 1280,
+            maxHeight: is1080 ? 1080 : 720,
+            maxFrameRate: fps
           }
         } as any
       });
       
       const track = new LocalVideoTrack(stream.getVideoTracks()[0]);
-      await localParticipant.publishTrack(track, { source: Track.Source.ScreenShare });
+      await localParticipant.publishTrack(track, { 
+        source: Track.Source.ScreenShare,
+        videoCodec: 'h264',
+        encodings: [
+          { maxBitrate: is1080 && fps === 60 ? 4000000 : 2000000, maxFramerate: fps }
+        ]
+      });
       setScreenTrack(track);
 
       const audioTracks = stream.getAudioTracks();
@@ -506,7 +515,25 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audi
       {showSources && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '2rem' }}>
           <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '2rem', borderRadius: '12px', width: '100%', maxWidth: '800px', maxHeight: '80vh', overflowY: 'auto' }}>
-            <h2 style={{ marginBottom: '1.5rem' }}>{t('voice.shareScreen')}</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <h2 style={{ margin: 0 }}>{t('voice.shareScreen')}</h2>
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Qualidade:</label>
+                  <select value={streamRes} onChange={e => setStreamRes(e.target.value as '720' | '1080')} style={{ backgroundColor: 'var(--bg-tertiary)', color: 'white', border: '1px solid var(--border-subtle)', padding: '0.4rem', borderRadius: '6px', outline: 'none' }}>
+                    <option value="720">720p (Padrão)</option>
+                    <option value="1080">1080p (Premium)</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>FPS:</label>
+                  <select value={streamFps} onChange={e => setStreamFps(e.target.value as '30' | '60')} style={{ backgroundColor: 'var(--bg-tertiary)', color: 'white', border: '1px solid var(--border-subtle)', padding: '0.4rem', borderRadius: '6px', outline: 'none' }}>
+                    <option value="30">30 FPS (Padrão)</option>
+                    <option value="60">60 FPS (Premium)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
               {sources.map(s => (
                 <div key={s.id} onClick={() => selectSource(s.id)} style={{ cursor: 'pointer', backgroundColor: 'var(--bg-tertiary)', padding: '0.5rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
