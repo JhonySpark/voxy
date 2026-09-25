@@ -5,8 +5,8 @@ import * as Slider from '@radix-ui/react-slider';
 import * as Switch from '@radix-ui/react-switch';
 import { ipcRenderer } from 'electron';
 import { useTranslation } from 'react-i18next';
-import { LiveKitRoom, useParticipants, useLocalParticipant, RoomAudioRenderer } from '@livekit/components-react';
-import { Track, TrackEvent, LocalVideoTrack, LocalAudioTrack } from 'livekit-client';
+import { LiveKitRoom, useParticipants, useLocalParticipant, RoomAudioRenderer, useRoomContext, useIsSpeaking } from '@livekit/components-react';
+import { Track, TrackEvent, LocalVideoTrack, LocalAudioTrack, RoomEvent } from 'livekit-client';
 import api from '../api';
 import chatConnectedSound from '../assets/sounds/chat_connected.wav';
 import chatDisconnectedSound from '../assets/sounds/chat_disconected.wav';
@@ -22,7 +22,9 @@ interface VoiceRoomProps {
   audioInput?: string;
   audioOutput?: string;
   userVolumes: Record<string, number>;
+  userVolumes: Record<string, number>;
   onVolumeChange: (id: string, volume: number) => void;
+  onSpeakersChange?: (speakers: string[]) => void;
 }
 
 export default function VoiceRoomWrapper(props: VoiceRoomProps) {
@@ -101,13 +103,26 @@ export default function VoiceRoomWrapper(props: VoiceRoomProps) {
   );
 }
 
-function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audioOutput, userVolumes, onVolumeChange }: VoiceRoomProps) {
+function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audioOutput, userVolumes, onVolumeChange, onSpeakersChange }: VoiceRoomProps) {
   const { t } = useTranslation();
+  const room = useRoomContext();
   const { localParticipant } = useLocalParticipant();
   const participants = useParticipants();
   const prevParticipantsCount = useRef(0);
   const [watchingStreams, setWatchingStreams] = useState<Set<string>>(new Set());
   const [streamVolumes, setStreamVolumes] = useState<Record<string, number>>({});
+  
+  useEffect(() => {
+    const handleSpeakersChanged = (speakers: any[]) => {
+      if (onSpeakersChange) {
+        onSpeakersChange(speakers.map(s => s.identity));
+      }
+    };
+    room.on(RoomEvent.ActiveSpeakersChanged, handleSpeakersChanged);
+    return () => {
+      room.off(RoomEvent.ActiveSpeakersChanged, handleSpeakersChanged);
+    };
+  }, [room, onSpeakersChange]);
   
   const [isMuted, setIsMuted] = useState(false);
   const [sources, setSources] = useState<any[]>([]);
@@ -298,7 +313,9 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audi
       isLocal: p.isLocal,
       stream,
       isStreaming,
-      hasVideo: !!stream
+      hasVideo: !!stream,
+      isMuted: p.isLocal ? isMuted : !p.isMicrophoneEnabled,
+      lkParticipant: p
     };
   });
 
@@ -324,89 +341,31 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audi
   };
 
   const renderParticipantBox = (p: any, isHorizontal: boolean = false) => {
-    const vol = userVolumes[p.id] ?? 100;
-    
     return (
-    <ContextMenu.Root key={p.id}>
-      <ContextMenu.Trigger asChild>
-        <div 
-           onClick={() => setMaximizedId(p.id === activeMaximizedId ? null : p.id)}
-           style={{ 
-             backgroundColor: 'var(--bg-secondary)', 
-             borderRadius: '12px', 
-             overflow: 'hidden', 
-             position: 'relative', 
-             cursor: 'pointer',
-             display: 'flex', 
-             alignItems: 'center', 
-             justifyContent: 'center',
-             ...(isHorizontal ? { 
-               minWidth: '240px', 
-               maxWidth: '240px', 
-               height: '100%' 
-             } : { 
-               flex: '1 1 320px',
-               maxWidth: '800px',
-               aspectRatio: '16/9',
-             }),
-           }}
-        >
-          {p.hasVideo ? (
-            <video autoPlay muted={p.isLocal} style={{ width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000' }} ref={(el) => assignStream(el, p.stream)} />
-          ) : p.isStreaming && !p.isLocal ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', width: '100%', height: '100%', backgroundColor: '#000' }}>
-               <MonitorUp size={32} color="var(--brand-primary)" />
-               <button onClick={(e) => { e.stopPropagation(); toggleWatchStream(p.id); }} className="btn btn-primary" style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}>Assistir Transmissão</button>
-            </div>
-          ) : (
-            <div style={{ width: isHorizontal ? '60px' : '80px', height: isHorizontal ? '60px' : '80px', borderRadius: '50%', backgroundColor: 'var(--brand-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isHorizontal ? '1.5rem' : '2rem', margin: 'auto' }}>
-              {p.username === t('chat.you') ? 'ME' : p.username.charAt(0).toUpperCase()}
-            </div>
-          )}
-          <div style={{ position: 'absolute', bottom: '0.5rem', left: '0.5rem', backgroundColor: 'rgba(0,0,0,0.6)', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem' }}>
-            {p.username}
-          </div>
-          <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', backgroundColor: 'rgba(0,0,0,0.6)', padding: '0.25rem', borderRadius: '4px', color: 'var(--text-muted)' }}>
-            {p.id === activeMaximizedId ? <Minimize size={14} /> : <Maximize size={14} />}
-          </div>
-        </div>
-      </ContextMenu.Trigger>
-      
-      {!p.isLocal && (
-        <ContextMenu.Portal>
-          <ContextMenu.Content className="context-menu-content" style={{ zIndex: 9999 }}>
-            <ContextMenu.Item className="context-menu-item">Perfil</ContextMenu.Item>
-            <ContextMenu.Item className="context-menu-item" style={{ borderBottom: '1px solid var(--border-subtle)', marginBottom: '4px', paddingBottom: '8px' }}>Mensagem</ContextMenu.Item>
-            
-            <div className="context-menu-label">Volume do Microfone</div>
-            <div className="context-menu-slider-container">
-               <Slider.Root className="slider-root" value={[vol]} max={200} step={1} onValueChange={(vals) => onVolumeChange(p.id, vals[0])}>
-                 <Slider.Track className="slider-track"><Slider.Range className="slider-range" /></Slider.Track>
-                 <Slider.Thumb className="slider-thumb" />
-               </Slider.Root>
-            </div>
-
-            <ContextMenu.Item className="context-menu-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              Silenciar <Switch.Root className="switch-root"><Switch.Thumb className="switch-thumb" /></Switch.Root>
-            </ContextMenu.Item>
-            <ContextMenu.Item className="context-menu-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              Desativar vídeo <Switch.Root className="switch-root"><Switch.Thumb className="switch-thumb" /></Switch.Root>
-            </ContextMenu.Item>
-            
-            <ContextMenu.Separator className="context-menu-separator" />
-            
-            <ContextMenu.Item className="context-menu-item context-menu-item-danger">Bloquear</ContextMenu.Item>
-          </ContextMenu.Content>
-        </ContextMenu.Portal>
-      )}
-    </ContextMenu.Root>
-  )};
+      <ParticipantBox 
+        key={p.id}
+        p={p} 
+        isHorizontal={isHorizontal} 
+        userVolumes={userVolumes} 
+        onVolumeChange={onVolumeChange} 
+        activeMaximizedId={activeMaximizedId} 
+        setMaximizedId={setMaximizedId} 
+        toggleWatchStream={toggleWatchStream} 
+        streamVolumes={streamVolumes} 
+        setStreamVolumes={setStreamVolumes} 
+        showStreamSettingsId={showStreamSettingsId} 
+        setShowStreamSettingsId={setShowStreamSettingsId}
+        t={t}
+        assignStream={assignStream}
+      />
+    );
+  };
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)', minHeight: 0, height: '100%' }}>
       {maximizedParticipant ? (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '1rem', gap: '1rem', overflow: 'hidden', minHeight: 0 }}>
-          <div ref={fullscreenContainerRef} style={{ flex: 1, backgroundColor: 'black', borderRadius: '12px', overflow: 'hidden', position: 'relative', minHeight: 0 }}>
+          <div ref={fullscreenContainerRef} style={{ flex: 1, backgroundColor: '#0b0f17', borderRadius: '1rem', border: '1px solid rgba(255, 255, 255, 0.08)', overflow: 'hidden', position: 'relative', minHeight: 0 }}>
              {maximizedParticipant.hasVideo ? (
                <video autoPlay muted={maximizedParticipant.isLocal} style={{ width: '100%', height: '100%', objectFit: 'contain' }} ref={(el) => assignStream(el, maximizedParticipant.stream)} />
              ) : (
@@ -417,12 +376,12 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audi
              <div style={{ position: 'absolute', bottom: '1rem', left: '1rem', backgroundColor: 'rgba(0,0,0,0.6)', padding: '0.5rem 1rem', borderRadius: '6px', fontSize: '0.9rem', color: 'white' }}>
                {maximizedParticipant.username}
              </div>
-             <div style={{ position: 'absolute', top: '1rem', right: '1rem', display: 'flex', gap: '0.5rem' }}>
+             <div style={{ position: 'absolute', bottom: '1.5rem', right: '1.5rem', display: 'flex', gap: '0.5rem' }}>
                {!maximizedParticipant.isLocal && maximizedParticipant.isStreaming && (
                  <button 
                    onClick={() => setShowStreamSettingsId(showStreamSettingsId === maximizedParticipant.id ? null : maximizedParticipant.id)} 
                    className="icon-btn" 
-                   style={{ backgroundColor: 'rgba(0,0,0,0.5)', color: 'white' }} 
+                   style={{ backgroundColor: 'rgba(15, 19, 28, 0.85)', backdropFilter: 'blur(12px)', color: 'white', borderRadius: '8px' }} 
                    title="Configurações da Transmissão"
                  >
                    <Settings size={20} />
@@ -434,10 +393,10 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audi
                  } else {
                    fullscreenContainerRef.current?.requestFullscreen();
                  }
-               }} className="icon-btn" style={{ backgroundColor: 'rgba(0,0,0,0.5)', color: 'white' }} title="Tela Cheia">
+               }} className="icon-btn" style={{ backgroundColor: 'rgba(15, 19, 28, 0.85)', backdropFilter: 'blur(12px)', color: 'white', borderRadius: '8px' }} title="Tela Cheia">
                  <Fullscreen size={20} />
                </button>
-               <button onClick={() => setMaximizedId(null)} className="icon-btn" style={{ backgroundColor: 'rgba(0,0,0,0.5)', color: 'white' }} title="Desfocar">
+               <button onClick={() => setMaximizedId(null)} className="icon-btn" style={{ backgroundColor: 'rgba(15, 19, 28, 0.85)', backdropFilter: 'blur(12px)', color: 'white', borderRadius: '8px' }} title="Desfocar">
                  <Minimize size={20} />
                </button>
              </div>
@@ -481,31 +440,31 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audi
                </div>
              )}
           </div>
-          <div style={{ height: '140px', display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem', flexShrink: 0 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem', paddingBottom: '7rem' }}>
             {allParticipants.filter(p => p.id !== activeMaximizedId).map(p => renderParticipantBox(p, true))}
           </div>
         </div>
       ) : (
-        <div style={{ flex: 1, padding: '2rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignContent: 'center', gap: '1rem', overflowY: 'auto' }}>
+        <div style={{ flex: 1, padding: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem', overflowY: 'auto', alignContent: 'start', paddingBottom: '7rem' }}>
           {allParticipants.map(p => renderParticipantBox(p, false))}
         </div>
       )}
 
-      <div style={{ padding: '1.5rem', backgroundColor: 'var(--bg-tertiary)', display: 'flex', justifyContent: 'center', gap: '1rem', flexShrink: 0 }}>
-        <button onClick={toggleMute} className="icon-btn" style={{ backgroundColor: isMuted ? 'var(--danger)' : 'var(--bg-secondary)', width: '48px', height: '48px', borderRadius: '50%', color: 'white' }}>
+      <div style={{ padding: '1.5rem', backgroundColor: 'var(--bg-tertiary)', display: 'flex', justifyContent: 'center', gap: '1rem', flexShrink: 0, position: 'relative', zIndex: 40 }}>
+        <button onClick={toggleMute} className="icon-btn" style={{ backgroundColor: 'var(--bg-secondary)', width: '48px', height: '48px', borderRadius: '50%', color: isMuted ? 'var(--danger)' : 'var(--brand-primary)', border: isMuted ? '1px solid rgba(239,68,68,0.2)' : '1px solid rgba(52,211,153,0.2)', transition: 'all 0.2s' }}>
           {isMuted ? <MicOff /> : <Mic />}
         </button>
-        <button onClick={toggleScreenShare} className="icon-btn" style={{ backgroundColor: screenTrack ? 'var(--brand-primary)' : 'var(--bg-secondary)', width: '48px', height: '48px', borderRadius: '50%', color: 'white' }}>
+        <button onClick={toggleScreenShare} className="icon-btn" style={{ backgroundColor: screenTrack ? 'var(--bg-secondary)' : 'var(--brand-primary)', width: '48px', height: '48px', borderRadius: '50%', color: screenTrack ? 'var(--brand-primary)' : '#000', border: screenTrack ? '1px solid rgba(52,211,153,0.2)' : 'none', transition: 'all 0.2s' }}>
           {screenTrack ? <MonitorOff /> : <MonitorUp />}
         </button>
-        <button onClick={onDisconnect} className="icon-btn" style={{ backgroundColor: 'var(--danger)', width: '48px', height: '48px', borderRadius: '50%', color: 'white' }}>
+        <button onClick={onDisconnect} className="icon-btn" style={{ backgroundColor: '#ef4444', width: '48px', height: '48px', borderRadius: '50%', color: 'white', border: 'none', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)' }}>
           <PhoneOff />
         </button>
       </div>
 
       {showSources && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '2rem' }}>
-          <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '2rem', borderRadius: '12px', width: '100%', maxWidth: '800px', maxHeight: '80vh', overflowY: 'auto' }}>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '2rem' }}>
+          <div className="glass-panel" style={{ padding: '2rem', width: '100%', maxWidth: '800px', maxHeight: '80vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
               <h2 style={{ margin: 0 }}>{t('voice.shareScreen')}</h2>
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
@@ -538,5 +497,132 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audi
         </div>
       )}
     </div>
+  );
+}
+
+function ParticipantBox({ p, isHorizontal, userVolumes, onVolumeChange, activeMaximizedId, setMaximizedId, toggleWatchStream, streamVolumes, setStreamVolumes, showStreamSettingsId, setShowStreamSettingsId, t, assignStream }: any) {
+  const isSpeaking = useIsSpeaking(p.lkParticipant);
+  const vol = userVolumes[p.id] ?? 100;
+  
+  return (
+    <ContextMenu.Root>
+      <ContextMenu.Trigger asChild>
+        <div 
+           onClick={() => setMaximizedId(p.id === activeMaximizedId ? null : p.id)}
+           style={{ 
+             backgroundColor: 'var(--bg-secondary)', 
+             border: isSpeaking ? '2px solid var(--brand-primary)' : '1px solid rgba(255, 255, 255, 0.05)',
+             boxShadow: isSpeaking ? '0 0 15px rgba(52, 211, 153, 0.2)' : '0 4px 12px rgba(0,0,0,0.2)',
+             transition: 'all 0.2s ease',
+             borderRadius: '1rem', 
+             overflow: 'hidden', 
+             position: 'relative', 
+             cursor: 'pointer',
+             display: 'flex', 
+             alignItems: 'center', 
+             justifyContent: 'center',
+             aspectRatio: '4/3',
+             ...(isHorizontal ? { 
+               minWidth: '280px', 
+               maxWidth: '280px', 
+             } : { 
+               flex: '1 1 300px',
+               maxWidth: '600px',
+             }),
+           }}
+        >
+          {/* Background Video or Avatar */}
+          {p.hasVideo ? (
+            <video autoPlay muted={p.isLocal} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', backgroundColor: '#000', zIndex: 0 }} ref={(el) => assignStream(el, p.stream)} />
+          ) : p.isStreaming && !p.isLocal ? (
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', width: '100%', height: '100%', backgroundColor: '#000', zIndex: 0 }}>
+               <MonitorUp size={32} color="var(--brand-primary)" />
+               <button onClick={(e) => { e.stopPropagation(); toggleWatchStream(p.id); }} className="btn btn-primary" style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}>Assistir Transmissão</button>
+            </div>
+          ) : (
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', background: 'radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 70%)', zIndex: 0 }}>
+               <div style={{ 
+                 width: '80px', height: '80px', borderRadius: '50%', backgroundColor: 'var(--bg-tertiary)', 
+                 display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                 fontSize: '2rem', color: 'var(--text-primary)', border: isSpeaking ? '2px solid var(--brand-primary)' : '1px solid rgba(255,255,255,0.1)',
+                 boxShadow: isSpeaking ? '0 0 20px rgba(52, 211, 153, 0.3)' : 'none', transition: 'all 0.2s'
+               }}>
+                 {p.username === t('chat.you') ? 'ME' : p.username.charAt(0).toUpperCase()}
+               </div>
+            </div>
+          )}
+
+          {/* Top Row: Mic & Maximize */}
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '0.75rem' }}>
+            <div style={{ 
+              backgroundColor: p.isMuted ? 'rgba(239, 68, 68, 0.2)' : 'rgba(0,0,0,0.6)', 
+              padding: '0.35rem', 
+              borderRadius: '50%', 
+              color: p.isMuted ? '#ef4444' : (isSpeaking ? 'var(--brand-primary)' : 'var(--text-muted)'),
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: p.isMuted ? '0 0 10px rgba(239, 68, 68, 0.4)' : 'none'
+            }}>
+              {p.isMuted ? <MicOff size={14} /> : <Mic size={14} />}
+            </div>
+            
+            <div style={{ backgroundColor: 'rgba(0,0,0,0.6)', padding: '0.3rem', borderRadius: '6px', color: 'var(--text-muted)' }}>
+              {p.id === activeMaximizedId ? <Minimize size={14} /> : <Maximize size={14} />}
+            </div>
+          </div>
+
+          {/* Bottom Row: Name Band */}
+          <div style={{ 
+            position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10, margin: '0.5rem',
+            backgroundColor: 'rgba(15, 19, 28, 0.85)', backdropFilter: 'blur(12px)', 
+            padding: '0.4rem 0.75rem', borderRadius: '6px', 
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            width: 'calc(100% - 1rem)'
+          }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {p.username}
+            </span>
+            
+            {isSpeaking && (
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: '16px' }}>
+                <div style={{ width: '3px', height: '60%', backgroundColor: 'var(--brand-primary)', borderRadius: '2px', animation: 'pulse 1s infinite' }} />
+                <div style={{ width: '3px', height: '100%', backgroundColor: 'var(--brand-primary)', borderRadius: '2px', animation: 'pulse 0.8s infinite reverse' }} />
+                <div style={{ width: '3px', height: '40%', backgroundColor: 'var(--brand-primary)', borderRadius: '2px', animation: 'pulse 1.2s infinite' }} />
+              </div>
+            )}
+            {!isSpeaking && p.isStreaming && !p.isLocal && (
+               <span style={{ fontSize: '0.7rem', color: 'var(--brand-primary)' }}>AO VIVO</span>
+            )}
+          </div>
+        </div>
+      </ContextMenu.Trigger>
+      
+      {!p.isLocal && (
+        <ContextMenu.Portal>
+          <ContextMenu.Content className="context-menu-content" style={{ zIndex: 9999 }}>
+            <ContextMenu.Item className="context-menu-item">Perfil</ContextMenu.Item>
+            <ContextMenu.Item className="context-menu-item" style={{ borderBottom: '1px solid var(--border-subtle)', marginBottom: '4px', paddingBottom: '8px' }}>Mensagem</ContextMenu.Item>
+            
+            <div className="context-menu-label">Volume do Microfone</div>
+            <div className="context-menu-slider-container">
+               <Slider.Root className="slider-root" value={[vol]} max={200} step={1} onValueChange={(vals) => onVolumeChange(p.id, vals[0])}>
+                 <Slider.Track className="slider-track"><Slider.Range className="slider-range" /></Slider.Track>
+                 <Slider.Thumb className="slider-thumb" />
+               </Slider.Root>
+            </div>
+
+            <ContextMenu.Item className="context-menu-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              Silenciar <Switch.Root className="switch-root"><Switch.Thumb className="switch-thumb" /></Switch.Root>
+            </ContextMenu.Item>
+            <ContextMenu.Item className="context-menu-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              Desativar vídeo <Switch.Root className="switch-root"><Switch.Thumb className="switch-thumb" /></Switch.Root>
+            </ContextMenu.Item>
+            
+            <ContextMenu.Separator className="context-menu-separator" />
+            
+            <ContextMenu.Item className="context-menu-item context-menu-item-danger">Bloquear</ContextMenu.Item>
+          </ContextMenu.Content>
+        </ContextMenu.Portal>
+      )}
+    </ContextMenu.Root>
   );
 }

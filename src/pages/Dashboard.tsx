@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import heroLogo from '../assets/logo.png';
 import { io, Socket } from 'socket.io-client';
 import api from '../api';
-import { Users, LogOut, Send, Plus, Hash, Volume2, PhoneCall, PhoneOff, Check, X, Settings, MicOff } from 'lucide-react';
+import { Users, LogOut, Send, Plus, Hash, Volume2, PhoneCall, PhoneOff, Check, X, Settings, MicOff, Search, UserPlus, ChevronDown, ChevronUp, MoreVertical, Mic } from 'lucide-react';
 import VoiceRoom from '../components/VoiceRoom';
 import { useTranslation } from 'react-i18next';
 import * as ContextMenu from '@radix-ui/react-context-menu';
@@ -39,6 +39,27 @@ interface Server {
   channels: Channel[];
 }
 
+const LiveTimer = ({ startedAt }: { startedAt: number }) => {
+  const calculateSeconds = () => startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0;
+  const [seconds, setSeconds] = useState(calculateSeconds());
+  
+  useEffect(() => {
+    setSeconds(calculateSeconds());
+    const i = setInterval(() => setSeconds(calculateSeconds()), 1000);
+    return () => clearInterval(i);
+  }, [startedAt]);
+  
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  
+  return (
+    <div style={{ background: 'rgba(52, 211, 153, 0.15)', color: 'var(--brand-primary)', padding: '0.15rem 0.4rem', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700, border: '1px solid rgba(52, 211, 153, 0.3)', fontFamily: 'monospace' }}>
+      {hrs > 0 ? `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}` : `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`}
+    </div>
+  );
+};
+
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -55,11 +76,13 @@ export default function Dashboard() {
   const [activeServer, setActiveServer] = useState<Server | null>(null);
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
   const [serverVoiceStates, setServerVoiceStates] = useState<{ [channelId: string]: { userId: string; username: string; isMuted?: boolean }[] }>({});
+  const [channelStartTimes, setChannelStartTimes] = useState<{ [channelId: string]: number }>({});
   
   // Badges & Persistent Voice State
   const [unreadDMs, setUnreadDMs] = useState<{ [userId: string]: number }>({});
   const [unreadChannels, setUnreadChannels] = useState<{ [channelId: string]: number }>({});
   const [connectedVoiceChannel, setConnectedVoiceChannel] = useState<{ channelId: string; serverId: string; name: string } | null>(null);
+  const [activeSpeakers, setActiveSpeakers] = useState<Set<string>>(new Set());
   const activeViewRef = useRef<'DM' | 'SERVER'>('DM');
   const activeFriendIdRef = useRef<string | null>(null);
   const activeChannelIdRef = useRef<string | null>(null);
@@ -174,11 +197,23 @@ export default function Dashboard() {
       fetchServers();
     });
 
-    newSocket.on('serverVoiceUpdate', (data: { channelId: string, participants: { userId: string; username: string; isMuted?: boolean }[] }) => {
+    newSocket.on('serverVoiceUpdate', (data: { channelId: string, participants: { userId: string; username: string; isMuted?: boolean }[], startedAt?: number }) => {
       setServerVoiceStates(prev => ({
         ...prev,
         [data.channelId]: data.participants
       }));
+
+      setChannelStartTimes(prev => {
+        if (!data.startedAt) {
+          const newTimes = { ...prev };
+          delete newTimes[data.channelId];
+          return newTimes;
+        }
+        return {
+          ...prev,
+          [data.channelId]: data.startedAt
+        };
+      });
     });
 
     // Initial load
@@ -488,151 +523,233 @@ export default function Dashboard() {
       <div className="sidebar">
         {activeView === 'DM' ? (
           <>
-            <div className="sidebar-header">
+            <div className="sidebar-header" style={{ borderBottom: 'none', paddingBottom: '0.5rem' }}>
               <span className="sidebar-title">{t('sidebar.directMessages')}</span>
               <button className="icon-btn" title={t('friends.addFriend')} onClick={() => { setModalInput(''); setShowFriendModal(true); }}>
                 <Plus size={20} />
               </button>
             </div>
-            <div className="friends-list">
+            
+            <button className="invite-btn" onClick={() => { setModalInput(''); setShowFriendModal(true); }}>
+              <UserPlus size={18} /> Adicionar Amigo
+            </button>
+            
+            <div className="sidebar-search-wrapper">
+              <Search size={14} className="sidebar-search-icon" />
+              <input type="text" className="sidebar-search-input" placeholder="Encontrar conversas..." />
+            </div>
+
+            <div className="friends-list" style={{ padding: '0', paddingTop: '0.5rem' }}>
               {pendingRequests.length > 0 && (
                 <div style={{ marginBottom: '1rem' }}>
-                  <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '0.5rem' }}>{t('friends.pendingRequests')}</div>
-                  {pendingRequests.map(req => (
-                    <div key={req.id} className="friend-item" style={{ justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div className="avatar" style={{ backgroundColor: 'var(--bg-tertiary)' }}>{req.username.charAt(0).toUpperCase()}</div>
-                        <span className="user-name">{req.username}</span>
+                  <div className="section-title-wrapper">
+                    <span className="section-title">CONVITES PENDENTES</span>
+                    <ChevronDown size={14} color="var(--text-muted)" />
+                  </div>
+                  <div style={{ padding: '0 1rem' }}>
+                    {pendingRequests.map(req => (
+                      <div key={req.id} className="friend-item" style={{ justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <div className="avatar" style={{ backgroundColor: 'var(--bg-tertiary)' }}>{req.username.charAt(0).toUpperCase()}</div>
+                          <span className="user-name">{req.username}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button className="icon-btn" style={{ color: 'var(--danger)', padding: '0.25rem', backgroundColor: 'var(--bg-tertiary)' }} onClick={(e) => handleRejectRequest(e, req.id)} title="Reject">
+                            <X size={18} />
+                          </button>
+                          <button className="icon-btn" style={{ color: 'var(--success)', padding: '0.25rem', backgroundColor: 'var(--bg-tertiary)' }} onClick={(e) => handleAcceptRequest(e, req.id)} title="Accept">
+                            <Check size={18} />
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button className="icon-btn" style={{ color: 'var(--danger)', padding: '0.25rem', backgroundColor: 'var(--bg-tertiary)' }} onClick={(e) => handleRejectRequest(e, req.id)} title="Reject">
-                          <X size={18} />
-                        </button>
-                        <button className="icon-btn" style={{ color: 'var(--success)', padding: '0.25rem', backgroundColor: 'var(--bg-tertiary)' }} onClick={(e) => handleAcceptRequest(e, req.id)} title="Accept">
-                          <Check size={18} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
-              {friends.map(friend => (
-                <div 
-                  key={friend.id} 
-                  className={`friend-item ${activeFriend?.id === friend.id ? 'active' : ''}`}
-                  onClick={() => setActiveFriend(friend)}
-                  style={{ display: 'flex', justifyContent: 'space-between' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div className="avatar">
-                      {friend.username.charAt(0).toUpperCase()}
+              
+              <div className="section-title-wrapper">
+                <span className="section-title">MENSAGENS PRIVADAS</span>
+                <ChevronDown size={14} color="var(--text-muted)" />
+              </div>
+              <div style={{ padding: '0 1rem' }}>
+                {friends.map(friend => (
+                  <div 
+                    key={friend.id} 
+                    className={`friend-item ${activeFriend?.id === friend.id ? 'active' : ''}`}
+                    onClick={() => setActiveFriend(friend)}
+                    style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0.75rem' }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div className="avatar" style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}>
+                        {friend.username.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="user-info">
+                        <span className="user-name">{friend.username}</span>
+                      </div>
                     </div>
-                    <div className="user-info">
-                      <span className="user-name">{friend.username}</span>
-                    </div>
+                    {unreadDMs[friend.id] > 0 && activeFriend?.id !== friend.id && (
+                      <div className="badge">{unreadDMs[friend.id]}</div>
+                    )}
                   </div>
-                  {unreadDMs[friend.id] > 0 && activeFriend?.id !== friend.id && (
-                    <div className="badge">{unreadDMs[friend.id]}</div>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </>
         ) : (
           <>
-            <div className="sidebar-header" style={{ boxShadow: 'var(--shadow-sm)' }}>
-              <span className="sidebar-title" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{activeServer?.name}</span>
-              <div style={{ display: 'flex', gap: '0.25rem' }}>
-                <button className="icon-btn" title={t('server.inviteFriends')} onClick={() => setShowInviteModal(true)}>
-                  <Users size={20} />
-                </button>
+            <div className="sidebar-header" style={{ borderBottom: 'none', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flex: 1, minWidth: 0 }}>
+                <span className="sidebar-title" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{activeServer?.name}</span>
+                <span style={{ fontSize: '1rem', flexShrink: 0 }}>🌱</span>
+                <ChevronDown size={14} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                {activeServer?.ownerId === myId && <span className="owner-badge" style={{ margin: 0 }}>OWNER</span>}
                 <button 
                   className="icon-btn" 
                   title="Create Channel" 
                   onClick={() => { setModalInput(''); setChannelType('TEXT'); setShowChannelModal(true); }}
                   disabled={activeServer?.ownerId !== myId}
-                  style={{ opacity: activeServer?.ownerId !== myId ? 0.3 : 1, cursor: activeServer?.ownerId !== myId ? 'not-allowed' : 'pointer' }}
+                  style={{ opacity: activeServer?.ownerId !== myId ? 0.3 : 1, cursor: activeServer?.ownerId !== myId ? 'not-allowed' : 'pointer', padding: 0 }}
                 >
-                  <Plus size={20} />
+                  <Plus size={18} />
                 </button>
               </div>
             </div>
-            <div className="friends-list">
-              {activeServer?.channels.map(channel => (
-                <div key={channel.id}>
+            
+            <button className="invite-btn" onClick={() => setShowInviteModal(true)}>
+              <UserPlus size={18} /> Invite Users
+            </button>
+            
+            <div className="sidebar-search-wrapper">
+              <Search size={14} className="sidebar-search-icon" />
+              <input type="text" className="sidebar-search-input" placeholder="Search channels..." />
+            </div>
+
+            <div className="friends-list" style={{ padding: '0', paddingTop: '0.5rem' }}>
+              <div className="section-title-wrapper">
+                <span className="section-title">TEXT CHANNELS</span>
+                <ChevronDown size={14} color="var(--text-muted)" />
+              </div>
+              <div style={{ padding: '0 1rem', marginBottom: '0.5rem' }}>
+                {activeServer?.channels.filter(ch => ch.type === 'TEXT').map(channel => (
                   <div 
+                    key={channel.id}
                     className={`friend-item ${activeChannel?.id === channel.id ? 'active' : ''}`}
-                    onClick={() => { 
-                      setActiveChannel(channel); 
-                      if (channel.type === 'VOICE') {
-                        setConnectedVoiceChannel({ channelId: channel.id, serverId: activeServer.id, name: channel.name });
-                      }
-                    }}
-                    style={{ gap: '0.5rem', padding: '0.5rem 0.75rem', justifyContent: 'space-between' }}
+                    onClick={() => setActiveChannel(channel)}
+                    style={{ gap: '0.5rem', padding: '0.4rem 0.75rem', justifyContent: 'space-between', borderRadius: '8px' }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      {channel.type === 'TEXT' ? <Hash size={18} color="var(--brand-primary)" /> : <Volume2 size={18} color="var(--brand-primary)" />}
-                      <span className="user-name" style={{ fontSize: '0.95rem' }}>{channel.name}</span>
+                      <Hash size={16} color={activeChannel?.id === channel.id ? "var(--text-primary)" : "var(--text-muted)"} />
+                      <span className="user-name" style={{ fontSize: '0.9rem', color: activeChannel?.id === channel.id ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{channel.name}</span>
                     </div>
-                    {channel.type === 'TEXT' && unreadChannels[channel.id] > 0 && activeChannel?.id !== channel.id && (
+                    {activeChannel?.id === channel.id ? (
+                      <div className="active-indicator" />
+                    ) : unreadChannels[channel.id] > 0 ? (
                       <div className="badge">{unreadChannels[channel.id]}</div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+
+              <div className="section-title-wrapper">
+                <span className="section-title">VOICE CHANNELS</span>
+                <span className="live-badge">{activeServer?.channels.filter(ch => ch.type === 'VOICE' && serverVoiceStates[ch.id]?.length > 0).length} LIVE</span>
+              </div>
+              <div style={{ paddingBottom: '1rem' }}>
+                {activeServer?.channels.filter(ch => ch.type === 'VOICE').map(channel => (
+                  <div key={channel.id} className={serverVoiceStates[channel.id]?.length > 0 ? 'voice-channel-card' : ''}>
+                    <div 
+                      className={`friend-item`}
+                      onClick={() => { 
+                        setActiveChannel(channel); 
+                        setConnectedVoiceChannel({ channelId: channel.id, serverId: activeServer.id, name: channel.name });
+                      }}
+                      style={{ 
+                        gap: '0.5rem', 
+                        padding: serverVoiceStates[channel.id]?.length > 0 ? '0 0 0.5rem 0' : '0.4rem 1rem', 
+                        justifyContent: 'space-between', 
+                        background: 'transparent',
+                        border: 'none',
+                        borderLeft: 'none'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Volume2 size={16} color={serverVoiceStates[channel.id]?.length > 0 ? "var(--text-primary)" : "var(--text-muted)"} />
+                        <span className="user-name" style={{ fontSize: '0.9rem', fontWeight: serverVoiceStates[channel.id]?.length > 0 ? 700 : 500 }}>{channel.name}</span>
+                      </div>
+                      {serverVoiceStates[channel.id]?.length > 0 ? (
+                        <LiveTimer startedAt={channelStartTimes[channel.id]} />
+                      ) : (
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Empty</span>
+                      )}
+                    </div>
+                    
+                    {serverVoiceStates[channel.id]?.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
+                        {serverVoiceStates[channel.id].map((p: any) => {
+                          const vol = userVolumes[p.userId] ?? 100;
+                          const isMe = p.userId === myId;
+                          const isSpeaking = activeSpeakers.has(p.userId);
+                          const content = (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                              <div style={{ 
+                                width: '28px', height: '28px', minWidth: '28px', borderRadius: '50%', 
+                                backgroundColor: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                color: 'white', fontSize: '0.7rem', fontWeight: 'bold',
+                                border: isSpeaking ? '2px solid var(--brand-primary)' : '2px solid transparent',
+                                boxShadow: isSpeaking ? '0 0 10px rgba(52, 211, 153, 0.4)' : 'none',
+                                transition: 'all 0.2s',
+                                position: 'relative'
+                              }}>
+                                {p.username.charAt(0).toUpperCase()}
+                                <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '8px', height: '8px', backgroundColor: 'var(--brand-primary)', borderRadius: '50%', border: '2px solid var(--bg-tertiary)' }} />
+                              </div>
+                              <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: isMe ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: isMe ? 600 : 500 }}>{p.username}</span>
+                              {p.isMuted ? <MicOff size={14} color="var(--text-muted)" /> : isSpeaking ? <Volume2 size={14} color="var(--brand-primary)" /> : <Mic size={14} color="var(--text-muted)" style={{ opacity: 0.3 }} />}
+                            </div>
+                          );
+
+                          return isMe ? (
+                            <div key={p.userId}>{content}</div>
+                          ) : (
+                            <ContextMenu.Root key={p.userId}>
+                              <ContextMenu.Trigger asChild>
+                                <div style={{ cursor: 'pointer' }}>{content}</div>
+                              </ContextMenu.Trigger>
+                              <ContextMenu.Portal>
+                                <ContextMenu.Content className="context-menu-content" style={{ zIndex: 9999 }}>
+                                  <ContextMenu.Item className="context-menu-item">Perfil</ContextMenu.Item>
+                                  <ContextMenu.Item className="context-menu-item" style={{ borderBottom: '1px solid var(--border-subtle)', marginBottom: '4px', paddingBottom: '8px' }}>Mensagem</ContextMenu.Item>
+                                  
+                                  <div className="context-menu-label">Volume do usuário</div>
+                                  <div className="context-menu-slider-container">
+                                     <Slider.Root className="slider-root" value={[vol]} max={200} step={1} onValueChange={(vals) => handleVolumeChange(p.userId, vals[0])}>
+                                       <Slider.Track className="slider-track"><Slider.Range className="slider-range" /></Slider.Track>
+                                       <Slider.Thumb className="slider-thumb" />
+                                     </Slider.Root>
+                                  </div>
+  
+                                  <ContextMenu.Item className="context-menu-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    Silenciar <Switch.Root className="switch-root"><Switch.Thumb className="switch-thumb" /></Switch.Root>
+                                  </ContextMenu.Item>
+                                  <ContextMenu.Item className="context-menu-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    Desativar vídeo <Switch.Root className="switch-root"><Switch.Thumb className="switch-thumb" /></Switch.Root>
+                                  </ContextMenu.Item>
+                                  
+                                  <ContextMenu.Separator className="context-menu-separator" />
+                                  
+                                  <ContextMenu.Item className="context-menu-item context-menu-item-danger">Bloquear</ContextMenu.Item>
+                                </ContextMenu.Content>
+                              </ContextMenu.Portal>
+                            </ContextMenu.Root>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
-                  {channel.type === 'VOICE' && serverVoiceStates[channel.id]?.length > 0 && (
-                    <div style={{ paddingLeft: '2.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
-                      {serverVoiceStates[channel.id].map((p: any) => {
-                        const vol = userVolumes[p.userId] ?? 100;
-                        return p.userId === myId ? (
-                          <div key={p.userId} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                            <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'var(--brand-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.6rem', fontWeight: 'bold' }}>
-                              {p.username.charAt(0).toUpperCase()}
-                            </div>
-                            <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.username}</span>
-                            {p.isMuted && <MicOff size={14} color="var(--danger)" />}
-                          </div>
-                        ) : (
-                          <ContextMenu.Root key={p.userId}>
-                            <ContextMenu.Trigger asChild>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                                <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'var(--brand-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.6rem', fontWeight: 'bold' }}>
-                                  {p.username.charAt(0).toUpperCase()}
-                                </div>
-                                <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.username}</span>
-                                {p.isMuted && <MicOff size={14} color="var(--danger)" />}
-                              </div>
-                            </ContextMenu.Trigger>
-                            <ContextMenu.Portal>
-                              <ContextMenu.Content className="context-menu-content" style={{ zIndex: 9999 }}>
-                                <ContextMenu.Item className="context-menu-item">Perfil</ContextMenu.Item>
-                                <ContextMenu.Item className="context-menu-item" style={{ borderBottom: '1px solid var(--border-subtle)', marginBottom: '4px', paddingBottom: '8px' }}>Mensagem</ContextMenu.Item>
-                                
-                                <div className="context-menu-label">Volume do usuário</div>
-                                <div className="context-menu-slider-container">
-                                   <Slider.Root className="slider-root" value={[vol]} max={200} step={1} onValueChange={(vals) => handleVolumeChange(p.userId, vals[0])}>
-                                     <Slider.Track className="slider-track"><Slider.Range className="slider-range" /></Slider.Track>
-                                     <Slider.Thumb className="slider-thumb" />
-                                   </Slider.Root>
-                                </div>
-
-                                <ContextMenu.Item className="context-menu-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                  Silenciar <Switch.Root className="switch-root"><Switch.Thumb className="switch-thumb" /></Switch.Root>
-                                </ContextMenu.Item>
-                                <ContextMenu.Item className="context-menu-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                  Desativar vídeo <Switch.Root className="switch-root"><Switch.Thumb className="switch-thumb" /></Switch.Root>
-                                </ContextMenu.Item>
-                                
-                                <ContextMenu.Separator className="context-menu-separator" />
-                                
-                                <ContextMenu.Item className="context-menu-item context-menu-item-danger">Bloquear</ContextMenu.Item>
-                              </ContextMenu.Content>
-                            </ContextMenu.Portal>
-                          </ContextMenu.Root>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </>
         )}
@@ -690,6 +807,7 @@ export default function Dashboard() {
                   isMuted
                 });
               }}
+              onSpeakersChange={(speakers) => setActiveSpeakers(new Set(speakers))}
             />
           </div>
         )}

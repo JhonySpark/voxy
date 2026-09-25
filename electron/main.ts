@@ -12,8 +12,8 @@ let win: BrowserWindow | null = null
 async function createWindow() {
   win = new BrowserWindow({
     title: 'Voxy',
-    width: 1024,
-    height: 768,
+    width: 1280,
+    height: 800,
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: true,
