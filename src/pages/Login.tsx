@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import heroLogo from '../assets/logo.png';
 
 export default function Login() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   
   const isDev = import.meta.env.DEV;
   const [email, setEmail] = useState(isDev ? 'jhonyspark@gmail.com' : '');

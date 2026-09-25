@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import heroLogo from '../assets/logo.png';
 
 export default function Register() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import heroLogo from '../assets/logo.png';
 import { io, Socket } from 'socket.io-client';
 import api from '../api';
-import { Users, LogOut, Send, Plus, Hash, Volume2, PhoneCall, PhoneOff, Check, X, Settings, MicOff, Search, UserPlus, ChevronDown, ChevronUp, MoreVertical, Mic, Smile, Paperclip } from 'lucide-react';
+import { Users, LogOut, Send, Plus, Hash, Volume2, PhoneCall, PhoneOff, Check, X, Settings, MicOff, Search, UserPlus, ChevronDown, Mic, Smile, Paperclip } from 'lucide-react';
 import VoiceRoom from '../components/VoiceRoom';
 import { useTranslation } from 'react-i18next';
 import * as ContextMenu from '@radix-ui/react-context-menu';
@@ -474,7 +474,7 @@ export default function Dashboard() {
     );
   }
 
-  const renderChatMessage = (msg: Message, isDM: boolean = false) => {
+  const renderChatMessage = (msg: Message) => {
     const isMe = msg.senderId === myId;
     const authorName = isMe ? myUsername : (msg.sender?.username || activeFriend?.username || 'User');
     const avatarChar = isMe ? (myUsername ? myUsername.charAt(0).toUpperCase() : 'V') : authorName.charAt(0).toUpperCase();
@@ -914,7 +914,7 @@ export default function Dashboard() {
             </header>
             
             <div className="chat-messages" style={{ padding: '1.5rem', backgroundColor: 'transparent' }}>
-              {messages.map(msg => renderChatMessage(msg, true))}
+              {messages.map(msg => renderChatMessage(msg))}
               <div ref={messagesEndRef} />
             </div>
 
@@ -944,7 +944,7 @@ export default function Dashboard() {
             </header>
             
             <div className="chat-messages" style={{ padding: '1.5rem', backgroundColor: 'transparent' }}>
-              {messages.map(msg => renderChatMessage(msg, false))}
+              {messages.map(msg => renderChatMessage(msg))}
               <div ref={messagesEndRef} />
             </div>
 

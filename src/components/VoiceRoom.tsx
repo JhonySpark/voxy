@@ -22,7 +22,6 @@ interface VoiceRoomProps {
   audioInput?: string;
   audioOutput?: string;
   userVolumes: Record<string, number>;
-  userVolumes: Record<string, number>;
   onVolumeChange: (id: string, volume: number) => void;
   onSpeakersChange?: (speakers: string[]) => void;
 }
@@ -500,7 +499,7 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audi
   );
 }
 
-function ParticipantBox({ p, isHorizontal, userVolumes, onVolumeChange, activeMaximizedId, setMaximizedId, toggleWatchStream, streamVolumes, setStreamVolumes, showStreamSettingsId, setShowStreamSettingsId, t, assignStream }: any) {
+function ParticipantBox({ p, isHorizontal, userVolumes, onVolumeChange, activeMaximizedId, setMaximizedId, toggleWatchStream, t, assignStream }: any) {
   const isSpeaking = useIsSpeaking(p.lkParticipant);
   const vol = userVolumes[p.id] ?? 100;
   
