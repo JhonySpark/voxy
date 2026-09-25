@@ -25,6 +25,9 @@
         "nsis"
       ]
     },
+    "nsis": {
+      "deleteAppDataOnUninstall": true
+    },
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
@@ -33,6 +36,10 @@
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.24",
+    "@radix-ui/react-context-menu": "^2.3.7",
+    "@radix-ui/react-dialog": "^1.1.23",
+    "@radix-ui/react-slider": "^1.4.7",
+    "@radix-ui/react-switch": "^1.3.7",
     "axios": "^1.20.0",
     "i18next": "^26.4.2",
     "livekit-client": "^2.22.3",

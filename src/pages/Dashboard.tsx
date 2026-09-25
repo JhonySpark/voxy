@@ -6,6 +6,9 @@ import api from '../api';
 import { Users, LogOut, Send, Plus, Hash, Volume2, PhoneCall, PhoneOff, Check, X, Settings, MicOff } from 'lucide-react';
 import VoiceRoom from '../components/VoiceRoom';
 import { useTranslation } from 'react-i18next';
+import * as ContextMenu from '@radix-ui/react-context-menu';
+import * as Slider from '@radix-ui/react-slider';
+import * as Switch from '@radix-ui/react-switch';
 
 interface User {
   id: string;
@@ -72,6 +75,26 @@ export default function Dashboard() {
   const [showChannelModal, setShowChannelModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  // Audio Settings State
+  const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([]);
+  const [audioOutputs, setAudioOutputs] = useState<MediaDeviceInfo[]>([]);
+  const [selectedAudioInput, setSelectedAudioInput] = useState<string>(localStorage.getItem('voxy-audio-input') || '');
+  const [selectedAudioOutput, setSelectedAudioOutput] = useState<string>(localStorage.getItem('voxy-audio-output') || '');
+  const [userVolumes, setUserVolumes] = useState<Record<string, number>>({});
+
+  const handleVolumeChange = (id: string, value: number) => {
+    setUserVolumes(prev => ({ ...prev, [id]: value }));
+  };
+
+  useEffect(() => {
+    if (showSettingsModal) {
+      navigator.mediaDevices.enumerateDevices().then(devices => {
+        setAudioInputs(devices.filter(d => d.kind === 'audioinput'));
+        setAudioOutputs(devices.filter(d => d.kind === 'audiooutput'));
+      });
+    }
+  }, [showSettingsModal]);
 
   // Loading States
   const [initialLoading, setInitialLoading] = useState(true);
@@ -557,15 +580,55 @@ export default function Dashboard() {
                   </div>
                   {channel.type === 'VOICE' && serverVoiceStates[channel.id]?.length > 0 && (
                     <div style={{ paddingLeft: '2.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
-                      {serverVoiceStates[channel.id].map((p: any) => (
-                        <div key={p.userId} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                          <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'var(--brand-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.6rem', fontWeight: 'bold' }}>
-                            {p.username.charAt(0).toUpperCase()}
+                      {serverVoiceStates[channel.id].map((p: any) => {
+                        const vol = userVolumes[p.userId] ?? 100;
+                        return p.userId === myId ? (
+                          <div key={p.userId} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                            <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'var(--brand-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.6rem', fontWeight: 'bold' }}>
+                              {p.username.charAt(0).toUpperCase()}
+                            </div>
+                            <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.username}</span>
+                            {p.isMuted && <MicOff size={14} color="var(--danger)" />}
                           </div>
-                          <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.username}</span>
-                          {p.isMuted && <MicOff size={14} color="var(--danger)" />}
-                        </div>
-                      ))}
+                        ) : (
+                          <ContextMenu.Root key={p.userId}>
+                            <ContextMenu.Trigger asChild>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                                <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'var(--brand-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.6rem', fontWeight: 'bold' }}>
+                                  {p.username.charAt(0).toUpperCase()}
+                                </div>
+                                <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.username}</span>
+                                {p.isMuted && <MicOff size={14} color="var(--danger)" />}
+                              </div>
+                            </ContextMenu.Trigger>
+                            <ContextMenu.Portal>
+                              <ContextMenu.Content className="context-menu-content" style={{ zIndex: 9999 }}>
+                                <ContextMenu.Item className="context-menu-item">Perfil</ContextMenu.Item>
+                                <ContextMenu.Item className="context-menu-item" style={{ borderBottom: '1px solid var(--border-subtle)', marginBottom: '4px', paddingBottom: '8px' }}>Mensagem</ContextMenu.Item>
+                                
+                                <div className="context-menu-label">Volume do usuário</div>
+                                <div className="context-menu-slider-container">
+                                   <Slider.Root className="slider-root" value={[vol]} max={200} step={1} onValueChange={(vals) => handleVolumeChange(p.userId, vals[0])}>
+                                     <Slider.Track className="slider-track"><Slider.Range className="slider-range" /></Slider.Track>
+                                     <Slider.Thumb className="slider-thumb" />
+                                   </Slider.Root>
+                                </div>
+
+                                <ContextMenu.Item className="context-menu-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  Silenciar <Switch.Root className="switch-root"><Switch.Thumb className="switch-thumb" /></Switch.Root>
+                                </ContextMenu.Item>
+                                <ContextMenu.Item className="context-menu-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  Desativar vídeo <Switch.Root className="switch-root"><Switch.Thumb className="switch-thumb" /></Switch.Root>
+                                </ContextMenu.Item>
+                                
+                                <ContextMenu.Separator className="context-menu-separator" />
+                                
+                                <ContextMenu.Item className="context-menu-item context-menu-item-danger">Bloquear</ContextMenu.Item>
+                              </ContextMenu.Content>
+                            </ContextMenu.Portal>
+                          </ContextMenu.Root>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -614,6 +677,10 @@ export default function Dashboard() {
               serverId={connectedVoiceChannel.serverId}
               myId={myId} 
               myUsername={myUsername}
+              audioInput={selectedAudioInput}
+              audioOutput={selectedAudioOutput}
+              userVolumes={userVolumes}
+              onVolumeChange={handleVolumeChange}
               onDisconnect={() => setConnectedVoiceChannel(null)}
               onParticipantsChange={() => {}}
               onMuteChange={(isMuted) => {
@@ -745,6 +812,46 @@ export default function Dashboard() {
               >
                 <option value="en">English</option>
                 <option value="pt">Português</option>
+              </select>
+            </div>
+            
+            <div style={{ margin: '1rem 0', display: 'flex', alignItems: 'center', color: 'var(--text-muted)' }}>
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
+              <span style={{ padding: '0 1rem', fontSize: '0.85rem' }}>Áudio e Vídeo</span>
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
+            </div>
+
+            <div className="input-group">
+              <label className="input-label">Dispositivo de Entrada (Microfone)</label>
+              <select 
+                className="text-input" 
+                value={selectedAudioInput} 
+                onChange={(e) => {
+                  setSelectedAudioInput(e.target.value);
+                  localStorage.setItem('voxy-audio-input', e.target.value);
+                }}
+              >
+                <option value="">Padrão do Sistema</option>
+                {audioInputs.map(device => (
+                  <option key={device.deviceId} value={device.deviceId}>{device.label || `Microfone (${device.deviceId.slice(0,5)}...)`}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="input-group">
+              <label className="input-label">Dispositivo de Saída (Alto-falante)</label>
+              <select 
+                className="text-input" 
+                value={selectedAudioOutput} 
+                onChange={(e) => {
+                  setSelectedAudioOutput(e.target.value);
+                  localStorage.setItem('voxy-audio-output', e.target.value);
+                }}
+              >
+                <option value="">Padrão do Sistema</option>
+                {audioOutputs.map(device => (
+                  <option key={device.deviceId} value={device.deviceId}>{device.label || `Alto-falante (${device.deviceId.slice(0,5)}...)`}</option>
+                ))}
               </select>
             </div>
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
