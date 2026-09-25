@@ -22,8 +22,7 @@
       "output": "release/"
     },
     "win": {
-      "target": ["nsis"],
-      "publisherName": "D4rk Side"
+      "target": "nsis"
     },
     "nsis": {
       "oneClick": false,
