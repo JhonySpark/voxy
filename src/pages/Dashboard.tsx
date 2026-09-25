@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import heroLogo from '../assets/logo.png';
 import { io, Socket } from 'socket.io-client';
 import api from '../api';
-import { Users, LogOut, Send, Plus, Hash, Volume2, PhoneCall, PhoneOff, Check, X, Settings, MicOff, Search, UserPlus, ChevronDown, ChevronUp, MoreVertical, Mic } from 'lucide-react';
+import { Users, LogOut, Send, Plus, Hash, Volume2, PhoneCall, PhoneOff, Check, X, Settings, MicOff, Search, UserPlus, ChevronDown, ChevronUp, MoreVertical, Mic, Smile, Paperclip } from 'lucide-react';
 import VoiceRoom from '../components/VoiceRoom';
 import { useTranslation } from 'react-i18next';
 import * as ContextMenu from '@radix-ui/react-context-menu';
@@ -40,7 +40,7 @@ interface Server {
 }
 
 const LiveTimer = ({ startedAt }: { startedAt: number }) => {
-  const calculateSeconds = () => startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0;
+  const calculateSeconds = () => startedAt ? Math.max(0, Math.floor((Date.now() - startedAt) / 1000)) : 0;
   const [seconds, setSeconds] = useState(calculateSeconds());
   
   useEffect(() => {
@@ -474,6 +474,93 @@ export default function Dashboard() {
     );
   }
 
+  const renderChatMessage = (msg: Message, isDM: boolean = false) => {
+    const isMe = msg.senderId === myId;
+    const authorName = isMe ? myUsername : (msg.sender?.username || activeFriend?.username || 'User');
+    const avatarChar = isMe ? (myUsername ? myUsername.charAt(0).toUpperCase() : 'V') : authorName.charAt(0).toUpperCase();
+    const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    if (isMe) {
+      return (
+        <div key={msg.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', justifyContent: 'flex-end', marginBottom: '1.2rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', alignItems: 'flex-end', maxWidth: '85%' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{time}</span>
+              <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--brand-primary)' }}>{authorName}</span>
+              <span style={{ fontSize: '0.55rem', fontFamily: 'monospace', padding: '0.1rem 0.4rem', borderRadius: '4px', backgroundColor: 'rgba(52, 211, 153, 0.2)', color: 'var(--brand-primary)', border: '1px solid rgba(52, 211, 153, 0.3)' }}>{t('chat.you')}</span>
+            </div>
+            <div style={{ padding: '0.85rem 1rem', borderRadius: '1rem', borderTopRightRadius: '0.1rem', background: 'linear-gradient(to bottom right, rgba(18, 56, 44, 0.9), rgba(14, 42, 33, 0.95))', border: '1px solid rgba(52, 211, 153, 0.4)', backdropFilter: 'blur(12px)', boxShadow: '0 4px 20px rgba(52, 211, 153, 0.18)', color: 'white', fontSize: '0.85rem', lineHeight: 1.5, wordBreak: 'break-word' }}>
+              {msg.content}
+            </div>
+          </div>
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', color: 'var(--brand-primary)', fontWeight: 'bold', boxShadow: '0 0 12px rgba(90, 240, 179, 0.5)', border: '2px solid var(--brand-primary)' }}>
+              {avatarChar}
+            </div>
+            <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--brand-primary)', border: '2px solid #0f141f' }} />
+          </div>
+        </div>
+      );
+    } else {
+      return (
+        <div key={msg.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '1.2rem' }}>
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', color: 'white', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+              {avatarChar}
+            </div>
+            <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--brand-primary)', border: '2px solid #0f141f' }} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', maxWidth: '85%' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+              <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'white' }}>{authorName}</span>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{time}</span>
+            </div>
+            <div style={{ padding: '0.85rem 1rem', borderRadius: '1rem', borderTopLeftRadius: '0.1rem', backgroundColor: 'rgba(22, 29, 43, 0.8)', border: '1px solid rgba(255, 255, 255, 0.08)', backdropFilter: 'blur(12px)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', color: 'var(--text-primary)', fontSize: '0.85rem', lineHeight: 1.5, wordBreak: 'break-word' }}>
+              {msg.content}
+            </div>
+          </div>
+        </div>
+      );
+    }
+  };
+
+  const renderInputArea = (placeholderText: string) => (
+    <div style={{ padding: '1rem', paddingTop: '0.25rem' }}>
+      <form onSubmit={handleSendMessage} style={{ width: '100%', padding: '0.35rem 0.35rem 0.35rem 0.5rem', borderRadius: '1rem', backgroundColor: 'rgba(14, 19, 32, 0.85)', border: '1px solid rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(24px)', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', transition: 'all 0.2s' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          <button type="button" style={{ width: '32px', height: '32px', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.color = 'white'; e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }} title="Anexar arquivo">
+            <Plus size={19} />
+          </button>
+          <button type="button" style={{ width: '32px', height: '32px', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.color = 'var(--brand-primary)'; e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }} title="Mensagem de Áudio">
+            <Mic size={19} />
+          </button>
+        </div>
+
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0 0.5rem' }}>
+          <input
+            type="text"
+            style={{ width: '100%', backgroundColor: 'transparent', color: 'white', fontSize: '0.85rem', border: 'none', outline: 'none' }}
+            placeholder={placeholderText}
+            value={newMessage}
+            onChange={e => setNewMessage(e.target.value)}
+          />
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          <button type="button" style={{ width: '32px', height: '32px', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.color = 'white'; e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }}>
+            <Smile size={19} />
+          </button>
+          <button type="button" style={{ width: '32px', height: '32px', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.color = 'white'; e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }}>
+            <Paperclip size={19} />
+          </button>
+          <button type="submit" disabled={!newMessage.trim()} style={{ width: '36px', height: '36px', borderRadius: '0.75rem', background: 'linear-gradient(to top right, #34d399, #2dd4bf)', color: '#003825', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', border: 'none', cursor: newMessage.trim() ? 'pointer' : 'default', opacity: newMessage.trim() ? 1 : 0.5, boxShadow: newMessage.trim() ? '0 0 18px rgba(52, 211, 153, 0.6)' : 'none', transition: 'all 0.2s' }}>
+            <Send size={18} />
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+
   return (
     <div className="app-container">
       {/* Far-left Server Sidebar */}
@@ -814,45 +901,24 @@ export default function Dashboard() {
 
         {(activeView === 'DM' && activeFriend) ? (
           <>
-            <div className="chat-header glass-panel" style={{ borderRadius: 0, borderTop: 0, borderLeft: 0, borderRight: 0 }}>
-              <div className="avatar" style={{ backgroundColor: 'var(--brand-primary)' }}>{activeFriend.username.charAt(0).toUpperCase()}</div>
-              <span style={{ fontWeight: 600 }}>{activeFriend.username}</span>
-            </div>
-            
-            <div className="chat-messages">
-              {messages.map(msg => (
-                <div key={msg.id} className={`message-group ${msg.senderId === myId ? 'me' : 'other'}`}>
-                  <div className="avatar" style={{ backgroundColor: msg.senderId === myId ? 'var(--brand-primary)' : 'var(--bg-tertiary)' }}>
-                    {msg.senderId === myId ? (myUsername ? myUsername.charAt(0).toUpperCase() : 'V') : activeFriend.username.charAt(0).toUpperCase()}
+            <header style={{ height: '3.5rem', padding: '0 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.08)', backgroundColor: 'rgba(12, 16, 27, 0.6)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, zIndex: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ position: 'relative' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    {activeFriend.username.charAt(0).toUpperCase()}
                   </div>
-                  <div className="message-content">
-                    <div className="message-header">
-                      <span className="message-author">{msg.senderId === myId ? t('chat.you') : activeFriend.username}</span>
-                      <span className="message-time">{new Date(msg.createdAt).toLocaleTimeString()}</span>
-                    </div>
-                    <div className="message-text">
-                      {msg.content}
-                    </div>
-                  </div>
+                  <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--brand-primary)', border: '2px solid #0f141f' }} />
                 </div>
-              ))}
+                <h1 style={{ fontWeight: 700, fontSize: '0.875rem', color: 'white', margin: 0 }}>{activeFriend.username}</h1>
+              </div>
+            </header>
+            
+            <div className="chat-messages" style={{ padding: '1.5rem', backgroundColor: 'transparent' }}>
+              {messages.map(msg => renderChatMessage(msg, true))}
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="chat-input-area">
-              <form onSubmit={handleSendMessage} className="chat-input-wrapper glass-panel">
-                <input
-                  type="text"
-                  className="chat-input"
-                  placeholder={`${t('chat.messagePlaceholder')} @${activeFriend.username}`}
-                  value={newMessage}
-                  onChange={e => setNewMessage(e.target.value)}
-                />
-                <button type="submit" className="icon-btn" style={{ color: newMessage.trim() ? 'var(--brand-primary)' : 'var(--text-muted)' }}>
-                  <Send size={20} />
-                </button>
-              </form>
-            </div>
+            {renderInputArea(`${t('chat.messagePlaceholder')} @${activeFriend.username}`)}
           </>
         ) : activeView === 'SERVER' && activeChannel ? (
           activeChannel.type === 'VOICE' ? (
@@ -864,45 +930,25 @@ export default function Dashboard() {
             )
           ) : (
           <>
-             <div className="chat-header glass-panel" style={{ borderRadius: 0, borderTop: 0, borderLeft: 0, borderRight: 0 }}>
-              <Hash size={24} color="var(--brand-primary)" />
-              <span style={{ fontWeight: 600 }}>{activeChannel.name}</span>
-            </div>
-            
-            <div className="chat-messages">
-              {messages.map(msg => (
-                <div key={msg.id} className={`message-group ${msg.senderId === myId ? 'me' : 'other'}`}>
-                  <div className="avatar" style={{ backgroundColor: msg.senderId === myId ? 'var(--brand-primary)' : 'var(--bg-tertiary)' }}>
-                    {msg.senderId === myId ? (myUsername ? myUsername.charAt(0).toUpperCase() : 'V') : (msg.sender?.username?.charAt(0).toUpperCase() || 'U')}
-                  </div>
-                  <div className="message-content">
-                    <div className="message-header">
-                      <span className="message-author">{msg.senderId === myId ? t('chat.you') : (msg.sender?.username || 'User')}</span>
-                      <span className="message-time">{new Date(msg.createdAt).toLocaleTimeString()}</span>
-                    </div>
-                    <div className="message-text">
-                      {msg.content}
-                    </div>
+             <header style={{ height: '3.5rem', padding: '0 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.08)', backgroundColor: 'rgba(12, 16, 27, 0.6)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, zIndex: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '0.5rem', backgroundColor: 'rgba(52, 211, 153, 0.1)', border: '1px solid rgba(52, 211, 153, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--brand-primary)' }}>
+                  <Hash size={18} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <h1 style={{ fontWeight: 700, fontSize: '0.875rem', color: 'white', margin: 0 }}>{activeChannel.name}</h1>
                   </div>
                 </div>
-              ))}
+              </div>
+            </header>
+            
+            <div className="chat-messages" style={{ padding: '1.5rem', backgroundColor: 'transparent' }}>
+              {messages.map(msg => renderChatMessage(msg, false))}
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="chat-input-area">
-              <form onSubmit={handleSendMessage} className="chat-input-wrapper glass-panel">
-                <input
-                  type="text"
-                  className="chat-input"
-                  placeholder={`${t('chat.messagePlaceholder')} #${activeChannel.name}`}
-                  value={newMessage}
-                  onChange={e => setNewMessage(e.target.value)}
-                />
-                <button type="submit" className="icon-btn" style={{ color: newMessage.trim() ? 'var(--brand-primary)' : 'var(--text-muted)' }}>
-                  <Send size={20} />
-                </button>
-              </form>
-            </div>
+            {renderInputArea(`${t('chat.messagePlaceholder')} #${activeChannel.name}`)}
           </>
           )
         ) : (
