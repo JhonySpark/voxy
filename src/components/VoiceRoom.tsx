@@ -262,9 +262,7 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audi
       await localParticipant.publishTrack(track, { 
         source: Track.Source.ScreenShare,
         videoCodec: 'h264',
-        encodings: [
-          { maxBitrate: is1080 && fps === 60 ? 4000000 : 2000000, maxFramerate: fps }
-        ]
+        videoEncoding: { maxBitrate: is1080 && fps === 60 ? 4000000 : 2000000, maxFramerate: fps }
       });
       setScreenTrack(track);
 
@@ -304,14 +302,7 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audi
     };
   });
 
-  const videoParticipants = allParticipants.filter(p => p.hasVideo);
   let activeMaximizedId = maximizedId;
-
-  // The user requested NO auto-maximize. The stream should stay in the grid until clicked.
-  // if (!activeMaximizedId && videoParticipants.length === 1) {
-  //   activeMaximizedId = videoParticipants[0].id;
-  // }
-
   const maximizedParticipant = allParticipants.find(p => p.id === activeMaximizedId);
   if (!maximizedParticipant) {
     activeMaximizedId = null;
