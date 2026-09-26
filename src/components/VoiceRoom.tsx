@@ -378,10 +378,6 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audi
         activeMaximizedId={activeMaximizedId} 
         setMaximizedId={setMaximizedId} 
         toggleWatchStream={toggleWatchStream} 
-        streamVolumes={streamVolumes} 
-        setStreamVolumes={setStreamVolumes} 
-        showStreamSettingsId={showStreamSettingsId} 
-        setShowStreamSettingsId={setShowStreamSettingsId}
         t={t}
         assignStream={assignStream}
         pCount={allParticipants.length}
@@ -532,7 +528,7 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audi
   );
 }
 
-function ParticipantBox({ p, isHorizontal, userVolumes, onVolumeChange, activeMaximizedId, setMaximizedId, toggleWatchStream, streamVolumes, setStreamVolumes, showStreamSettingsId, setShowStreamSettingsId, t, assignStream, pCount }: any) {
+function ParticipantBox({ p, isHorizontal, userVolumes, onVolumeChange, activeMaximizedId, setMaximizedId, toggleWatchStream, t, assignStream, pCount }: any) {
   const isSpeaking = useIsSpeaking(p.lkParticipant);
   const vol = userVolumes[p.id] ?? 100;
   
