@@ -85,12 +85,18 @@ export default function VoiceRoomWrapper(props: VoiceRoomProps) {
       token={token}
       serverUrl={import.meta.env.VITE_LIVEKIT_URL}
       options={{
+        adaptiveStream: true,
+        dynacast: true,
         publishDefaults: {
           videoCodec: 'h264',
+          // @ts-ignore
+          degradationPreference: 'maintain-framerate',
           screenShareEncoding: {
-            maxBitrate: 3000000,
+            maxBitrate: 8000000,
             maxFramerate: 60,
-          }
+            priority: 'high',
+          },
+          simulcast: true,
         }
       }}
       onDisconnected={handleDisconnect}
@@ -282,11 +288,23 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audi
         } as any
       });
       
-      const track = new LocalVideoTrack(stream.getVideoTracks()[0]);
+      const videoTrack = stream.getVideoTracks()[0];
+      
+      // Otimização crucial para alta movimentação (evita que o WebRTC derrube o FPS para focar em nitidez)
+      if ('contentHint' in videoTrack) {
+        (videoTrack as any).contentHint = 'motion';
+      }
+
+      const track = new LocalVideoTrack(videoTrack);
       await localParticipant.publishTrack(track, { 
         source: Track.Source.ScreenShare,
         videoCodec: 'h264',
-        videoEncoding: { maxBitrate: is1080 && fps === 60 ? 4000000 : 2000000, maxFramerate: fps }
+        videoEncoding: { 
+          maxBitrate: is1080 ? (fps === 60 ? 8000000 : 5000000) : (fps === 60 ? 4000000 : 2500000), 
+          maxFramerate: fps,
+          priority: 'high'
+        },
+        simulcast: true
       });
       setScreenTrack(track);
 
