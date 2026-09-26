@@ -4,6 +4,9 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
+// Disable Windows Graphics Capture (WGC) to prevent the yellow border on screen share
+app.commandLine.appendSwitch('disable-features', 'WebRtcWindowCapture')
+
 // Disable GPU Acceleration for Windows 7
 if (process.release.name === 'win32') app.disableHardwareAcceleration()
 

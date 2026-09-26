@@ -148,31 +148,41 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audi
     }
   }, [audioOutput]);
 
+  // Microphone volume effect
   useEffect(() => {
     participants.forEach(p => {
       if (!p.isLocal) {
-        // Microphone volume
         const pub = p.getTrackPublication(Track.Source.Microphone);
         const track = pub?.audioTrack as any;
         if (track && typeof track.setVolume === 'function') {
           const vol = userVolumes[p.identity] ?? 100;
-          track.setVolume(Math.min(vol / 200, 1.0));
+          track.setVolume(Math.min(vol / 100, 1.0));
         }
+      }
+    });
+  }, [userVolumes, participants]);
 
-        // Screen share audio volume
+  // Screen share audio volume effect
+  useEffect(() => {
+    participants.forEach(p => {
+      if (!p.isLocal) {
         const screenAudioPub = p.getTrackPublication(Track.Source.ScreenShareAudio);
         const screenAudioTrack = screenAudioPub?.audioTrack as any;
-        if (screenAudioTrack && typeof screenAudioTrack.setVolume === 'function') {
-          if (!watchingStreams.has(p.identity)) {
-             screenAudioTrack.setVolume(0);
-          } else {
-             const streamVol = streamVolumes[p.identity] ?? 100;
-             screenAudioTrack.setVolume(Math.min(streamVol / 200, 1.0));
+        if (screenAudioTrack) {
+          const streamVol = streamVolumes[p.identity] ?? 100;
+          const shouldBeMuted = !watchingStreams.has(p.identity) || streamVol === 0;
+          
+          if (screenAudioTrack.mediaStreamTrack) {
+             screenAudioTrack.mediaStreamTrack.enabled = !shouldBeMuted;
+          }
+
+          if (!shouldBeMuted && typeof screenAudioTrack.setVolume === 'function') {
+             screenAudioTrack.setVolume(Math.min(streamVol / 100, 1.0));
           }
         }
       }
     });
-  }, [userVolumes, streamVolumes, participants, watchingStreams]);
+  }, [streamVolumes, participants, watchingStreams]);
 
   const toggleWatchStream = (id: string) => {
     setWatchingStreams(prev => {
@@ -356,6 +366,7 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audi
         setShowStreamSettingsId={setShowStreamSettingsId}
         t={t}
         assignStream={assignStream}
+        pCount={allParticipants.length}
       />
     );
   };
@@ -439,13 +450,17 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audi
                </div>
              )}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem', paddingBottom: '7rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '1rem', paddingBottom: '7rem', overflowY: 'auto', maxHeight: '30vh' }}>
             {allParticipants.filter(p => p.id !== activeMaximizedId).map(p => renderParticipantBox(p, true))}
           </div>
         </div>
       ) : (
-        <div style={{ flex: 1, padding: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem', overflowY: 'auto', alignContent: 'start', paddingBottom: '7rem' }}>
-          {allParticipants.map(p => renderParticipantBox(p, false))}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', minHeight: 0 }}>
+          <div style={{ flex: '1 1 auto', minHeight: '1rem' }} />
+          <div style={{ width: '100%', padding: '0 1.5rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
+            {allParticipants.map(p => renderParticipantBox(p, false))}
+          </div>
+          <div style={{ flex: '1 1 auto', minHeight: '2rem' }} />
         </div>
       )}
 
@@ -499,7 +514,7 @@ function VoiceRoomInner({ onDisconnect, onParticipantsChange, onMuteChange, audi
   );
 }
 
-function ParticipantBox({ p, isHorizontal, userVolumes, onVolumeChange, activeMaximizedId, setMaximizedId, toggleWatchStream, t, assignStream }: any) {
+function ParticipantBox({ p, isHorizontal, userVolumes, onVolumeChange, activeMaximizedId, setMaximizedId, toggleWatchStream, streamVolumes, setStreamVolumes, showStreamSettingsId, setShowStreamSettingsId, t, assignStream, pCount }: any) {
   const isSpeaking = useIsSpeaking(p.lkParticipant);
   const vol = userVolumes[p.id] ?? 100;
   
@@ -525,8 +540,9 @@ function ParticipantBox({ p, isHorizontal, userVolumes, onVolumeChange, activeMa
                minWidth: '280px', 
                maxWidth: '280px', 
              } : { 
-               flex: '1 1 300px',
-               maxWidth: '600px',
+               width: pCount === 1 ? '100%' : pCount === 2 ? 'calc(50% - 1rem)' : 'calc(33.333% - 1rem)',
+               minWidth: '140px',
+               maxWidth: pCount === 1 ? '800px' : '450px',
              }),
            }}
         >
