@@ -5,6 +5,8 @@ import { io, Socket } from 'socket.io-client';
 import api from '../api';
 import { Users, LogOut, Send, Plus, Hash, Volume2, PhoneCall, PhoneOff, Check, X, Settings, MicOff, Search, UserPlus, ChevronDown, Mic, Smile, Paperclip } from 'lucide-react';
 import VoiceRoom from '../components/VoiceRoom';
+import { SettingsModal } from '../components/SettingsModal';
+import UpdateNotification from '../components/UpdateNotification';
 import { useTranslation } from 'react-i18next';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import * as Slider from '@radix-ui/react-slider';
@@ -61,7 +63,7 @@ const LiveTimer = ({ startedAt }: { startedAt: number }) => {
 };
 
 export default function Dashboard() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [friends, setFriends] = useState<User[]>([]);
   const [pendingRequests, setPendingRequests] = useState<User[]>([]);
@@ -100,8 +102,6 @@ export default function Dashboard() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // Audio Settings State
-  const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([]);
-  const [audioOutputs, setAudioOutputs] = useState<MediaDeviceInfo[]>([]);
   const [selectedAudioInput, setSelectedAudioInput] = useState<string>(localStorage.getItem('voxy-audio-input') || '');
   const [selectedAudioOutput, setSelectedAudioOutput] = useState<string>(localStorage.getItem('voxy-audio-output') || '');
   const [userVolumes, setUserVolumes] = useState<Record<string, number>>({});
@@ -109,15 +109,6 @@ export default function Dashboard() {
   const handleVolumeChange = (id: string, value: number) => {
     setUserVolumes(prev => ({ ...prev, [id]: value }));
   };
-
-  useEffect(() => {
-    if (showSettingsModal) {
-      navigator.mediaDevices.enumerateDevices().then(devices => {
-        setAudioInputs(devices.filter(d => d.kind === 'audioinput'));
-        setAudioOutputs(devices.filter(d => d.kind === 'audiooutput'));
-      });
-    }
-  }, [showSettingsModal]);
 
   // Loading States
   const [initialLoading, setInitialLoading] = useState(true);
@@ -959,71 +950,18 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* Notificação Flutuante de Atualização */}
+      <UpdateNotification />
+
       {/* Modals */}
-      {showSettingsModal && (
-        <div className="modal-overlay" onClick={() => setShowSettingsModal(false)}>
-          <div className="modal-content glass-panel" onClick={e => e.stopPropagation()}>
-            <h2 className="modal-title">{t('settings.title')}</h2>
-            <div className="input-group">
-              <label className="input-label">{t('settings.language')}</label>
-              <select 
-                className="text-input" 
-                value={i18n.language} 
-                onChange={(e) => {
-                  i18n.changeLanguage(e.target.value);
-                  localStorage.setItem('voxy-language', e.target.value);
-                }}
-              >
-                <option value="en">English</option>
-                <option value="pt">Português</option>
-              </select>
-            </div>
-            
-            <div style={{ margin: '1rem 0', display: 'flex', alignItems: 'center', color: 'var(--text-muted)' }}>
-              <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
-              <span style={{ padding: '0 1rem', fontSize: '0.85rem' }}>Áudio e Vídeo</span>
-              <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
-            </div>
-
-            <div className="input-group">
-              <label className="input-label">Dispositivo de Entrada (Microfone)</label>
-              <select 
-                className="text-input" 
-                value={selectedAudioInput} 
-                onChange={(e) => {
-                  setSelectedAudioInput(e.target.value);
-                  localStorage.setItem('voxy-audio-input', e.target.value);
-                }}
-              >
-                <option value="">Padrão do Sistema</option>
-                {audioInputs.map(device => (
-                  <option key={device.deviceId} value={device.deviceId}>{device.label || `Microfone (${device.deviceId.slice(0,5)}...)`}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="input-group">
-              <label className="input-label">Dispositivo de Saída (Alto-falante)</label>
-              <select 
-                className="text-input" 
-                value={selectedAudioOutput} 
-                onChange={(e) => {
-                  setSelectedAudioOutput(e.target.value);
-                  localStorage.setItem('voxy-audio-output', e.target.value);
-                }}
-              >
-                <option value="">Padrão do Sistema</option>
-                {audioOutputs.map(device => (
-                  <option key={device.deviceId} value={device.deviceId}>{device.label || `Alto-falante (${device.deviceId.slice(0,5)}...)`}</option>
-                ))}
-              </select>
-            </div>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-              <button className="btn-primary" onClick={() => setShowSettingsModal(false)}>{t('voice.cancel')}</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SettingsModal 
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        onDeviceChange={(input, output) => {
+          setSelectedAudioInput(input);
+          setSelectedAudioOutput(output);
+        }}
+      />
 
       {showServerModal && (
         <div className="modal-overlay" onClick={() => setShowServerModal(false)}>

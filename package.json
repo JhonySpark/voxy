@@ -1,7 +1,7 @@
 {
   "name": "voxy",
   "private": true,
-  "version": "1.0.0",
+  "version": "0.2.2",
   "type": "module",
   "main": "dist-electron/main.js",
   "author": "D4rk Side",
@@ -11,7 +11,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "dist": "npm run build && electron-builder --win"
+    "dist": "npm run build && dotenv -e .env -- electron-builder --win",
+    "dist:publish": "npm run build && dotenv -e .env -- electron-builder --win --publish always"
   },
   "build": {
     "appId": "br.com.d4rkside.voxy",
@@ -37,11 +38,24 @@
       "dist-electron/**/*",
       "package.json"
     ],
+    "extraResources": [
+      {
+        "from": "electron/bin",
+        "to": "bin",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "asarUnpack": [
+      "**/*.exe"
+    ],
     "publish": [
       {
         "provider": "github",
         "owner": "JhonySpark",
-        "repo": "voxy"
+        "repo": "voxy",
+        "releaseType": "release"
       }
     ]
   },
@@ -67,6 +81,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
+    "dotenv-cli": "^11.0.0",
     "electron": "^41.7.1",
     "electron-builder": "^26.15.3",
     "oxlint": "^1.81.0",
