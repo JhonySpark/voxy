@@ -1,0 +1,63 @@
+.bar {
+  padding: 1.25rem;
+  background-color: var(--bg-tertiary, #0e121d);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 40;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.button {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.button:hover {
+  transform: translateY(-2px);
+}
+
+.micButton {
+  background-color: #1a2233;
+  color: var(--brand-primary, #34d399);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+}
+
+.micButton.muted {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.screenButton {
+  background-color: #1a2233;
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.screenButton.active {
+  background-color: var(--brand-primary, #34d399);
+  color: #05140d;
+  box-shadow: 0 0 16px rgba(52, 211, 153, 0.4);
+}
+
+.disconnectButton {
+  background-color: #ef4444;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.disconnectButton:hover {
+  background-color: #dc2626;
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.5);
+}

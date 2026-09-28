@@ -1,130 +1,117 @@
-import { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import heroLogo from '../assets/logo.png';
-import { io, Socket } from 'socket.io-client';
-import api from '../api';
-import { Users, LogOut, Send, Plus, Hash, Volume2, PhoneCall, PhoneOff, Check, X, Settings, MicOff, Search, UserPlus, ChevronDown, Mic, Smile, Paperclip } from 'lucide-react';
+import { Users, Volume2, PhoneCall, PhoneOff, Settings, LogOut } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import VoiceRoom from '../components/VoiceRoom';
 import { SettingsModal } from '../components/SettingsModal';
 import UpdateNotification from '../components/UpdateNotification';
-import { useTranslation } from 'react-i18next';
-import * as ContextMenu from '@radix-ui/react-context-menu';
-import * as Slider from '@radix-ui/react-slider';
-import * as Switch from '@radix-ui/react-switch';
+import { useToast } from '../components/common/Toast/ToastContext';
+import { httpClient } from '../infrastructure/adapters/http/http-client.adapter';
+import { realtimeClient } from '../infrastructure/adapters/realtime/socket-realtime.adapter';
 
-interface User {
-  id: string;
-  username: string;
-  email: string;
-}
+import {
+  DashboardView,
+  ChannelTypeEnum,
+  StorageKeys,
+  RealtimeEvents,
+  ApiRoutes,
+  AppRoutes,
+} from '../core/enums';
 
-interface Message {
-  id: string;
-  content: string;
-  senderId: string;
-  receiverId?: string;
-  channelId?: string;
-  createdAt: string;
-  sender?: User;
-}
-
-interface Channel {
-  id: string;
-  name: string;
-  type: 'TEXT' | 'VOICE';
-}
-
-interface Server {
-  id: string;
-  name: string;
-  ownerId: string;
-  channels: Channel[];
-}
-
-const LiveTimer = ({ startedAt }: { startedAt: number }) => {
-  const calculateSeconds = () => startedAt ? Math.max(0, Math.floor((Date.now() - startedAt) / 1000)) : 0;
-  const [seconds, setSeconds] = useState(calculateSeconds());
-  
-  useEffect(() => {
-    setSeconds(calculateSeconds());
-    const i = setInterval(() => setSeconds(calculateSeconds()), 1000);
-    return () => clearInterval(i);
-  }, [startedAt]);
-  
-  const hrs = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-  
-  return (
-    <div style={{ background: 'rgba(52, 211, 153, 0.15)', color: 'var(--brand-primary)', padding: '0.15rem 0.4rem', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700, border: '1px solid rgba(52, 211, 153, 0.3)', fontFamily: 'monospace' }}>
-      {hrs > 0 ? `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}` : `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`}
-    </div>
-  );
-};
+// Subcomponentes refatorados da Fase 2
+import { ServerSidebar } from '../features/servers/components/ServerSidebar/ServerSidebar';
+import type { ServerItem, ChannelItem } from '../features/servers/components/ServerSidebar/ServerSidebar';
+import { ChannelList } from '../features/servers/components/ChannelList/ChannelList';
+import { CreateServerModal } from '../features/servers/components/ServerModals/CreateServerModal';
+import { CreateChannelModal } from '../features/servers/components/ServerModals/CreateChannelModal';
+import { InviteServerModal } from '../features/servers/components/ServerModals/InviteServerModal';
+import { FriendsSidebar } from '../features/friends/components/FriendsSidebar/FriendsSidebar';
+import type { FriendUser } from '../features/friends/components/FriendsSidebar/FriendsSidebar';
+import { AddFriendModal } from '../features/friends/components/AddFriendModal/AddFriendModal';
+import { ChatArea } from '../features/chat/components/ChatArea/ChatArea';
+import type { ChatMessage } from '../features/chat/components/ChatArea/ChatArea';
 
 export default function Dashboard() {
   const { t } = useTranslation();
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [friends, setFriends] = useState<User[]>([]);
-  const [pendingRequests, setPendingRequests] = useState<User[]>([]);
-  const [servers, setServers] = useState<Server[]>([]);
-  
-  const [activeView, setActiveView] = useState<'DM' | 'SERVER'>('DM');
-  
-  // DM State
-  const [activeFriend, setActiveFriend] = useState<User | null>(null);
-  
-  // Server State
-  const [activeServer, setActiveServer] = useState<Server | null>(null);
-  const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
-  const [serverVoiceStates, setServerVoiceStates] = useState<{ [channelId: string]: { userId: string; username: string; isMuted?: boolean }[] }>({});
-  const [channelStartTimes, setChannelStartTimes] = useState<{ [channelId: string]: number }>({});
-  
-  // Badges & Persistent Voice State
-  const [unreadDMs, setUnreadDMs] = useState<{ [userId: string]: number }>({});
-  const [unreadChannels, setUnreadChannels] = useState<{ [channelId: string]: number }>({});
-  const [connectedVoiceChannel, setConnectedVoiceChannel] = useState<{ channelId: string; serverId: string; name: string } | null>(null);
-  const [activeSpeakers, setActiveSpeakers] = useState<Set<string>>(new Set());
-  const activeViewRef = useRef<'DM' | 'SERVER'>('DM');
-  const activeFriendIdRef = useRef<string | null>(null);
-  const activeChannelIdRef = useRef<string | null>(null);
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
-  const [messages, setMessages] = useState<Message[]>([]);
+  // Dados e Estado
+  const [friends, setFriends] = useState<FriendUser[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<FriendUser[]>([]);
+  const [servers, setServers] = useState<ServerItem[]>([]);
+
+  const [activeView, setActiveView] = useState<DashboardView>(DashboardView.DM);
+  const [activeFriend, setActiveFriend] = useState<FriendUser | null>(null);
+  const [activeServer, setActiveServer] = useState<ServerItem | null>(null);
+  const [activeChannel, setActiveChannel] = useState<ChannelItem | null>(null);
+
+  // Estados de Voz e Canais
+  const [serverVoiceStates, setServerVoiceStates] = useState<
+    Record<string, { userId: string; username: string; isMuted?: boolean }[]>
+  >({});
+  const [channelStartTimes, setChannelStartTimes] = useState<Record<string, number>>({});
+  const [connectedVoiceChannel, setConnectedVoiceChannel] = useState<{
+    channelId: string;
+    serverId: string;
+    name: string;
+  } | null>(null);
+  const [activeSpeakers, setActiveSpeakers] = useState<Set<string>>(new Set());
+
+  // Badges
+  const [unreadDMs, setUnreadDMs] = useState<Record<string, number>>({});
+  const [unreadChannels, setUnreadChannels] = useState<Record<string, number>>({});
+
+  // Mensagens
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [myId, setMyId] = useState('');
   const [myUsername, setMyUsername] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Modais
   const [showServerModal, setShowServerModal] = useState(false);
   const [showFriendModal, setShowFriendModal] = useState(false);
   const [showChannelModal, setShowChannelModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
-  // Audio Settings State
-  const [selectedAudioInput, setSelectedAudioInput] = useState<string>(localStorage.getItem('voxy-audio-input') || '');
-  const [selectedAudioOutput, setSelectedAudioOutput] = useState<string>(localStorage.getItem('voxy-audio-output') || '');
+  // Dispositivos de Áudio
+  const [selectedAudioInput, setSelectedAudioInput] = useState<string>(
+    localStorage.getItem(StorageKeys.AUDIO_INPUT) || ''
+  );
+  const [selectedAudioOutput, setSelectedAudioOutput] = useState<string>(
+    localStorage.getItem(StorageKeys.AUDIO_OUTPUT) || ''
+  );
   const [userVolumes, setUserVolumes] = useState<Record<string, number>>({});
 
-  const handleVolumeChange = (id: string, value: number) => {
-    setUserVolumes(prev => ({ ...prev, [id]: value }));
-  };
-
-  // Loading States
   const [initialLoading, setInitialLoading] = useState(true);
-  const [isCreatingServer, setIsCreatingServer] = useState(false);
-  const [isJoiningServer, setIsJoiningServer] = useState(false);
-  const [isAddingFriend, setIsAddingFriend] = useState(false);
-  const [isCreatingChannel, setIsCreatingChannel] = useState(false);
-  
-  const [modalInput, setModalInput] = useState('');
-  const [inviteInput, setInviteInput] = useState('');
-  const [channelType, setChannelType] = useState<'TEXT' | 'VOICE'>('TEXT');
 
-  const navigate = useNavigate();
+  // Refs de estado para callbacks de sockets
+  const activeViewRef = useRef<DashboardView>(DashboardView.DM);
+  const activeFriendIdRef = useRef<string | null>(null);
+  const activeChannelIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('voxy_token');
+    activeViewRef.current = activeView;
+  }, [activeView]);
+
+  useEffect(() => {
+    activeFriendIdRef.current = activeFriend?.id || null;
+    if (activeFriend) {
+      setUnreadDMs((prev) => ({ ...prev, [activeFriend.id]: 0 }));
+    }
+  }, [activeFriend]);
+
+  useEffect(() => {
+    activeChannelIdRef.current = activeChannel?.id || null;
+    if (activeChannel) {
+      setUnreadChannels((prev) => ({ ...prev, [activeChannel.id]: 0 }));
+    }
+  }, [activeChannel]);
+
+  // Inicialização e Conexão Realtime
+  useEffect(() => {
+    const token = localStorage.getItem(StorageKeys.AUTH_TOKEN);
     if (!token) {
       navigate('/login');
       return;
@@ -138,823 +125,458 @@ export default function Dashboard() {
       console.error(e);
     }
 
-    const newSocket = io(import.meta.env.VITE_API_URL, {
-      auth: { token }
-    });
+    realtimeClient.connect(token);
 
-    setSocket(newSocket);
-
-    newSocket.on('newMessage', (msg: Message) => {
-      // Receiver side of a DM
-      if (activeViewRef.current === 'DM' && activeFriendIdRef.current === msg.senderId) {
-        setMessages(prev => [...prev, msg]);
-        scrollToBottom();
+    // Eventos do Realtime
+    realtimeClient.on(RealtimeEvents.NEW_MESSAGE, (msg: ChatMessage) => {
+      if (activeViewRef.current === DashboardView.DM && activeFriendIdRef.current === msg.senderId) {
+        setMessages((prev) => [...prev, msg]);
       } else {
-        setUnreadDMs(prev => ({ ...prev, [msg.senderId]: (prev[msg.senderId] || 0) + 1 }));
+        setUnreadDMs((prev) => ({
+          ...prev,
+          [msg.senderId]: (prev[msg.senderId] || 0) + 1,
+        }));
       }
     });
 
-    newSocket.on('messageSent', (msg: Message) => {
-      // Sender side of a DM
-      if (activeViewRef.current === 'DM' && activeFriendIdRef.current === msg.receiverId) {
-        setMessages(prev => {
-          const filtered = prev.filter(m => !(m.id.startsWith('temp-') && m.content === msg.content));
-          if (filtered.some(m => m.id === msg.id)) return filtered;
+    realtimeClient.on(RealtimeEvents.MESSAGE_SENT, (msg: ChatMessage) => {
+      if (activeViewRef.current === DashboardView.DM && activeFriendIdRef.current === msg.receiverId) {
+        setMessages((prev) => {
+          const filtered = prev.filter((m) => !(m.id.startsWith('temp-') && m.content === msg.content));
+          if (filtered.some((m) => m.id === msg.id)) return filtered;
           return [...filtered, msg];
         });
-        scrollToBottom();
       }
     });
 
-    newSocket.on('newChannelMessage', (msg: Message) => {
-      if (!msg.channelId) return;
-      if (activeViewRef.current === 'SERVER' && activeChannelIdRef.current === msg.channelId) {
-        setMessages(prev => {
-          const filtered = prev.filter(m => !(m.id.startsWith('temp-') && m.content === msg.content && m.senderId === msg.senderId));
-          if (filtered.some(m => m.id === msg.id)) return filtered;
+    realtimeClient.on(RealtimeEvents.NEW_CHANNEL_MESSAGE, (msg: ChatMessage) => {
+      if (activeViewRef.current === DashboardView.SERVER && activeChannelIdRef.current === msg.channelId) {
+        setMessages((prev) => [...prev, msg]);
+      } else if (msg.channelId) {
+        setUnreadChannels((prev) => ({
+          ...prev,
+          [msg.channelId!]: (prev[msg.channelId!] || 0) + 1,
+        }));
+      }
+    });
+
+    realtimeClient.on(RealtimeEvents.CHANNEL_MESSAGE_SENT, (msg: ChatMessage) => {
+      if (activeViewRef.current === DashboardView.SERVER && activeChannelIdRef.current === msg.channelId) {
+        setMessages((prev) => {
+          const filtered = prev.filter((m) => !(m.id.startsWith('temp-') && m.content === msg.content));
+          if (filtered.some((m) => m.id === msg.id)) return filtered;
           return [...filtered, msg];
         });
-        scrollToBottom();
-      } else {
-        setUnreadChannels(prev => ({ ...prev, [msg.channelId as string]: (prev[msg.channelId as string] || 0) + 1 }));
       }
     });
 
-    newSocket.on('friendActionUpdate', () => {
+    realtimeClient.on(RealtimeEvents.FRIEND_ACTION, () => {
       fetchFriends();
     });
 
-    newSocket.on('serverUpdated', () => {
+    realtimeClient.on(RealtimeEvents.FRIEND_ACTION_UPDATE, () => {
+      fetchFriends();
+    });
+
+    realtimeClient.on(
+      RealtimeEvents.VOICE_STATE_UPDATE,
+      (data: {
+        channelId: string;
+        participants: { userId: string; username: string; isMuted?: boolean }[];
+        startedAt?: number;
+      }) => {
+        setServerVoiceStates((prev) => ({
+          ...prev,
+          [data.channelId]: data.participants,
+        }));
+
+        setChannelStartTimes((prev) => {
+          if (!data.startedAt) {
+            const newTimes = { ...prev };
+            delete newTimes[data.channelId];
+            return newTimes;
+          }
+          return {
+            ...prev,
+            [data.channelId]: data.startedAt,
+          };
+        });
+      }
+    );
+
+    realtimeClient.on(RealtimeEvents.CHANNEL_CREATED, () => {
       fetchServers();
     });
 
-    newSocket.on('serverVoiceUpdate', (data: { channelId: string, participants: { userId: string; username: string; isMuted?: boolean }[], startedAt?: number }) => {
-      setServerVoiceStates(prev => ({
-        ...prev,
-        [data.channelId]: data.participants
-      }));
-
-      setChannelStartTimes(prev => {
-        if (!data.startedAt) {
-          const newTimes = { ...prev };
-          delete newTimes[data.channelId];
-          return newTimes;
-        }
-        return {
-          ...prev,
-          [data.channelId]: data.startedAt
-        };
-      });
+    realtimeClient.on(RealtimeEvents.SERVER_UPDATED, () => {
+      fetchServers();
     });
 
-    // Initial load
+    // Carga inicial
     const initData = async () => {
       try {
         await Promise.allSettled([fetchFriends(), fetchServers()]);
       } catch (err) {
         console.error('Error in initial load', err);
       } finally {
-        setTimeout(() => {
-          setInitialLoading(false);
-        }, 500);
+        setTimeout(() => setInitialLoading(false), 400);
       }
     };
 
     initData();
 
     return () => {
-      newSocket.close();
+      realtimeClient.disconnect();
     };
   }, [navigate]);
 
+  // Sincronizar presença em servidores
   useEffect(() => {
-    activeViewRef.current = activeView;
-  }, [activeView]);
-
-  useEffect(() => {
-    activeFriendIdRef.current = activeFriend?.id || null;
-    if (activeFriend) {
-      setUnreadDMs(prev => ({ ...prev, [activeFriend.id]: 0 }));
-    }
-  }, [activeFriend]);
-
-  useEffect(() => {
-    activeChannelIdRef.current = activeChannel?.id || null;
-    if (activeChannel) {
-      setUnreadChannels(prev => ({ ...prev, [activeChannel.id]: 0 }));
-    }
-  }, [activeChannel]);
-
-  useEffect(() => {
-    if (activeView === 'DM' && activeFriend) {
-      fetchDMMessages(activeFriend.id);
-    } else if (activeView === 'SERVER' && activeChannel) {
-      if (activeChannel.type === 'TEXT') {
-        fetchChannelMessages(activeChannel.id);
-      }
-      socket?.emit('joinChannel', { channelId: activeChannel.id });
-      return () => {
-        socket?.emit('leaveChannel', { channelId: activeChannel.id });
-      }
-    }
-  }, [activeFriend, activeChannel, activeView]);
-
-  useEffect(() => {
-    if (socket && servers.length > 0) {
-      servers.forEach(server => {
-        socket.emit('joinServer', { serverId: server.id });
+    if (servers.length > 0) {
+      servers.forEach((server) => {
+        realtimeClient.emit(RealtimeEvents.JOIN_SERVER, { serverId: server.id });
       });
     }
-  }, [socket, servers]);
+  }, [servers]);
 
+  // Sincronizar presença no canal de voz ativo
   useEffect(() => {
-    if (socket && connectedVoiceChannel) {
-      socket.emit('joinVoice', { 
-        serverId: connectedVoiceChannel.serverId, 
-        channelId: connectedVoiceChannel.channelId 
+    if (connectedVoiceChannel) {
+      realtimeClient.emit(RealtimeEvents.JOIN_VOICE, {
+        serverId: connectedVoiceChannel.serverId,
+        channelId: connectedVoiceChannel.channelId,
       });
       return () => {
-        socket.emit('leaveVoice', { 
-          serverId: connectedVoiceChannel.serverId, 
-          channelId: connectedVoiceChannel.channelId 
+        realtimeClient.emit(RealtimeEvents.LEAVE_VOICE, {
+          serverId: connectedVoiceChannel.serverId,
+          channelId: connectedVoiceChannel.channelId,
         });
       };
     }
-  }, [socket, connectedVoiceChannel]);
+  }, [connectedVoiceChannel]);
 
-  const scrollToBottom = () => {
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  };
-
-  const fetchFriends = async () => {
+  const fetchFriends = useCallback(async () => {
     try {
-      const res = await api.get('/friends');
-      setFriends(res.data);
-      const reqRes = await api.get('/friends/requests');
-      setPendingRequests(reqRes.data);
+      const res = await httpClient.get<FriendUser[]>(ApiRoutes.FRIENDS);
+      setFriends(res);
+      const reqRes = await httpClient.get<FriendUser[]>(ApiRoutes.FRIEND_REQUESTS);
+      setPendingRequests(reqRes);
     } catch (err) {
       console.error('Error fetching friends', err);
     }
+  }, []);
+
+  const fetchServers = useCallback(async () => {
+    try {
+      const res = await httpClient.get<ServerItem[]>(ApiRoutes.SERVERS);
+      setServers(res);
+    } catch (err) {
+      console.error('Error fetching servers', err);
+    }
+  }, []);
+
+  const fetchDMMessages = useCallback(async (friendId: string) => {
+    try {
+      const res = await httpClient.get<ChatMessage[]>(`${ApiRoutes.CHAT}/${friendId}`);
+      setMessages(res);
+    } catch (err) {
+      console.error('Error fetching DM messages', err);
+    }
+  }, []);
+
+  const fetchChannelMessages = useCallback(async (channelId: string) => {
+    try {
+      const res = await httpClient.get<ChatMessage[]>(`${ApiRoutes.CHANNELS}/${channelId}/messages`);
+      setMessages(res);
+    } catch (err) {
+      console.error('Error fetching channel messages', err);
+    }
+  }, []);
+
+  // Mudança de Conversa Ativa
+  useEffect(() => {
+    if (activeView === DashboardView.DM && activeFriend) {
+      fetchDMMessages(activeFriend.id);
+    } else if (activeView === DashboardView.SERVER && activeChannel) {
+      if (activeChannel.type === ChannelTypeEnum.TEXT) {
+        fetchChannelMessages(activeChannel.id);
+      }
+      realtimeClient.emit(RealtimeEvents.JOIN_CHANNEL, { channelId: activeChannel.id });
+      return () => {
+        realtimeClient.emit(RealtimeEvents.LEAVE_CHANNEL, { channelId: activeChannel.id });
+      };
+    }
+  }, [activeFriend, activeChannel, activeView, fetchDMMessages, fetchChannelMessages]);
+
+  // Sincroniza salas de servidores
+  useEffect(() => {
+    if (servers.length > 0) {
+      servers.forEach((server) => {
+        realtimeClient.emit(RealtimeEvents.JOIN_SERVER, { serverId: server.id });
+      });
+    }
+  }, [servers]);
+
+  // Sincroniza canal de voz conectado
+  useEffect(() => {
+    if (connectedVoiceChannel) {
+      realtimeClient.emit(RealtimeEvents.JOIN_VOICE, {
+        serverId: connectedVoiceChannel.serverId,
+        channelId: connectedVoiceChannel.channelId,
+      });
+      return () => {
+        realtimeClient.emit(RealtimeEvents.LEAVE_VOICE, {
+          serverId: connectedVoiceChannel.serverId,
+          channelId: connectedVoiceChannel.channelId,
+        });
+      };
+    }
+  }, [connectedVoiceChannel]);
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim()) return;
+
+    const tempMsg: ChatMessage = {
+      id: `temp-${Date.now()}`,
+      content: newMessage.trim(),
+      senderId: myId,
+      createdAt: new Date().toISOString(),
+      sender: { id: myId, username: myUsername, email: '' },
+    };
+
+    if (activeView === DashboardView.DM && activeFriend) {
+      tempMsg.receiverId = activeFriend.id;
+      setMessages((prev) => [...prev, tempMsg]);
+      realtimeClient.emit(RealtimeEvents.SEND_MESSAGE, {
+        receiverId: activeFriend.id,
+        content: newMessage.trim(),
+      });
+    } else if (activeView === DashboardView.SERVER && activeChannel) {
+      tempMsg.channelId = activeChannel.id;
+      setMessages((prev) => [...prev, tempMsg]);
+      realtimeClient.emit(RealtimeEvents.SEND_CHANNEL_MESSAGE, {
+        channelId: activeChannel.id,
+        content: newMessage.trim(),
+      });
+    }
+    setNewMessage('');
   };
 
   const handleAcceptRequest = async (e: React.MouseEvent, friendId: string) => {
     e.stopPropagation();
     try {
-      const res = await api.post(`/friends/accept/${friendId}`);
-      fetchFriends();
-      socket?.emit('friendAction', { targetId: res.data.targetId });
-    } catch (err) {
-      console.error('Error accepting friend', err);
+      const res = await httpClient.post<{ targetId: string }>(`${ApiRoutes.FRIEND_ACCEPT}/${friendId}`);
+      toast.success(t('friends.accept'));
+      await fetchFriends();
+      realtimeClient.emit(RealtimeEvents.FRIEND_ACTION, { targetId: res.targetId });
+    } catch (err: any) {
+      toast.error(t('friends.userNotFound'));
     }
   };
 
   const handleRejectRequest = async (e: React.MouseEvent, friendId: string) => {
     e.stopPropagation();
     try {
-      const res = await api.post(`/friends/reject/${friendId}`);
-      fetchFriends();
-      socket?.emit('friendAction', { targetId: res.data.targetId });
-    } catch (err) {
-      console.error('Error rejecting friend', err);
-    }
-  };
-
-  const fetchServers = async () => {
-    try {
-      const res = await api.get('/servers');
-      setServers(res.data);
-    } catch (err) {
-      console.error('Error fetching servers', err);
-    }
-  };
-
-  const fetchDMMessages = async (friendId: string) => {
-    try {
-      const res = await api.get(`/chat/${friendId}`);
-      setMessages(res.data);
-      scrollToBottom();
-    } catch (err) {
-      console.error('Error fetching messages', err);
-    }
-  };
-
-  const fetchChannelMessages = async (channelId: string) => {
-    try {
-      const res = await api.get(`/channels/${channelId}/messages`);
-      setMessages(res.data);
-      scrollToBottom();
-    } catch (err) {
-      console.error('Error fetching channel messages', err);
-    }
-  };
-
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !socket) return;
-
-    const tempMsg: Message = {
-      id: `temp-${Date.now()}`,
-      content: newMessage,
-      senderId: myId,
-      createdAt: new Date().toISOString(),
-      sender: { id: myId, username: myUsername, email: '' }
-    };
-
-    if (activeView === 'DM' && activeFriend) {
-      tempMsg.receiverId = activeFriend.id;
-      setMessages(prev => [...prev, tempMsg]);
-      scrollToBottom();
-      socket.emit('sendMessage', {
-        receiverId: activeFriend.id,
-        content: newMessage
-      });
-    } else if (activeView === 'SERVER' && activeChannel) {
-      tempMsg.channelId = activeChannel.id;
-      setMessages(prev => [...prev, tempMsg]);
-      scrollToBottom();
-      socket.emit('sendChannelMessage', {
-        channelId: activeChannel.id,
-        content: newMessage
-      });
-    }
-    setNewMessage('');
-  };
-
-  const handleCreateServer = async () => {
-    if (!modalInput.trim()) return;
-    setIsCreatingServer(true);
-    try {
-      await api.post('/servers', { name: modalInput });
-      await fetchServers();
-      setShowServerModal(false);
-      setModalInput('');
-    } catch (err) {
-      console.error('Error creating server', err);
-    } finally {
-      setIsCreatingServer(false);
-    }
-  };
-
-  const handleJoinServer = async () => {
-    if (!inviteInput.trim()) return;
-    setIsJoiningServer(true);
-    try {
-      await api.post('/servers/join', { inviteCode: inviteInput });
-      await fetchServers();
-      setShowServerModal(false);
-      setInviteInput('');
-    } catch (err) {
-      console.error('Error joining server', err);
-      alert('Invalid or expired invite code');
-    } finally {
-      setIsJoiningServer(false);
-    }
-  };
-
-  const handleAddFriend = async () => {
-    if (!modalInput.trim()) return;
-    setIsAddingFriend(true);
-    try {
-      const res = await api.post('/friends/request', { username: modalInput });
-      setShowFriendModal(false);
-      setModalInput('');
+      const res = await httpClient.post<{ targetId: string }>(`${ApiRoutes.FRIEND_REJECT}/${friendId}`);
+      toast.info(t('friends.reject'));
       await fetchFriends();
-      socket?.emit('friendAction', { targetId: res.data.targetId });
-    } catch (err) {
-      console.error('Error adding friend', err);
-      alert('Error adding friend or user not found');
-    } finally {
-      setIsAddingFriend(false);
-    }
-  };
-
-  const handleCreateChannel = async () => {
-    if (!modalInput.trim() || !activeServer) return;
-    setIsCreatingChannel(true);
-    try {
-      await api.post(`/channels/${activeServer.id}`, { name: modalInput, type: channelType });
-      await fetchServers(); 
-      socket?.emit('channelCreated', { serverId: activeServer.id });
-      setShowChannelModal(false);
-      setModalInput('');
-    } catch (err) {
-      console.error('Error creating channel', err);
-    } finally {
-      setIsCreatingChannel(false);
+      realtimeClient.emit(RealtimeEvents.FRIEND_ACTION, { targetId: res.targetId });
+    } catch (err: any) {
+      toast.error(t('friends.userNotFound'));
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('voxy_token');
-    navigate('/login');
+    localStorage.removeItem(StorageKeys.AUTH_TOKEN);
+    navigate(AppRoutes.LOGIN);
   };
 
   const totalUnreadDMs = Object.entries(unreadDMs).reduce((sum, [friendId, count]) => {
-    if (activeView === 'DM' && activeFriend?.id === friendId) return sum;
+    if (activeView === DashboardView.DM && activeFriend?.id === friendId) return sum;
     return sum + count;
   }, 0);
 
   if (initialLoading) {
     return (
-      <div className="app-initial-loader">
-        <img src={heroLogo} alt="Voxy Logo" className="pulsing-logo" />
-        <div className="loader-spinner-subtle" />
+      <div style={{ height: '100vh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#090d16' }}>
+        <div className="btn-spinner" style={{ width: '36px', height: '36px' }} />
       </div>
     );
   }
 
-  const renderChatMessage = (msg: Message) => {
-    const isMe = msg.senderId === myId;
-    const authorName = isMe ? myUsername : (msg.sender?.username || activeFriend?.username || 'User');
-    const avatarChar = isMe ? (myUsername ? myUsername.charAt(0).toUpperCase() : 'V') : authorName.charAt(0).toUpperCase();
-    const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    if (isMe) {
-      return (
-        <div key={msg.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', justifyContent: 'flex-end', marginBottom: '1.2rem' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', alignItems: 'flex-end', maxWidth: '85%' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{time}</span>
-              <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--brand-primary)' }}>{authorName}</span>
-              <span style={{ fontSize: '0.55rem', fontFamily: 'monospace', padding: '0.1rem 0.4rem', borderRadius: '4px', backgroundColor: 'rgba(52, 211, 153, 0.2)', color: 'var(--brand-primary)', border: '1px solid rgba(52, 211, 153, 0.3)' }}>{t('chat.you')}</span>
-            </div>
-            <div style={{ padding: '0.85rem 1rem', borderRadius: '1rem', borderTopRightRadius: '0.1rem', background: 'linear-gradient(to bottom right, rgba(18, 56, 44, 0.9), rgba(14, 42, 33, 0.95))', border: '1px solid rgba(52, 211, 153, 0.4)', backdropFilter: 'blur(12px)', boxShadow: '0 4px 20px rgba(52, 211, 153, 0.18)', color: 'white', fontSize: '0.85rem', lineHeight: 1.5, wordBreak: 'break-word' }}>
-              {msg.content}
-            </div>
-          </div>
-          <div style={{ position: 'relative', flexShrink: 0 }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', color: 'var(--brand-primary)', fontWeight: 'bold', boxShadow: '0 0 12px rgba(90, 240, 179, 0.5)', border: '2px solid var(--brand-primary)' }}>
-              {avatarChar}
-            </div>
-            <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--brand-primary)', border: '2px solid #0f141f' }} />
-          </div>
-        </div>
-      );
-    } else {
-      return (
-        <div key={msg.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '1.2rem' }}>
-          <div style={{ position: 'relative', flexShrink: 0 }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', color: 'white', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-              {avatarChar}
-            </div>
-            <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--brand-primary)', border: '2px solid #0f141f' }} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', maxWidth: '85%' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-              <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'white' }}>{authorName}</span>
-              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{time}</span>
-            </div>
-            <div style={{ padding: '0.85rem 1rem', borderRadius: '1rem', borderTopLeftRadius: '0.1rem', backgroundColor: 'rgba(22, 29, 43, 0.8)', border: '1px solid rgba(255, 255, 255, 0.08)', backdropFilter: 'blur(12px)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', color: 'var(--text-primary)', fontSize: '0.85rem', lineHeight: 1.5, wordBreak: 'break-word' }}>
-              {msg.content}
-            </div>
-          </div>
-        </div>
-      );
-    }
-  };
-
-  const renderInputArea = (placeholderText: string) => (
-    <div style={{ padding: '1rem', paddingTop: '0.25rem' }}>
-      <form onSubmit={handleSendMessage} style={{ width: '100%', padding: '0.35rem 0.35rem 0.35rem 0.5rem', borderRadius: '1rem', backgroundColor: 'rgba(14, 19, 32, 0.85)', border: '1px solid rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(24px)', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', transition: 'all 0.2s' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          <button type="button" style={{ width: '32px', height: '32px', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.color = 'white'; e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }} title="Anexar arquivo">
-            <Plus size={19} />
-          </button>
-          <button type="button" style={{ width: '32px', height: '32px', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.color = 'var(--brand-primary)'; e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }} title="Mensagem de Áudio">
-            <Mic size={19} />
-          </button>
-        </div>
-
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0 0.5rem' }}>
-          <input
-            type="text"
-            style={{ width: '100%', backgroundColor: 'transparent', color: 'white', fontSize: '0.85rem', border: 'none', outline: 'none' }}
-            placeholder={placeholderText}
-            value={newMessage}
-            onChange={e => setNewMessage(e.target.value)}
-          />
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          <button type="button" style={{ width: '32px', height: '32px', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.color = 'white'; e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }}>
-            <Smile size={19} />
-          </button>
-          <button type="button" style={{ width: '32px', height: '32px', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.color = 'white'; e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'; }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }}>
-            <Paperclip size={19} />
-          </button>
-          <button type="submit" disabled={!newMessage.trim()} style={{ width: '36px', height: '36px', borderRadius: '0.75rem', background: 'linear-gradient(to top right, #34d399, #2dd4bf)', color: '#003825', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', border: 'none', cursor: newMessage.trim() ? 'pointer' : 'default', opacity: newMessage.trim() ? 1 : 0.5, boxShadow: newMessage.trim() ? '0 0 18px rgba(52, 211, 153, 0.6)' : 'none', transition: 'all 0.2s' }}>
-            <Send size={18} />
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-
   return (
     <div className="app-container">
-      {/* Far-left Server Sidebar */}
-      <div className="server-sidebar">
-        <div 
-          className={`server-icon ${activeView === 'DM' ? 'active' : ''}`}
-          onClick={() => { setActiveView('DM'); setActiveServer(null); setActiveChannel(null); }}
-          title={t('sidebar.directMessages')}
-          style={{ padding: 0, backgroundColor: 'transparent', position: 'relative' }}
-        >
-          <img src={heroLogo} alt="Home" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
-          {totalUnreadDMs > 0 && (
-            <div className="server-badge">{totalUnreadDMs > 99 ? '99+' : totalUnreadDMs}</div>
-          )}
-        </div>
-        
-        <div style={{ width: '32px', height: '2px', backgroundColor: 'var(--border-subtle)', borderRadius: '2px' }} />
+      {/* 1. Barra de Servidores (Esquerda) */}
+      <ServerSidebar
+        servers={servers}
+        activeView={activeView}
+        activeServer={activeServer}
+        activeChannel={activeChannel}
+        totalUnreadDMs={totalUnreadDMs}
+        unreadChannels={unreadChannels}
+        onSelectDMView={() => {
+          setActiveView(DashboardView.DM);
+          setActiveServer(null);
+          setActiveChannel(null);
+        }}
+        onSelectServer={(server) => {
+          setActiveView(DashboardView.SERVER);
+          setActiveServer(server);
+          setActiveChannel(server.channels?.[0] || null);
+        }}
+        onOpenCreateServerModal={() => setShowServerModal(true)}
+      />
 
-        {servers.map(server => {
-          const unreadCount = server.channels?.reduce((sum, ch) => {
-            if (activeView === 'SERVER' && activeChannel?.id === ch.id) return sum;
-            return sum + (unreadChannels[ch.id] || 0);
-          }, 0) || 0;
-
-          return (
-            <div 
-              key={server.id} 
-              className={`server-icon ${activeServer?.id === server.id ? 'active' : ''}`}
-              onClick={() => { setActiveView('SERVER'); setActiveServer(server); setActiveChannel(server.channels[0]); }}
-              title={server.name}
-              style={{ position: 'relative' }}
-            >
-              {server.name.substring(0, 2).toUpperCase()}
-              {unreadCount > 0 && (
-                <div className="server-badge">{unreadCount > 99 ? '99+' : unreadCount}</div>
-              )}
-            </div>
-          );
-        })}
-
-        <div className="server-icon" style={{ backgroundColor: 'transparent', border: '1px dashed var(--text-muted)', color: 'var(--brand-primary)' }} onClick={() => { setModalInput(''); setShowServerModal(true); }} title={t('server.addServer')}>
-          <Plus size={24} />
-        </div>
-      </div>
-
-      {/* Main Sidebar */}
+      {/* 2. Barra de Navegação Interna (Amigos ou Canais do Servidor) */}
       <div className="sidebar">
-        {activeView === 'DM' ? (
-          <>
-            <div className="sidebar-header" style={{ borderBottom: 'none', paddingBottom: '0.5rem' }}>
-              <span className="sidebar-title">{t('sidebar.directMessages')}</span>
-              <button className="icon-btn" title={t('friends.addFriend')} onClick={() => { setModalInput(''); setShowFriendModal(true); }}>
-                <Plus size={20} />
-              </button>
-            </div>
-            
-            <button className="invite-btn" onClick={() => { setModalInput(''); setShowFriendModal(true); }}>
-              <UserPlus size={18} /> Adicionar Amigo
-            </button>
-            
-            <div className="sidebar-search-wrapper">
-              <Search size={14} className="sidebar-search-icon" />
-              <input type="text" className="sidebar-search-input" placeholder="Encontrar conversas..." />
-            </div>
+        {activeView === DashboardView.DM ? (
+          <FriendsSidebar
+            friends={friends}
+            pendingRequests={pendingRequests}
+            activeFriend={activeFriend}
+            unreadDMs={unreadDMs}
+            onSelectFriend={(f) => setActiveFriend(f)}
+            onOpenAddFriendModal={() => setShowFriendModal(true)}
+            onAcceptRequest={handleAcceptRequest}
+            onRejectRequest={handleRejectRequest}
+          />
+        ) : activeServer ? (
+          <ChannelList
+            server={activeServer}
+            myId={myId}
+            activeChannel={activeChannel}
+            serverVoiceStates={serverVoiceStates}
+            channelStartTimes={channelStartTimes}
+            userVolumes={userVolumes}
+            onVolumeChange={(id, val) => setUserVolumes((prev) => ({ ...prev, [id]: val }))}
+            unreadChannels={unreadChannels}
+            activeSpeakers={activeSpeakers}
+            onSelectChannel={(ch) => setActiveChannel(ch)}
+            onConnectVoice={(ch) => {
+              setConnectedVoiceChannel({
+                channelId: ch.id,
+                serverId: activeServer.id,
+                name: ch.name,
+              });
+            }}
+            onOpenCreateChannelModal={() => setShowChannelModal(true)}
+            onOpenInviteModal={() => setShowInviteModal(true)}
+          />
+        ) : null}
 
-            <div className="friends-list" style={{ padding: '0', paddingTop: '0.5rem' }}>
-              {pendingRequests.length > 0 && (
-                <div style={{ marginBottom: '1rem' }}>
-                  <div className="section-title-wrapper">
-                    <span className="section-title">CONVITES PENDENTES</span>
-                    <ChevronDown size={14} color="var(--text-muted)" />
-                  </div>
-                  <div style={{ padding: '0 1rem' }}>
-                    {pendingRequests.map(req => (
-                      <div key={req.id} className="friend-item" style={{ justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <div className="avatar" style={{ backgroundColor: 'var(--bg-tertiary)' }}>{req.username.charAt(0).toUpperCase()}</div>
-                          <span className="user-name">{req.username}</span>
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button className="icon-btn" style={{ color: 'var(--danger)', padding: '0.25rem', backgroundColor: 'var(--bg-tertiary)' }} onClick={(e) => handleRejectRequest(e, req.id)} title="Reject">
-                            <X size={18} />
-                          </button>
-                          <button className="icon-btn" style={{ color: 'var(--success)', padding: '0.25rem', backgroundColor: 'var(--bg-tertiary)' }} onClick={(e) => handleAcceptRequest(e, req.id)} title="Accept">
-                            <Check size={18} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              <div className="section-title-wrapper">
-                <span className="section-title">MENSAGENS PRIVADAS</span>
-                <ChevronDown size={14} color="var(--text-muted)" />
-              </div>
-              <div style={{ padding: '0 1rem' }}>
-                {friends.map(friend => (
-                  <div 
-                    key={friend.id} 
-                    className={`friend-item ${activeFriend?.id === friend.id ? 'active' : ''}`}
-                    onClick={() => setActiveFriend(friend)}
-                    style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0.75rem' }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div className="avatar" style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}>
-                        {friend.username.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="user-info">
-                        <span className="user-name">{friend.username}</span>
-                      </div>
-                    </div>
-                    {unreadDMs[friend.id] > 0 && activeFriend?.id !== friend.id && (
-                      <div className="badge">{unreadDMs[friend.id]}</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="sidebar-header" style={{ borderBottom: 'none', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flex: 1, minWidth: 0 }}>
-                <span className="sidebar-title" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{activeServer?.name}</span>
-                <span style={{ fontSize: '1rem', flexShrink: 0 }}>🌱</span>
-                <ChevronDown size={14} color="var(--text-muted)" style={{ flexShrink: 0 }} />
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-                {activeServer?.ownerId === myId && <span className="owner-badge" style={{ margin: 0 }}>OWNER</span>}
-                <button 
-                  className="icon-btn" 
-                  title="Create Channel" 
-                  onClick={() => { setModalInput(''); setChannelType('TEXT'); setShowChannelModal(true); }}
-                  disabled={activeServer?.ownerId !== myId}
-                  style={{ opacity: activeServer?.ownerId !== myId ? 0.3 : 1, cursor: activeServer?.ownerId !== myId ? 'not-allowed' : 'pointer', padding: 0 }}
-                >
-                  <Plus size={18} />
-                </button>
-              </div>
-            </div>
-            
-            <button className="invite-btn" onClick={() => setShowInviteModal(true)}>
-              <UserPlus size={18} /> Invite Users
-            </button>
-            
-            <div className="sidebar-search-wrapper">
-              <Search size={14} className="sidebar-search-icon" />
-              <input type="text" className="sidebar-search-input" placeholder="Search channels..." />
-            </div>
-
-            <div className="friends-list" style={{ padding: '0', paddingTop: '0.5rem' }}>
-              <div className="section-title-wrapper">
-                <span className="section-title">TEXT CHANNELS</span>
-                <ChevronDown size={14} color="var(--text-muted)" />
-              </div>
-              <div style={{ padding: '0 1rem', marginBottom: '0.5rem' }}>
-                {activeServer?.channels.filter(ch => ch.type === 'TEXT').map(channel => (
-                  <div 
-                    key={channel.id}
-                    className={`friend-item ${activeChannel?.id === channel.id ? 'active' : ''}`}
-                    onClick={() => setActiveChannel(channel)}
-                    style={{ gap: '0.5rem', padding: '0.4rem 0.75rem', justifyContent: 'space-between', borderRadius: '8px' }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Hash size={16} color={activeChannel?.id === channel.id ? "var(--text-primary)" : "var(--text-muted)"} />
-                      <span className="user-name" style={{ fontSize: '0.9rem', color: activeChannel?.id === channel.id ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{channel.name}</span>
-                    </div>
-                    {activeChannel?.id === channel.id ? (
-                      <div className="active-indicator" />
-                    ) : unreadChannels[channel.id] > 0 ? (
-                      <div className="badge">{unreadChannels[channel.id]}</div>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-
-              <div className="section-title-wrapper">
-                <span className="section-title">VOICE CHANNELS</span>
-                <span className="live-badge">{activeServer?.channels.filter(ch => ch.type === 'VOICE' && serverVoiceStates[ch.id]?.length > 0).length} LIVE</span>
-              </div>
-              <div style={{ paddingBottom: '1rem' }}>
-                {activeServer?.channels.filter(ch => ch.type === 'VOICE').map(channel => (
-                  <div key={channel.id} className={serverVoiceStates[channel.id]?.length > 0 ? 'voice-channel-card' : ''}>
-                    <div 
-                      className={`friend-item`}
-                      onClick={() => { 
-                        setActiveChannel(channel); 
-                        setConnectedVoiceChannel({ channelId: channel.id, serverId: activeServer.id, name: channel.name });
-                      }}
-                      style={{ 
-                        gap: '0.5rem', 
-                        padding: serverVoiceStates[channel.id]?.length > 0 ? '0 0 0.5rem 0' : '0.4rem 1rem', 
-                        justifyContent: 'space-between', 
-                        background: 'transparent',
-                        border: 'none',
-                        borderLeft: 'none'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Volume2 size={16} color={serverVoiceStates[channel.id]?.length > 0 ? "var(--text-primary)" : "var(--text-muted)"} />
-                        <span className="user-name" style={{ fontSize: '0.9rem', fontWeight: serverVoiceStates[channel.id]?.length > 0 ? 700 : 500 }}>{channel.name}</span>
-                      </div>
-                      {serverVoiceStates[channel.id]?.length > 0 ? (
-                        <LiveTimer startedAt={channelStartTimes[channel.id]} />
-                      ) : (
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Empty</span>
-                      )}
-                    </div>
-                    
-                    {serverVoiceStates[channel.id]?.length > 0 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
-                        {serverVoiceStates[channel.id].map((p: any) => {
-                          const vol = userVolumes[p.userId] ?? 100;
-                          const isMe = p.userId === myId;
-                          const isSpeaking = activeSpeakers.has(p.userId);
-                          const content = (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                              <div style={{ 
-                                width: '28px', height: '28px', minWidth: '28px', borderRadius: '50%', 
-                                backgroundColor: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                                color: 'white', fontSize: '0.7rem', fontWeight: 'bold',
-                                border: isSpeaking ? '2px solid var(--brand-primary)' : '2px solid transparent',
-                                boxShadow: isSpeaking ? '0 0 10px rgba(52, 211, 153, 0.4)' : 'none',
-                                transition: 'all 0.2s',
-                                position: 'relative'
-                              }}>
-                                {p.username.charAt(0).toUpperCase()}
-                                <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '8px', height: '8px', backgroundColor: 'var(--brand-primary)', borderRadius: '50%', border: '2px solid var(--bg-tertiary)' }} />
-                              </div>
-                              <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: isMe ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: isMe ? 600 : 500 }}>{p.username}</span>
-                              {p.isMuted ? <MicOff size={14} color="var(--text-muted)" /> : isSpeaking ? <Volume2 size={14} color="var(--brand-primary)" /> : <Mic size={14} color="var(--text-muted)" style={{ opacity: 0.3 }} />}
-                            </div>
-                          );
-
-                          return isMe ? (
-                            <div key={p.userId}>{content}</div>
-                          ) : (
-                            <ContextMenu.Root key={p.userId}>
-                              <ContextMenu.Trigger asChild>
-                                <div style={{ cursor: 'pointer' }}>{content}</div>
-                              </ContextMenu.Trigger>
-                              <ContextMenu.Portal>
-                                <ContextMenu.Content className="context-menu-content" style={{ zIndex: 9999 }}>
-                                  <ContextMenu.Item className="context-menu-item">Perfil</ContextMenu.Item>
-                                  <ContextMenu.Item className="context-menu-item" style={{ borderBottom: '1px solid var(--border-subtle)', marginBottom: '4px', paddingBottom: '8px' }}>Mensagem</ContextMenu.Item>
-                                  
-                                  <div className="context-menu-label">Volume do usuário</div>
-                                  <div className="context-menu-slider-container">
-                                     <Slider.Root className="slider-root" value={[vol]} max={200} step={1} onValueChange={(vals) => handleVolumeChange(p.userId, vals[0])}>
-                                       <Slider.Track className="slider-track"><Slider.Range className="slider-range" /></Slider.Track>
-                                       <Slider.Thumb className="slider-thumb" />
-                                     </Slider.Root>
-                                  </div>
-  
-                                  <ContextMenu.Item className="context-menu-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    Silenciar <Switch.Root className="switch-root"><Switch.Thumb className="switch-thumb" /></Switch.Root>
-                                  </ContextMenu.Item>
-                                  <ContextMenu.Item className="context-menu-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    Desativar vídeo <Switch.Root className="switch-root"><Switch.Thumb className="switch-thumb" /></Switch.Root>
-                                  </ContextMenu.Item>
-                                  
-                                  <ContextMenu.Separator className="context-menu-separator" />
-                                  
-                                  <ContextMenu.Item className="context-menu-item context-menu-item-danger">Bloquear</ContextMenu.Item>
-                                </ContextMenu.Content>
-                              </ContextMenu.Portal>
-                            </ContextMenu.Root>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* User Profile Bar */}
+        {/* Rodapé do Perfil do Usuário */}
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           {connectedVoiceChannel && (
             <div className="active-call-bar">
               <div className="active-call-info">
-                <span className="active-call-title"><PhoneCall size={14} /> {t('voice.connected')}</span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{connectedVoiceChannel.name}</span>
+                <span className="active-call-title">
+                  <PhoneCall size={14} /> {t('voice.connected')}
+                </span>
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                  {connectedVoiceChannel.name}
+                </span>
               </div>
-              <button className="icon-btn" style={{ color: 'var(--danger)' }} onClick={() => setConnectedVoiceChannel(null)} title={t('voice.cancel')}>
+              <button
+                className="icon-btn"
+                style={{ color: '#ef4444' }}
+                onClick={() => setConnectedVoiceChannel(null)}
+                title={t('voice.cancel')}
+              >
                 <PhoneOff size={18} />
               </button>
             </div>
           )}
+
           <div className="user-profile-bar glass-panel" style={{ border: 'none', borderRadius: 0 }}>
-            <div className="avatar" style={{ backgroundColor: 'var(--brand-primary)' }}>
+            <div className="avatar" style={{ backgroundColor: 'var(--brand-primary, #34d399)', color: '#05140d', fontWeight: 700 }}>
               {myUsername ? myUsername.charAt(0).toUpperCase() : 'ME'}
             </div>
             <div className="user-info">
               <span className="user-name">{myUsername || 'User'}</span>
             </div>
-            <button className="icon-btn" onClick={() => setShowSettingsModal(true)} title={t('settings.title')}>
+            <button
+              className="icon-btn"
+              onClick={() => setShowSettingsModal(true)}
+              title={t('settings.title')}
+            >
               <Settings size={18} />
             </button>
-            <button className="icon-btn" onClick={handleLogout} title={t('settings.logout')}>
+            <button
+              className="icon-btn"
+              onClick={handleLogout}
+              title={t('settings.logout')}
+            >
               <LogOut size={18} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Chat Area */}
-      <div className="chat-area">
-        {connectedVoiceChannel && (
-          <div style={{ display: activeChannel?.id === connectedVoiceChannel.channelId ? 'flex' : 'none', flex: 1, flexDirection: 'column', minHeight: 0 }}>
-            <VoiceRoom 
-              key={connectedVoiceChannel.channelId}
-              channelId={connectedVoiceChannel.channelId}
-              serverId={connectedVoiceChannel.serverId}
-              myId={myId} 
-              myUsername={myUsername}
-              audioInput={selectedAudioInput}
-              audioOutput={selectedAudioOutput}
-              userVolumes={userVolumes}
-              onVolumeChange={handleVolumeChange}
-              onDisconnect={() => setConnectedVoiceChannel(null)}
-              onParticipantsChange={() => {}}
-              onMuteChange={(isMuted) => {
-                socket?.emit('updateVoiceMute', {
-                  serverId: connectedVoiceChannel.serverId,
-                  channelId: connectedVoiceChannel.channelId,
-                  isMuted
-                });
-              }}
-              onSpeakersChange={(speakers) => setActiveSpeakers(new Set(speakers))}
-            />
-          </div>
-        )}
-
-        {(activeView === 'DM' && activeFriend) ? (
-          <>
-            <header style={{ height: '3.5rem', padding: '0 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.08)', backgroundColor: 'rgba(12, 16, 27, 0.6)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, zIndex: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ position: 'relative' }}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    {activeFriend.username.charAt(0).toUpperCase()}
-                  </div>
-                  <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--brand-primary)', border: '2px solid #0f141f' }} />
-                </div>
-                <h1 style={{ fontWeight: 700, fontSize: '0.875rem', color: 'white', margin: 0 }}>{activeFriend.username}</h1>
-              </div>
-            </header>
-            
-            <div className="chat-messages" style={{ padding: '1.5rem', backgroundColor: 'transparent' }}>
-              {messages.map(msg => renderChatMessage(msg))}
-              <div ref={messagesEndRef} />
-            </div>
-
-            {renderInputArea(`${t('chat.messagePlaceholder')} @${activeFriend.username}`)}
-          </>
-        ) : activeView === 'SERVER' && activeChannel ? (
-          activeChannel.type === 'VOICE' ? (
+      {/* 3. Área Principal */}
+      <div className="main-content chat-area">
+        {connectedVoiceChannel && activeChannel?.id === connectedVoiceChannel.channelId ? (
+          <VoiceRoom
+            channelId={connectedVoiceChannel.channelId}
+            serverId={connectedVoiceChannel.serverId}
+            myId={myId}
+            myUsername={myUsername}
+            onDisconnect={() => setConnectedVoiceChannel(null)}
+            onParticipantsChange={() => {}}
+            onMuteChange={(isMuted) => {
+              realtimeClient.emit(RealtimeEvents.UPDATE_VOICE_MUTE, {
+                serverId: connectedVoiceChannel.serverId,
+                channelId: connectedVoiceChannel.channelId,
+                isMuted,
+              });
+            }}
+            audioInput={selectedAudioInput}
+            audioOutput={selectedAudioOutput}
+            userVolumes={userVolumes}
+            onVolumeChange={(id, val) => setUserVolumes((prev) => ({ ...prev, [id]: val }))}
+            onSpeakersChange={(speakers) => setActiveSpeakers(new Set(speakers))}
+          />
+        ) : activeView === DashboardView.DM && activeFriend ? (
+          <ChatArea
+            type="DM"
+            target={activeFriend}
+            myId={myId}
+            messages={messages}
+            newMessage={newMessage}
+            onNewMessageChange={setNewMessage}
+            onSendMessage={handleSendMessage}
+          />
+        ) : activeView === DashboardView.SERVER && activeChannel ? (
+          activeChannel.type === ChannelTypeEnum.VOICE ? (
             activeChannel.id !== connectedVoiceChannel?.channelId && (
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', flexDirection: 'column', gap: '1rem' }}>
                 <Volume2 size={48} opacity={0.5} />
                 <p>{t('voice.clickToJoin')}</p>
               </div>
             )
           ) : (
-          <>
-             <header style={{ height: '3.5rem', padding: '0 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.08)', backgroundColor: 'rgba(12, 16, 27, 0.6)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, zIndex: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '0.5rem', backgroundColor: 'rgba(52, 211, 153, 0.1)', border: '1px solid rgba(52, 211, 153, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--brand-primary)' }}>
-                  <Hash size={18} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <h1 style={{ fontWeight: 700, fontSize: '0.875rem', color: 'white', margin: 0 }}>{activeChannel.name}</h1>
-                  </div>
-                </div>
-              </div>
-            </header>
-            
-            <div className="chat-messages" style={{ padding: '1.5rem', backgroundColor: 'transparent' }}>
-              {messages.map(msg => renderChatMessage(msg))}
-              <div ref={messagesEndRef} />
-            </div>
-
-            {renderInputArea(`${t('chat.messagePlaceholder')} #${activeChannel.name}`)}
-          </>
+            <ChatArea
+              type="CHANNEL"
+              target={activeChannel}
+              myId={myId}
+              messages={messages}
+              newMessage={newMessage}
+              onNewMessageChange={setNewMessage}
+              onSendMessage={handleSendMessage}
+            />
           )
         ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', flexDirection: 'column', gap: '1rem' }}>
             <Users size={48} opacity={0.5} />
             <p>{t('sidebar.search')}</p>
           </div>
         )}
       </div>
 
-      {/* Notificação Flutuante de Atualização */}
+      {/* 4. Modais e Notificações */}
       <UpdateNotification />
 
-      {/* Modals */}
-      <SettingsModal 
+      <SettingsModal
         isOpen={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
         onDeviceChange={(input, output) => {
@@ -963,101 +585,38 @@ export default function Dashboard() {
         }}
       />
 
-      {showServerModal && (
-        <div className="modal-overlay" onClick={() => setShowServerModal(false)}>
-          <div className="modal-content glass-panel" onClick={e => e.stopPropagation()}>
-            <h2 className="modal-title">{t('server.createServer')}</h2>
-            <div className="input-group">
-              <label className="input-label">Server Name</label>
-              <input type="text" className="text-input" value={modalInput} onChange={e => setModalInput(e.target.value)} />
-            </div>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-              <button className="btn-primary" onClick={handleCreateServer} disabled={isCreatingServer}>
-                {isCreatingServer && <span className="btn-spinner" />}
-                {t('server.createServerButton')}
-              </button>
-            </div>
+      <AddFriendModal
+        isOpen={showFriendModal}
+        onClose={() => setShowFriendModal(false)}
+        onFriendAdded={fetchFriends}
+        onFriendAction={(targetId) => realtimeClient.emit(RealtimeEvents.FRIEND_ACTION, { targetId })}
+      />
 
-            <div style={{ margin: '1rem 0', display: 'flex', alignItems: 'center', color: 'var(--text-muted)' }}>
-              <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
-              <span style={{ padding: '0 1rem', fontSize: '0.85rem' }}>OR</span>
-              <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
-            </div>
+      <CreateServerModal
+        isOpen={showServerModal}
+        onClose={() => setShowServerModal(false)}
+        onServerCreated={fetchServers}
+      />
 
-            <div className="input-group">
-              <label className="input-label">{t('server.joinServerPlaceholder')}</label>
-              <input type="text" className="text-input" placeholder={t('server.joinServerPlaceholder')} value={inviteInput} onChange={e => setInviteInput(e.target.value)} />
-            </div>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-              <button className="btn-primary" style={{ backgroundColor: 'var(--bg-tertiary)' }} onClick={() => setShowServerModal(false)}>{t('voice.cancel')}</button>
-              <button className="btn-primary" onClick={handleJoinServer} disabled={isJoiningServer}>
-                {isJoiningServer && <span className="btn-spinner" />}
-                {t('server.joinServerButton')}
-              </button>
-            </div>
-          </div>
-        </div>
+      {activeServer && (
+        <>
+          <CreateChannelModal
+            isOpen={showChannelModal}
+            serverId={activeServer.id}
+            onClose={() => setShowChannelModal(false)}
+            onChannelCreated={fetchServers}
+            onChannelSocketEmit={() =>
+              realtimeClient.emit(RealtimeEvents.CHANNEL_CREATED, { serverId: activeServer.id })
+            }
+          />
+
+          <InviteServerModal
+            isOpen={showInviteModal}
+            server={activeServer}
+            onClose={() => setShowInviteModal(false)}
+          />
+        </>
       )}
-
-      {showInviteModal && activeServer && (
-        <div className="modal-overlay" onClick={() => setShowInviteModal(false)}>
-          <div className="modal-content glass-panel" onClick={e => e.stopPropagation()}>
-            <h2 className="modal-title">{t('server.inviteFriends')} - {activeServer.name}</h2>
-            <div className="input-group">
-              <input type="text" className="text-input" readOnly value={activeServer.id} style={{ color: 'var(--brand-primary)', fontWeight: 'bold', textAlign: 'center', letterSpacing: '1px' }} />
-            </div>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-              <button className="btn-primary" style={{ width: '100%' }} onClick={() => { navigator.clipboard.writeText(activeServer.id); alert('Copied!'); setShowInviteModal(false); }}>Copy Invite Code</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showFriendModal && (
-        <div className="modal-overlay" onClick={() => setShowFriendModal(false)}>
-          <div className="modal-content glass-panel" onClick={e => e.stopPropagation()}>
-            <h2 className="modal-title">{t('friends.addFriend')}</h2>
-            <div className="input-group">
-              <label className="input-label">Username</label>
-              <input type="text" className="text-input" value={modalInput} onChange={e => setModalInput(e.target.value)} placeholder={t('friends.addFriendPlaceholder')} autoFocus />
-            </div>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-              <button className="btn-primary" style={{ backgroundColor: 'var(--bg-tertiary)' }} onClick={() => setShowFriendModal(false)}>{t('voice.cancel')}</button>
-              <button className="btn-primary" onClick={handleAddFriend} disabled={isAddingFriend}>
-                {isAddingFriend && <span className="btn-spinner" />}
-                {t('friends.addFriendButton')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showChannelModal && (
-        <div className="modal-overlay" onClick={() => setShowChannelModal(false)}>
-          <div className="modal-content glass-panel" onClick={e => e.stopPropagation()}>
-            <h2 className="modal-title">Create Channel</h2>
-            <div className="input-group">
-              <label className="input-label">Channel Type</label>
-              <select className="text-input" value={channelType} onChange={e => setChannelType(e.target.value as any)}>
-                <option value="TEXT">Text</option>
-                <option value="VOICE">Voice</option>
-              </select>
-            </div>
-            <div className="input-group">
-              <label className="input-label">Channel Name</label>
-              <input type="text" className="text-input" value={modalInput} onChange={e => setModalInput(e.target.value)} autoFocus />
-            </div>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-              <button className="btn-primary" style={{ backgroundColor: 'var(--bg-tertiary)' }} onClick={() => setShowChannelModal(false)}>{t('voice.cancel')}</button>
-              <button className="btn-primary" onClick={handleCreateChannel} disabled={isCreatingChannel}>
-                {isCreatingChannel && <span className="btn-spinner" />}
-                {t('server.createServerButton')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }

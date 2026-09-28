@@ -1,0 +1,161 @@
+export const ChannelTypeEnum = {
+  TEXT: 'TEXT',
+  VOICE: 'VOICE',
+} as const;
+export type ChannelTypeEnum = (typeof ChannelTypeEnum)[keyof typeof ChannelTypeEnum];
+
+export const ServerRoleEnum = {
+  OWNER: 'OWNER',
+  MEMBER: 'MEMBER',
+} as const;
+export type ServerRoleEnum = (typeof ServerRoleEnum)[keyof typeof ServerRoleEnum];
+
+export const DashboardView = {
+  DM: 'DM',
+  SERVER: 'SERVER',
+} as const;
+export type DashboardView = (typeof DashboardView)[keyof typeof DashboardView];
+
+export const AppRoutes = {
+  ROOT: '/',
+  LOGIN: '/login',
+  REGISTER: '/register',
+  APP: '/app',
+} as const;
+export type AppRoutes = (typeof AppRoutes)[keyof typeof AppRoutes];
+
+export const StorageKeys = {
+  AUTH_TOKEN: 'voxy_token',
+  AUDIO_INPUT: 'voxy-audio-input',
+  AUDIO_OUTPUT: 'voxy-audio-output',
+  INPUT_SENSITIVITY: 'voxy-input-sensitivity',
+  OUTPUT_VOLUME: 'voxy-output-volume',
+  NOISE_SUPPRESSION: 'voxy-noise-suppression',
+  ECHO_CANCELLATION: 'voxy-echo-cancellation',
+  AUTO_GAIN: 'voxy-auto-gain',
+  NOTIFY_MESSAGES: 'voxy-notify-messages',
+  NOTIFY_SOUNDS: 'voxy-notify-sounds',
+  GAME_PRESENCE: 'voxy-game-presence',
+  LANGUAGE: 'voxy-language',
+} as const;
+export type StorageKeys = (typeof StorageKeys)[keyof typeof StorageKeys];
+
+export const RealtimeEvents = {
+  // Direct Messages
+  NEW_MESSAGE: 'newMessage',
+  MESSAGE_SENT: 'messageSent',
+  SEND_MESSAGE: 'sendMessage',
+
+  // Channel Messages
+  NEW_CHANNEL_MESSAGE: 'newChannelMessage',
+  CHANNEL_MESSAGE_SENT: 'channelMessageSent',
+  SEND_CHANNEL_MESSAGE: 'sendChannelMessage',
+
+  // Channels
+  JOIN_CHANNEL: 'joinChannel',
+  LEAVE_CHANNEL: 'leaveChannel',
+  CHANNEL_CREATED: 'channelCreated',
+
+  // Servers
+  JOIN_SERVER: 'joinServer',
+  LEAVE_SERVER: 'leaveServer',
+  SERVER_UPDATED: 'serverUpdated',
+
+  // Voice
+  JOIN_VOICE: 'joinVoice',
+  LEAVE_VOICE: 'leaveVoice',
+  UPDATE_VOICE_MUTE: 'updateVoiceMute',
+  SERVER_VOICE_UPDATE: 'serverVoiceUpdate',
+  VOICE_STATE_UPDATE: 'serverVoiceUpdate',
+
+  // Friends
+  FRIEND_ACTION: 'friendAction',
+  FRIEND_ACTION_UPDATE: 'friendActionUpdate',
+} as const;
+export type RealtimeEvents = (typeof RealtimeEvents)[keyof typeof RealtimeEvents];
+
+export const StreamResolution = {
+  HD_720: '720',
+  FHD_1080: '1080',
+} as const;
+export type StreamResolution = (typeof StreamResolution)[keyof typeof StreamResolution];
+
+export const StreamFramerate = {
+  FPS_30: '30',
+  FPS_60: '60',
+} as const;
+export type StreamFramerate = (typeof StreamFramerate)[keyof typeof StreamFramerate];
+
+export const DesktopSourceType = {
+  GAMES: 'games',
+  WINDOWS: 'windows',
+  SCREENS: 'screens',
+} as const;
+export type DesktopSourceType = (typeof DesktopSourceType)[keyof typeof DesktopSourceType];
+
+export const ApiRoutes = {
+  AUTH_LOGIN: '/auth/login',
+  AUTH_REGISTER: '/auth/register',
+  FRIENDS: '/friends',
+  FRIEND_REQUESTS: '/friends/requests',
+  FRIEND_REQUEST: '/friends/request',
+  FRIEND_ACCEPT: '/friends/accept',
+  FRIEND_REJECT: '/friends/reject',
+  SERVERS: '/servers',
+  SERVERS_JOIN: '/servers/join',
+  CHANNELS: '/channels',
+  CHAT: '/chat',
+} as const;
+export type ApiRoutes = (typeof ApiRoutes)[keyof typeof ApiRoutes];
+
+export const ToastTypeEnum = {
+  SUCCESS: 'success',
+  ERROR: 'error',
+  WARNING: 'warning',
+  INFO: 'info',
+} as const;
+export type ToastTypeEnum = (typeof ToastTypeEnum)[keyof typeof ToastTypeEnum];
+
+export const SettingsTabEnum = {
+  VOICE: 'voice',
+  APPEARANCE: 'appearance',
+  NOTIFICATIONS: 'notifications',
+  PRIVACY: 'privacy',
+  KEYBINDS: 'keybinds',
+} as const;
+export type SettingsTabEnum = (typeof SettingsTabEnum)[keyof typeof SettingsTabEnum];
+
+export const IpcChannels = {
+  CHECK_FOR_UPDATES: 'CHECK_FOR_UPDATES',
+  RESTART_AND_INSTALL: 'RESTART_AND_INSTALL',
+  DESKTOP_CAPTURER_GET_CATEGORIZED_SOURCES: 'DESKTOP_CAPTURER_GET_CATEGORIZED_SOURCES',
+  DESKTOP_CAPTURER_GET_SOURCES: 'DESKTOP_CAPTURER_GET_SOURCES',
+  APP_UPDATE_AVAILABLE: 'app-update-available',
+  APP_UPDATE_PROGRESS: 'app-update-progress',
+  APP_UPDATE_DOWNLOADED: 'app-update-downloaded',
+  APP_UPDATE_ERROR: 'app-update-error',
+} as const;
+export type IpcChannels = (typeof IpcChannels)[keyof typeof IpcChannels];
+
+export const AppUpdateStatus = {
+  IDLE: 'idle',
+  AVAILABLE: 'available',
+  DOWNLOADING: 'downloading',
+  DOWNLOADED: 'downloaded',
+  ERROR: 'error',
+} as const;
+export type AppUpdateStatus = (typeof AppUpdateStatus)[keyof typeof AppUpdateStatus];
+
+export const LanguageEnum = {
+  EN: 'en',
+  PT: 'pt',
+  ES: 'es',
+} as const;
+export type LanguageEnum = (typeof LanguageEnum)[keyof typeof LanguageEnum];
+
+export const FriendshipStatusEnum = {
+  PENDING: 'PENDING',
+  ACCEPTED: 'ACCEPTED',
+  REJECTED: 'REJECTED',
+} as const;
+export type FriendshipStatusEnum = (typeof FriendshipStatusEnum)[keyof typeof FriendshipStatusEnum];

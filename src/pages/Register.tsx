@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import api from '../api';
 import { Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { ApiRoutes, AppRoutes, StorageKeys } from '../core/enums';
 import heroLogo from '../assets/logo.png';
 
 export default function Register() {
@@ -20,22 +21,22 @@ export default function Register() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!acceptTerms) {
-      setError('Você deve aceitar os termos de uso.');
+      setError(t('auth.register.errorTerms'));
       return;
     }
     if (password !== confirmPassword) {
-      setError('As senhas não coincidem.');
+      setError(t('auth.register.errorPasswordMismatch'));
       return;
     }
     setIsLoading(true);
     setError('');
     try {
-      await api.post('/auth/register', { email, username, password });
-      const res = await api.post('/auth/login', { email, password });
-      localStorage.setItem('voxy_token', res.data.access_token);
-      navigate('/app');
+      await api.post(ApiRoutes.AUTH_REGISTER, { email, username, password });
+      const res = await api.post(ApiRoutes.AUTH_LOGIN, { email, password });
+      localStorage.setItem(StorageKeys.AUTH_TOKEN, res.data.access_token);
+      navigate(AppRoutes.APP);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed');
+      setError(err.response?.data?.message || t('auth.register.failed'));
     } finally {
       setIsLoading(false);
     }
@@ -54,11 +55,11 @@ export default function Register() {
 
         <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div className="input-group">
-            <label className="input-label">E-mail</label>
+            <label className="input-label">{t('auth.register.email')}</label>
             <input 
               type="email" 
               className="text-input" 
-              placeholder="seu@email.com"
+              placeholder={t('auth.register.emailPlaceholder')}
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
@@ -66,11 +67,11 @@ export default function Register() {
           </div>
 
           <div className="input-group">
-            <label className="input-label">Nome de Usuário</label>
+            <label className="input-label">{t('auth.register.username')}</label>
             <input 
               type="text" 
               className="text-input" 
-              placeholder="seu_usuario"
+              placeholder={t('auth.register.usernamePlaceholder')}
               value={username}
               onChange={e => setUsername(e.target.value)}
               required
@@ -78,12 +79,12 @@ export default function Register() {
           </div>
           
           <div className="input-group">
-            <label className="input-label">Senha</label>
+            <label className="input-label">{t('auth.register.password')}</label>
             <div className="password-input-wrapper">
               <input 
                 type={showPassword ? "text" : "password"} 
                 className="text-input" 
-                placeholder="............"
+                placeholder={t('auth.register.passwordPlaceholder')}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
@@ -100,12 +101,12 @@ export default function Register() {
           </div>
           
           <div className="input-group">
-            <label className="input-label">Confirmar Senha</label>
+            <label className="input-label">{t('auth.register.confirmPassword')}</label>
             <div className="password-input-wrapper">
               <input 
                 type={showPassword ? "text" : "password"} 
                 className="text-input" 
-                placeholder="............"
+                placeholder={t('auth.register.passwordPlaceholder')}
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
                 required
@@ -120,16 +121,16 @@ export default function Register() {
               checked={acceptTerms}
               onChange={e => setAcceptTerms(e.target.checked)}
             />
-            Li e concordo com os termos de uso
+            {t('auth.register.acceptTerms')}
           </label>
 
           <button type="submit" className="btn-primary" disabled={isLoading} style={{ marginTop: '0.5rem', padding: '0.85rem' }}>
-            {isLoading ? <span className="btn-spinner" /> : 'Criar Conta no Voxy'}
+            {isLoading ? <span className="btn-spinner" /> : t('auth.register.button')}
           </button>
         </form>
         
         <div className="auth-footer" style={{ textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '1.5rem' }}>
-          {t('auth.register.hasAccount')} <Link to="/login" style={{ color: 'var(--brand-primary)', fontWeight: 600, textDecoration: 'none' }}>{t('auth.login.button')}</Link>
+          {t('auth.register.hasAccount')} <Link to={AppRoutes.LOGIN} style={{ color: 'var(--brand-primary)', fontWeight: 600, textDecoration: 'none' }}>{t('auth.login.button')}</Link>
         </div>
       </div>
     </div>

@@ -1,0 +1,229 @@
+.container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+  background-color: var(--bg-primary, #0c0f17);
+}
+
+.header {
+  height: 3.5rem;
+  padding: 0 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: rgba(12, 16, 27, 0.6);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.headerInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.avatarWrapper {
+  position: relative;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #1e2433;
+  color: #f8fafc;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+}
+
+.channelIconBox {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background-color: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--brand-primary, #34d399);
+}
+
+.onlineDot {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--brand-primary, #34d399);
+  border: 2px solid #0f141f;
+}
+
+.title {
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: #ffffff;
+  margin: 0;
+}
+
+.messagesList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.messageRow {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.messageRow.myMessage {
+  justify-content: flex-end;
+}
+
+.messageRow.otherMessage {
+  justify-content: flex-start;
+}
+
+.messageBubbleWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-width: 80%;
+}
+
+.messageRow.myMessage .messageBubbleWrapper {
+  align-items: flex-end;
+}
+
+.messageMeta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.authorName {
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #ffffff;
+}
+
+.time {
+  font-size: 0.65rem;
+  color: #64748b;
+  font-family: monospace;
+}
+
+.bubble {
+  padding: 0.75rem 1rem;
+  border-radius: 14px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.myBubble {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.2), rgba(45, 212, 191, 0.15));
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  color: #f8fafc;
+  border-top-right-radius: 3px;
+}
+
+.otherBubble {
+  background: rgba(22, 29, 43, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  border-top-left-radius: 3px;
+}
+
+.inputArea {
+  padding: 0.75rem 1.25rem 1rem 1.25rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.inputForm {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border-radius: 12px;
+  background-color: rgba(14, 19, 32, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-sizing: border-box;
+}
+
+.actionButton {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.actionButton:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.textInputWrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.textInputField {
+  width: 100%;
+  background: transparent;
+  color: #ffffff;
+  font-size: 0.875rem;
+  border: none;
+  outline: none;
+}
+
+.sendButton {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--brand-primary, #34d399);
+  color: #05140d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sendButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.sendButton:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: scale(1.05);
+}

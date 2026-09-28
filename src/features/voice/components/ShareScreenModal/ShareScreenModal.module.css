@@ -1,0 +1,245 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1.5rem;
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  padding: 1.8rem;
+  width: 100%;
+  max-width: 850px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  background-color: #0f131c;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.2rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 1rem;
+}
+
+.titleArea {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.iconBadge {
+  background-color: rgba(52, 211, 153, 0.1);
+  padding: 0.5rem;
+  border-radius: 10px;
+  color: var(--brand-primary, #34d399);
+  display: flex;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.subtitle {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.selectors {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+}
+
+.selectBox {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.04);
+  padding: 0.3rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.selectLabel {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.select {
+  background-color: transparent;
+  color: #ffffff;
+  border: none;
+  font-size: 0.85rem;
+  outline: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.6rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 0.6rem;
+}
+
+.tabBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.tabBtn.active {
+  background-color: var(--brand-primary, #34d399);
+  color: #0b0f17;
+}
+
+.tabBtn.inactive {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+}
+
+.tabBtn.inactive:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.sourceGrid {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 48vh;
+  padding-right: 0.3rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.sourceCard {
+  cursor: pointer;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.sourceCard.isGame {
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+.sourceCard:hover {
+  border-color: var(--brand-primary, #34d399);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.thumbnailWrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background-color: #000;
+  overflow: hidden;
+}
+
+.thumbnailImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gameBadge {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  background-color: rgba(16, 185, 129, 0.9);
+  color: #000;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+}
+
+.cardFooter {
+  padding: 0.6rem 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.sourceName {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  color: #64748b;
+  gap: 0.8rem;
+  text-align: center;
+  grid-column: 1 / -1;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cancelBtn {
+  padding: 0.6rem 1.25rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background-color: #1e2433;
+  color: #e2e8f0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancelBtn:hover {
+  background-color: #2a3347;
+  color: #ffffff;
+}

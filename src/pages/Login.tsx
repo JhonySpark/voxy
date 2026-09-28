@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import api from '../api';
 import { Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { ApiRoutes, AppRoutes, StorageKeys } from '../core/enums';
 import heroLogo from '../assets/logo.png';
 
 export default function Login() {
@@ -22,11 +23,11 @@ export default function Login() {
     setIsLoading(true);
     setError('');
     try {
-      const res = await api.post('/auth/login', { email, password });
-      localStorage.setItem('voxy_token', res.data.access_token);
-      navigate('/app');
+      const res = await api.post(ApiRoutes.AUTH_LOGIN, { email, password });
+      localStorage.setItem(StorageKeys.AUTH_TOKEN, res.data.access_token);
+      navigate(AppRoutes.APP);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed');
+      setError(err.response?.data?.message || t('auth.login.failed'));
     } finally {
       setIsLoading(false);
     }
@@ -45,11 +46,11 @@ export default function Login() {
 
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div className="input-group">
-            <label className="input-label">E-mail</label>
+            <label className="input-label">{t('auth.login.email')}</label>
             <input 
               type="email" 
               className="text-input" 
-              placeholder="seu@email.com"
+              placeholder={t('auth.login.emailPlaceholder')}
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
@@ -58,8 +59,8 @@ export default function Login() {
           
           <div className="input-group">
             <div className="input-header">
-              <label className="input-label">Senha</label>
-              <a href="#" className="forgot-password" onClick={(e) => e.preventDefault()}>Esqueceu a senha?</a>
+              <label className="input-label">{t('auth.login.password')}</label>
+              <a href="#" className="forgot-password" onClick={(e) => e.preventDefault()}>{t('auth.login.forgotPassword')}</a>
             </div>
             <div className="password-input-wrapper">
               <input 
@@ -88,16 +89,16 @@ export default function Login() {
               checked={rememberMe}
               onChange={e => setRememberMe(e.target.checked)}
             />
-            Lembrar-me neste dispositivo
+            {t('auth.login.rememberMe')}
           </label>
 
           <button type="submit" className="btn-primary" disabled={isLoading} style={{ marginTop: '0.5rem', padding: '0.85rem' }}>
-            {isLoading ? <span className="btn-spinner" /> : 'Entrar no Voxy'}
+            {isLoading ? <span className="btn-spinner" /> : t('auth.login.button')}
           </button>
         </form>
         
         <div className="auth-footer" style={{ textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '1.5rem' }}>
-          {t('auth.login.noAccount')} <Link to="/register" style={{ color: 'var(--brand-primary)', fontWeight: 600, textDecoration: 'none' }}>{t('auth.login.register')}</Link>
+          {t('auth.login.noAccount')} <Link to={AppRoutes.REGISTER} style={{ color: 'var(--brand-primary)', fontWeight: 600, textDecoration: 'none' }}>{t('auth.login.register')}</Link>
         </div>
       </div>
     </div>

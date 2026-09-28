@@ -17,6 +17,7 @@ import {
 import { ipcRenderer } from 'electron';
 import { useTranslation } from 'react-i18next';
 import packageJson from '../../package.json';
+import { SettingsTabEnum, StorageKeys, IpcChannels, LanguageEnum } from '../core/enums';
 import './SettingsModal.css';
 
 interface SettingsModalProps {
@@ -31,7 +32,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onDeviceChange
 }) => {
   const { t, i18n } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'voice' | 'appearance' | 'notifications' | 'privacy' | 'keybinds'>('voice');
+  const [activeTab, setActiveTab] = useState<SettingsTabEnum>(SettingsTabEnum.VOICE);
 
   // Versão da aplicação (sincronizada com package.json)
   const APP_VERSION = `v${packageJson.version}`;
@@ -40,40 +41,40 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([]);
   const [audioOutputs, setAudioOutputs] = useState<MediaDeviceInfo[]>([]);
   const [selectedInput, setSelectedInput] = useState<string>(
-    localStorage.getItem('voxy-audio-input') || ''
+    localStorage.getItem(StorageKeys.AUDIO_INPUT) || ''
   );
   const [selectedOutput, setSelectedOutput] = useState<string>(
-    localStorage.getItem('voxy-audio-output') || ''
+    localStorage.getItem(StorageKeys.AUDIO_OUTPUT) || ''
   );
 
   // Sliders
   const [inputSensitivity, setInputSensitivity] = useState<number>(
-    parseInt(localStorage.getItem('voxy-input-sensitivity') || '72', 10)
+    parseInt(localStorage.getItem(StorageKeys.INPUT_SENSITIVITY) || '72', 10)
   );
   const [outputVolume, setOutputVolume] = useState<number>(
-    parseInt(localStorage.getItem('voxy-output-volume') || '85', 10)
+    parseInt(localStorage.getItem(StorageKeys.OUTPUT_VOLUME) || '85', 10)
   );
 
   // DSP & Processamento Neural
   const [noiseSuppression, setNoiseSuppression] = useState<boolean>(
-    localStorage.getItem('voxy-noise-suppression') !== 'false'
+    localStorage.getItem(StorageKeys.NOISE_SUPPRESSION) !== 'false'
   );
   const [echoCancellation, setEchoCancellation] = useState<boolean>(
-    localStorage.getItem('voxy-echo-cancellation') !== 'false'
+    localStorage.getItem(StorageKeys.ECHO_CANCELLATION) !== 'false'
   );
   const [autoGainControl, setAutoGainControl] = useState<boolean>(
-    localStorage.getItem('voxy-auto-gain') !== 'false'
+    localStorage.getItem(StorageKeys.AUTO_GAIN) !== 'false'
   );
 
   // Notificações e Privacidade
   const [notifyMessages, setNotifyMessages] = useState<boolean>(
-    localStorage.getItem('voxy-notify-messages') !== 'false'
+    localStorage.getItem(StorageKeys.NOTIFY_MESSAGES) !== 'false'
   );
   const [notifySounds, setNotifySounds] = useState<boolean>(
-    localStorage.getItem('voxy-notify-sounds') !== 'false'
+    localStorage.getItem(StorageKeys.NOTIFY_SOUNDS) !== 'false'
   );
   const [gamePresence, setGamePresence] = useState<boolean>(
-    localStorage.getItem('voxy-game-presence') !== 'false'
+    localStorage.getItem(StorageKeys.GAME_PRESENCE) !== 'false'
   );
 
   // Verificação manual de atualização
@@ -84,22 +85,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     if (!ipcRenderer) return;
     try {
       setCheckingUpdate(true);
-      setUpdateFeedback('Verificando...');
-      const res = await ipcRenderer.invoke('CHECK_FOR_UPDATES');
+      setUpdateFeedback(t('settings.checkingUpdates'));
+      const res = await ipcRenderer.invoke(IpcChannels.CHECK_FOR_UPDATES);
       if (res?.status === 'ok') {
         const remoteVer = res.updateInfo?.version;
         if (remoteVer && remoteVer !== APP_VERSION.replace('v', '')) {
-          setUpdateFeedback(`Nova v${remoteVer} encontrada! Baixando...`);
+          setUpdateFeedback(t('settings.updateFound', { version: remoteVer }));
         } else {
-          setUpdateFeedback('Versão mais recente!');
+          setUpdateFeedback(t('settings.latestVersion'));
         }
       } else if (res?.status === 'dev') {
-        setUpdateFeedback('Modo dev');
+        setUpdateFeedback(t('settings.devMode'));
       } else {
-        setUpdateFeedback('Falha na busca.');
+        setUpdateFeedback(t('settings.updateFailed'));
       }
     } catch {
-      setUpdateFeedback('Erro ao verificar.');
+      setUpdateFeedback(t('settings.updateFailed'));
     } finally {
       setCheckingUpdate(false);
       setTimeout(() => {
@@ -264,16 +265,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   // Salvar alterações
   const handleSave = () => {
-    localStorage.setItem('voxy-audio-input', selectedInput);
-    localStorage.setItem('voxy-audio-output', selectedOutput);
-    localStorage.setItem('voxy-input-sensitivity', inputSensitivity.toString());
-    localStorage.setItem('voxy-output-volume', outputVolume.toString());
-    localStorage.setItem('voxy-noise-suppression', noiseSuppression.toString());
-    localStorage.setItem('voxy-echo-cancellation', echoCancellation.toString());
-    localStorage.setItem('voxy-auto-gain', autoGainControl.toString());
-    localStorage.setItem('voxy-notify-messages', notifyMessages.toString());
-    localStorage.setItem('voxy-notify-sounds', notifySounds.toString());
-    localStorage.setItem('voxy-game-presence', gamePresence.toString());
+    localStorage.setItem(StorageKeys.AUDIO_INPUT, selectedInput);
+    localStorage.setItem(StorageKeys.AUDIO_OUTPUT, selectedOutput);
+    localStorage.setItem(StorageKeys.INPUT_SENSITIVITY, inputSensitivity.toString());
+    localStorage.setItem(StorageKeys.OUTPUT_VOLUME, outputVolume.toString());
+    localStorage.setItem(StorageKeys.NOISE_SUPPRESSION, noiseSuppression.toString());
+    localStorage.setItem(StorageKeys.ECHO_CANCELLATION, echoCancellation.toString());
+    localStorage.setItem(StorageKeys.AUTO_GAIN, autoGainControl.toString());
+    localStorage.setItem(StorageKeys.NOTIFY_MESSAGES, notifyMessages.toString());
+    localStorage.setItem(StorageKeys.NOTIFY_SOUNDS, notifySounds.toString());
+    localStorage.setItem(StorageKeys.GAME_PRESENCE, gamePresence.toString());
 
     if (onDeviceChange) {
       onDeviceChange(selectedInput, selectedOutput);
@@ -297,13 +298,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <Mic size={20} />
             </div>
             <div>
-              <h2 className="settings-header-title">Configurações do Sistema</h2>
+              <h2 className="settings-header-title">{t('settings.title')}</h2>
               <div className="settings-header-subtitle">
-                Voxy Core {APP_VERSION} • Engine de Áudio Low-Latency
+                {t('settings.subtitle', { version: APP_VERSION })}
               </div>
             </div>
           </div>
-          <button className="settings-close-btn" onClick={onClose} title="Fechar">
+          <button className="settings-close-btn" onClick={onClose} title={t('common.close')}>
             <X size={18} />
           </button>
         </div>
@@ -313,41 +314,41 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* Sidebar */}
           <div className="settings-sidebar">
             <div className="settings-sidebar-nav">
-              <div className="settings-sidebar-section">DISPOSITIVOS</div>
+              <div className="settings-sidebar-section">{t('settings.devices')}</div>
               <button 
-                className={`settings-tab-btn ${activeTab === 'voice' ? 'active' : ''}`}
-                onClick={() => setActiveTab('voice')}
+                className={`settings-tab-btn ${activeTab === SettingsTabEnum.VOICE ? 'active' : ''}`}
+                onClick={() => setActiveTab(SettingsTabEnum.VOICE)}
               >
                 <Mic size={16} />
-                <span>Voz & Vídeo</span>
+                <span>{t('settings.voiceAndVideo')}</span>
               </button>
               <button 
-                className={`settings-tab-btn ${activeTab === 'appearance' ? 'active' : ''}`}
-                onClick={() => setActiveTab('appearance')}
+                className={`settings-tab-btn ${activeTab === SettingsTabEnum.APPEARANCE ? 'active' : ''}`}
+                onClick={() => setActiveTab(SettingsTabEnum.APPEARANCE)}
               >
                 <Palette size={16} />
-                <span>Aparência</span>
+                <span>{t('settings.appearance')}</span>
               </button>
               <button 
-                className={`settings-tab-btn ${activeTab === 'notifications' ? 'active' : ''}`}
-                onClick={() => setActiveTab('notifications')}
+                className={`settings-tab-btn ${activeTab === SettingsTabEnum.NOTIFICATIONS ? 'active' : ''}`}
+                onClick={() => setActiveTab(SettingsTabEnum.NOTIFICATIONS)}
               >
                 <Bell size={16} />
-                <span>Notificações</span>
+                <span>{t('settings.notifications')}</span>
               </button>
               <button 
-                className={`settings-tab-btn ${activeTab === 'privacy' ? 'active' : ''}`}
-                onClick={() => setActiveTab('privacy')}
+                className={`settings-tab-btn ${activeTab === SettingsTabEnum.PRIVACY ? 'active' : ''}`}
+                onClick={() => setActiveTab(SettingsTabEnum.PRIVACY)}
               >
                 <Shield size={16} />
-                <span>Privacidade</span>
+                <span>{t('settings.privacy')}</span>
               </button>
               <button 
-                className={`settings-tab-btn ${activeTab === 'keybinds' ? 'active' : ''}`}
-                onClick={() => setActiveTab('keybinds')}
+                className={`settings-tab-btn ${activeTab === SettingsTabEnum.KEYBINDS ? 'active' : ''}`}
+                onClick={() => setActiveTab(SettingsTabEnum.KEYBINDS)}
               >
                 <Keyboard size={16} />
-                <span>Keybinds</span>
+                <span>{t('settings.keybinds')}</span>
               </button>
             </div>
 
@@ -357,37 +358,37 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <span>DSP: 48kHz / 24bit</span>
               </div>
               <div className="version-pill">
-                <span>Versão do App</span>
+                <span>{t('settings.appVersion')}</span>
                 <span className="version-tag">{APP_VERSION}</span>
               </div>
               <button 
-                type="button"
+                type="button" 
                 className="settings-check-update-btn"
                 onClick={handleCheckUpdate}
                 disabled={checkingUpdate}
               >
                 <RefreshCw size={12} className={checkingUpdate ? 'spin-icon' : ''} />
-                <span>{updateFeedback || 'Verificar Atualizações'}</span>
+                <span>{updateFeedback || t('settings.checkUpdates')}</span>
               </button>
             </div>
           </div>
 
           {/* Content Area */}
           <div className="settings-content">
-            {activeTab === 'voice' && (
+            {activeTab === SettingsTabEnum.VOICE && (
               <>
                 {/* 2-Columns Grid for Input and Output */}
                 <div className="settings-grid-2">
                   {/* Entrada */}
                   <div className="settings-field-group">
-                    <label className="settings-field-label">Dispositivo de Entrada</label>
+                    <label className="settings-field-label">{t('settings.inputDevice')}</label>
                     <div className="settings-select-wrapper">
                       <select 
                         className="settings-select"
                         value={selectedInput}
                         onChange={e => setSelectedInput(e.target.value)}
                       >
-                        <option value="">Padrão do Sistema</option>
+                        <option value="">{t('settings.defaultDevice')}</option>
                         {audioInputs.map(device => (
                           <option key={device.deviceId} value={device.deviceId}>
                             {device.label || `Microfone (${device.deviceId.slice(0, 5)}...)`}
@@ -400,7 +401,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     {/* Teste do Microfone (Monitoramento) */}
                     <div className="settings-meter-box">
                       <div className="settings-meter-header">
-                        <span className="settings-meter-title">Teste do Microfone (Monitoramento)</span>
+                        <span className="settings-meter-title">{t('settings.micTest')}</span>
                         <span className="settings-meter-db">{dbLevel}</span>
                       </div>
                       <div className="settings-meter-track">
@@ -416,7 +417,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     {/* Sensibilidade de Entrada */}
                     <div className="settings-field-group" style={{ marginTop: '0.25rem' }}>
                       <div className="settings-slider-header">
-                        <span>Sensibilidade de Entrada</span>
+                        <span>{t('settings.micSensitivity')}</span>
                         <span className="settings-slider-value">{inputSensitivity}%</span>
                       </div>
                       <input 
@@ -432,14 +433,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                   {/* Saída */}
                   <div className="settings-field-group">
-                    <label className="settings-field-label">Dispositivo de Saída</label>
+                    <label className="settings-field-label">{t('settings.outputDevice')}</label>
                     <div className="settings-select-wrapper">
                       <select 
                         className="settings-select"
                         value={selectedOutput}
                         onChange={e => setSelectedOutput(e.target.value)}
                       >
-                        <option value="">Padrão do Sistema</option>
+                        <option value="">{t('settings.defaultDevice')}</option>
                         {audioOutputs.map(device => (
                           <option key={device.deviceId} value={device.deviceId}>
                             {device.label || `Alto-falante (${device.deviceId.slice(0, 5)}...)`}
@@ -454,7 +455,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <div className="settings-slider-header">
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                           <Volume2 size={15} color="#94a3b8" />
-                          Volume Principal da Rede
+                          {t('settings.outputVolume')}
                         </span>
                         <span className="settings-slider-value">{outputVolume}%</span>
                       </div>
@@ -475,14 +476,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       disabled={isTestingAudio}
                     >
                       <PlayCircle size={16} color="#34d399" />
-                      <span>{isTestingAudio ? 'Reproduzindo...' : 'Reproduzir Som de Teste'}</span>
+                      <span>{isTestingAudio ? t('settings.testingSound') : t('settings.testHeadphones')}</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Seção Processamento Neural & DSP */}
                 <div className="settings-field-group" style={{ marginTop: '0.5rem' }}>
-                  <div className="settings-section-title">Processamento Neural & DSP</div>
+                  <div className="settings-section-title">{t('settings.dspTitle')}</div>
 
                   {/* Crisp AI Noise Suppression */}
                   <div className="settings-neural-card">
@@ -491,11 +492,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
                     <div className="settings-neural-info">
                       <div className="settings-neural-title-row">
-                        <span className="settings-neural-title">Crisp AI Noise Suppression</span>
+                        <span className="settings-neural-title">{t('settings.noiseSuppression')}</span>
                         <span className="settings-neural-badge">RECOMENDADO</span>
                       </div>
                       <div className="settings-neural-desc">
-                        Isola automaticamente teclados mecânicos, ventiladores e ruídos de fundo por inferência local.
+                        {t('settings.noiseSuppressionDesc')}
                       </div>
                     </div>
                     <button 
@@ -515,8 +516,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       onClick={() => setEchoCancellation(!echoCancellation)}
                     >
                       <div>
-                        <div className="settings-subcard-title">Cancelamento de Eco</div>
-                        <div className="settings-subcard-desc">Impede retorno acústico em alto-falantes</div>
+                        <div className="settings-subcard-title">{t('settings.echoCancellation')}</div>
+                        <div className="settings-subcard-desc">{t('settings.echoCancellationDesc')}</div>
                       </div>
                       <div className={`settings-checkbox ${echoCancellation ? 'checked' : ''}`}>
                         <Check size={14} strokeWidth={3} />
@@ -528,8 +529,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       onClick={() => setAutoGainControl(!autoGainControl)}
                     >
                       <div>
-                        <div className="settings-subcard-title">Controle Automático de Ganho</div>
-                        <div className="settings-subcard-desc">Normaliza picos e vozes distantes</div>
+                        <div className="settings-subcard-title">{t('settings.autoGain')}</div>
+                        <div className="settings-subcard-desc">{t('settings.autoGainDesc')}</div>
                       </div>
                       <div className={`settings-checkbox ${autoGainControl ? 'checked' : ''}`}>
                         <Check size={14} strokeWidth={3} />
@@ -540,7 +541,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </>
             )}
 
-            {activeTab === 'appearance' && (
+            {activeTab === SettingsTabEnum.APPEARANCE && (
               <div className="settings-field-group" style={{ gap: '1.25rem' }}>
                 <div className="settings-field-group">
                   <label className="settings-field-label">{t('settings.language')}</label>
@@ -550,22 +551,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       value={i18n.language}
                       onChange={e => {
                         i18n.changeLanguage(e.target.value);
-                        localStorage.setItem('voxy-language', e.target.value);
+                        localStorage.setItem(StorageKeys.LANGUAGE, e.target.value);
                       }}
                     >
-                      <option value="pt">Português (Brasil)</option>
-                      <option value="en">English (US)</option>
+                      <option value={LanguageEnum.PT}>Português (Brasil)</option>
+                      <option value={LanguageEnum.EN}>English (US)</option>
                     </select>
                     <ChevronDown size={16} className="settings-select-chevron" />
                   </div>
                 </div>
 
                 <div className="settings-field-group">
-                  <label className="settings-field-label">Tema da Interface</label>
+                  <label className="settings-field-label">{t('settings.theme')}</label>
                   <div className="settings-subcard" style={{ cursor: 'default' }}>
                     <div>
                       <div className="settings-subcard-title">Obsidian Mint</div>
-                      <div className="settings-subcard-desc">Dark Glass com realces luminosos em esmeralda</div>
+                      <div className="settings-subcard-desc">Dark Glass</div>
                     </div>
                     <span className="settings-neural-badge">ATIVO</span>
                   </div>
@@ -573,15 +574,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             )}
 
-            {activeTab === 'notifications' && (
+            {activeTab === SettingsTabEnum.NOTIFICATIONS && (
               <div className="settings-field-group" style={{ gap: '1rem' }}>
                 <div 
                   className="settings-subcard"
                   onClick={() => setNotifyMessages(!notifyMessages)}
                 >
                   <div>
-                    <div className="settings-subcard-title">Notificações no Desktop</div>
-                    <div className="settings-subcard-desc">Exibe avisos do Windows ao receber mensagens diretas</div>
+                    <div className="settings-subcard-title">{t('settings.desktopNotifications')}</div>
+                    <div className="settings-subcard-desc">{t('settings.desktopNotificationsDesc')}</div>
                   </div>
                   <div className={`settings-checkbox ${notifyMessages ? 'checked' : ''}`}>
                     <Check size={14} strokeWidth={3} />
@@ -593,8 +594,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   onClick={() => setNotifySounds(!notifySounds)}
                 >
                   <div>
-                    <div className="settings-subcard-title">Sons de Alerta e Conexão</div>
-                    <div className="settings-subcard-desc">Reproduz sons ao conectar, desconectar ou receber mensagens</div>
+                    <div className="settings-subcard-title">{t('settings.alertSounds')}</div>
+                    <div className="settings-subcard-desc">{t('settings.alertSoundsDesc')}</div>
                   </div>
                   <div className={`settings-checkbox ${notifySounds ? 'checked' : ''}`}>
                     <Check size={14} strokeWidth={3} />
@@ -603,15 +604,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             )}
 
-            {activeTab === 'privacy' && (
+            {activeTab === SettingsTabEnum.PRIVACY && (
               <div className="settings-field-group" style={{ gap: '1rem' }}>
                 <div 
                   className="settings-subcard"
                   onClick={() => setGamePresence(!gamePresence)}
                 >
                   <div>
-                    <div className="settings-subcard-title">Detecção Nativa de Jogos</div>
-                    <div className="settings-subcard-desc">Detecta jogos 3D em execução para otimização de stream WGC</div>
+                    <div className="settings-subcard-title">{t('settings.gameDetection')}</div>
+                    <div className="settings-subcard-desc">{t('settings.gameDetectionDesc')}</div>
                   </div>
                   <div className={`settings-checkbox ${gamePresence ? 'checked' : ''}`}>
                     <Check size={14} strokeWidth={3} />
@@ -620,12 +621,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             )}
 
-            {activeTab === 'keybinds' && (
+            {activeTab === SettingsTabEnum.KEYBINDS && (
               <div className="settings-field-group" style={{ gap: '0.85rem' }}>
                 <div className="settings-subcard" style={{ cursor: 'default' }}>
                   <div>
-                    <div className="settings-subcard-title">Alternar Microfone (Mudo)</div>
-                    <div className="settings-subcard-desc">Atalho global para silenciar ou ativar seu microfone</div>
+                    <div className="settings-subcard-title">{t('settings.muteKeybind')}</div>
+                    <div className="settings-subcard-desc">{t('settings.muteKeybindDesc')}</div>
                   </div>
                   <kbd style={{ background: 'rgba(255,255,255,0.08)', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontFamily: 'monospace' }}>
                     Ctrl + Shift + M
@@ -634,8 +635,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 <div className="settings-subcard" style={{ cursor: 'default' }}>
                   <div>
-                    <div className="settings-subcard-title">Desativar Áudio (Deafen)</div>
-                    <div className="settings-subcard-desc">Atalho para silenciar áudio de entrada e saída simultaneamente</div>
+                    <div className="settings-subcard-title">{t('settings.deafenKeybind')}</div>
+                    <div className="settings-subcard-desc">{t('settings.deafenKeybindDesc')}</div>
                   </div>
                   <kbd style={{ background: 'rgba(255,255,255,0.08)', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontFamily: 'monospace' }}>
                     Ctrl + Shift + D
@@ -650,16 +651,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="settings-footer">
           <button className="settings-restore-btn" onClick={handleRestoreDefaults}>
             <RotateCcw size={14} />
-            <span>Restaurar Padrões de Áudio</span>
+            <span>{t('settings.resetFilters')}</span>
           </button>
 
           <div className="settings-footer-actions">
             <button className="settings-cancel-btn" onClick={onClose}>
-              {t('voice.cancel')}
+              {t('common.cancel')}
             </button>
             <button className="settings-save-btn" onClick={handleSave}>
               <Check size={16} strokeWidth={2.5} />
-              <span>Salvar Alterações</span>
+              <span>{t('common.save')}</span>
             </button>
           </div>
         </div>

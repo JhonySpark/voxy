@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Download, CheckCircle, RefreshCw, X, AlertCircle } from 'lucide-react';
 import { ipcRenderer } from 'electron';
+import { useTranslation } from 'react-i18next';
+import { AppUpdateStatus, IpcChannels } from '../core/enums';
 import './UpdateNotification.css';
 
 interface UpdateProgress {
@@ -11,7 +13,8 @@ interface UpdateProgress {
 }
 
 export const UpdateNotification: React.FC = () => {
-  const [status, setStatus] = useState<'idle' | 'available' | 'downloading' | 'downloaded' | 'error'>('idle');
+  const { t } = useTranslation();
+  const [status, setStatus] = useState<AppUpdateStatus>(AppUpdateStatus.IDLE);
   const [version, setVersion] = useState<string>('');
   const [progress, setProgress] = useState<UpdateProgress>({
     percent: 0,
@@ -26,46 +29,46 @@ export const UpdateNotification: React.FC = () => {
 
     const onAvailable = (_: unknown, data: { version: string }) => {
       setVersion(data.version);
-      setStatus('available');
+      setStatus(AppUpdateStatus.AVAILABLE);
       setDismissed(false);
     };
 
     const onProgress = (_: unknown, data: UpdateProgress) => {
       setProgress(data);
-      setStatus('downloading');
+      setStatus(AppUpdateStatus.DOWNLOADING);
       setDismissed(false);
     };
 
     const onDownloaded = (_: unknown, data: { version: string }) => {
       setVersion(data.version);
-      setStatus('downloaded');
+      setStatus(AppUpdateStatus.DOWNLOADED);
       setDismissed(false);
     };
 
     const onError = () => {
-      setStatus('error');
+      setStatus(AppUpdateStatus.ERROR);
     };
 
-    ipcRenderer.on('app-update-available', onAvailable);
-    ipcRenderer.on('app-update-progress', onProgress);
-    ipcRenderer.on('app-update-downloaded', onDownloaded);
-    ipcRenderer.on('app-update-error', onError);
+    ipcRenderer.on(IpcChannels.APP_UPDATE_AVAILABLE, onAvailable);
+    ipcRenderer.on(IpcChannels.APP_UPDATE_PROGRESS, onProgress);
+    ipcRenderer.on(IpcChannels.APP_UPDATE_DOWNLOADED, onDownloaded);
+    ipcRenderer.on(IpcChannels.APP_UPDATE_ERROR, onError);
 
     return () => {
-      ipcRenderer.removeListener('app-update-available', onAvailable);
-      ipcRenderer.removeListener('app-update-progress', onProgress);
-      ipcRenderer.removeListener('app-update-downloaded', onDownloaded);
-      ipcRenderer.removeListener('app-update-error', onError);
+      ipcRenderer.removeListener(IpcChannels.APP_UPDATE_AVAILABLE, onAvailable);
+      ipcRenderer.removeListener(IpcChannels.APP_UPDATE_PROGRESS, onProgress);
+      ipcRenderer.removeListener(IpcChannels.APP_UPDATE_DOWNLOADED, onDownloaded);
+      ipcRenderer.removeListener(IpcChannels.APP_UPDATE_ERROR, onError);
     };
   }, []);
 
-  if (status === 'idle' || dismissed) {
+  if (status === AppUpdateStatus.IDLE || dismissed) {
     return null;
   }
 
   const handleInstall = () => {
     try {
-      ipcRenderer.invoke('RESTART_AND_INSTALL');
+      ipcRenderer.invoke(IpcChannels.RESTART_AND_INSTALL);
     } catch (err) {
       console.error('Erro ao reiniciar para instalar:', err);
     }
@@ -80,10 +83,10 @@ export const UpdateNotification: React.FC = () => {
     <div className="update-notification-toast">
       <div className="update-toast-header">
         <div className="update-toast-left">
-          <div className={`update-toast-icon ${status === 'downloading' ? 'downloading' : ''}`}>
-            {status === 'downloaded' ? (
+          <div className={`update-toast-icon ${status === AppUpdateStatus.DOWNLOADING ? 'downloading' : ''}`}>
+            {status === AppUpdateStatus.DOWNLOADED ? (
               <CheckCircle size={18} />
-            ) : status === 'error' ? (
+            ) : status === AppUpdateStatus.ERROR ? (
               <AlertCircle size={18} color="#ffb4ab" />
             ) : (
               <Download size={18} />
@@ -91,20 +94,20 @@ export const UpdateNotification: React.FC = () => {
           </div>
           <div>
             <div className="update-toast-title">
-              {status === 'downloaded'
-                ? `Atualização pronta (v${version})`
-                : status === 'error'
-                ? 'Falha ao baixar atualização'
-                : `Nova versão encontrada! (v${version})`}
+              {status === AppUpdateStatus.DOWNLOADED
+                ? t('update.ready', { version })
+                : status === AppUpdateStatus.ERROR
+                ? t('update.failed')
+                : t('update.available', { version })}
             </div>
             <div className="update-toast-subtitle">
-              {status === 'downloaded'
-                ? 'O download foi concluído com sucesso.'
-                : status === 'downloading'
-                ? `Baixando em segundo plano... ${progress.percent}%`
-                : status === 'error'
-                ? 'Verifique sua conexão ou tente mais tarde.'
-                : 'Iniciando download automático...'}
+              {status === AppUpdateStatus.DOWNLOADED
+                ? t('update.readyDesc')
+                : status === AppUpdateStatus.DOWNLOADING
+                ? t('update.downloadingDesc', { percent: progress.percent })
+                : status === AppUpdateStatus.ERROR
+                ? t('update.failedDesc')
+                : t('update.startingDesc')}
             </div>
           </div>
         </div>
@@ -112,13 +115,13 @@ export const UpdateNotification: React.FC = () => {
         <button 
           className="update-toast-close"
           onClick={() => setDismissed(true)}
-          title="Fechar aviso"
+          title={t('common.close')}
         >
           <X size={15} />
         </button>
       </div>
 
-      {status === 'downloading' && (
+      {status === AppUpdateStatus.DOWNLOADING && (
         <div className="update-progress-container">
           <div className="update-progress-bar-bg">
             <div 
@@ -127,26 +130,26 @@ export const UpdateNotification: React.FC = () => {
             />
           </div>
           <div className="update-progress-stats">
-            <span>{formatBytes(progress.transferred)} de {formatBytes(progress.total)}</span>
+            <span>{formatBytes(progress.transferred)} / {formatBytes(progress.total)}</span>
             <span>{progress.bytesPerSecond ? `${(progress.bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s` : ''}</span>
           </div>
         </div>
       )}
 
-      {status === 'downloaded' && (
+      {status === AppUpdateStatus.DOWNLOADED && (
         <div className="update-toast-actions">
           <button 
             className="update-btn-dismiss"
             onClick={() => setDismissed(true)}
           >
-            Depois
+            {t('update.later')}
           </button>
           <button 
             className="update-btn-install"
             onClick={handleInstall}
           >
             <RefreshCw size={13} />
-            <span>Reiniciar Agora</span>
+            <span>{t('update.restartNow')}</span>
           </button>
         </div>
       )}
