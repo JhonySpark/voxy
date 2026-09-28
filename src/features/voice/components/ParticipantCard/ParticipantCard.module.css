@@ -8,6 +8,10 @@
   align-items: center;
   justify-content: center;
   aspect-ratio: 4 / 3;
+  width: 100%;
+  min-width: 260px;
+  max-width: 540px;
+  flex: 1 1 320px;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   user-select: none;
