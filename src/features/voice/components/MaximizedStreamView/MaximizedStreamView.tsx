@@ -15,6 +15,7 @@ interface MaximizedStreamViewProps {
     isStreaming: boolean;
     hasVideo: boolean;
     isMuted: boolean;
+    nativeTelemetry?: any;
   };
   isWatching: boolean;
   streamVolume: number;
@@ -86,7 +87,7 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
         {participant.hasVideo ? (
           <>
             <VideoRenderer track={participant.track} className={styles.videoElement} />
-            {participant.track && <DevStreamDiagnostics track={participant.track} />}
+            {participant.track && <DevStreamDiagnostics track={participant.track} nativeTelemetry={participant.nativeTelemetry} />}
           </>
         ) : (
           <div className={styles.avatarPlaceholder}>

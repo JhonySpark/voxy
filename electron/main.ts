@@ -1,11 +1,28 @@
 import { app, BrowserWindow, ipcMain, desktopCapturer, dialog } from 'electron'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { spawn, ChildProcess } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { autoUpdater } from 'electron-updater'
 import { getCategorizedSources } from './gameDetector'
 import os from 'node:os'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+
+let nativeStreamProcess: ChildProcess | null = null
+
+function findNativeStreamerBin(): string | null {
+  const candidatePaths = [
+    join(process.resourcesPath, 'bin/voxy_native_streamer.exe'),
+    join(process.resourcesPath, 'app.asar.unpacked/electron/bin/voxy_native_streamer.exe'),
+    join(__dirname, 'bin/voxy_native_streamer.exe'),
+    join(__dirname, '../electron/bin/voxy_native_streamer.exe'),
+    join(app.getAppPath(), 'electron/bin/voxy_native_streamer.exe'),
+    join(process.cwd(), 'electron/bin/voxy_native_streamer.exe'),
+    join(process.cwd(), 'frontend/electron/bin/voxy_native_streamer.exe')
+  ]
+  return candidatePaths.find(p => existsSync(p)) || null
+}
 
 // Eleva a prioridade de agendamento do processo no Windows para que o jogo 3D não congele as threads de captura e WebRTC
 try {
@@ -67,6 +84,97 @@ app.whenReady().then(() => {
   });
 
   createWindow();
+
+  // IPC para o Pipeline Nativo C++ (WGC + NVENC + LiveKit C++ SDK)
+  ipcMain.handle('IS_NATIVE_STREAM_SUPPORTED', () => {
+    return process.platform === 'win32' && !!findNativeStreamerBin();
+  });
+
+  ipcMain.handle('START_NATIVE_STREAM', async (_event, opts: {
+    url: string;
+    token: string;
+    hwnd: string | number;
+    width?: number;
+    height?: number;
+    fps?: number;
+    bitrate?: number;
+  }) => {
+    const binPath = findNativeStreamerBin();
+    if (!binPath) {
+      throw new Error('voxy_native_streamer.exe não encontrado');
+    }
+
+    if (nativeStreamProcess) {
+      try {
+        nativeStreamProcess.stdin?.write('stop\n');
+        nativeStreamProcess.kill();
+      } catch (_) {}
+      nativeStreamProcess = null;
+    }
+
+    const args = [
+      '--url', opts.url,
+      '--token', opts.token,
+      '--hwnd', String(opts.hwnd),
+      '--width', String(opts.width || 1920),
+      '--height', String(opts.height || 1080),
+      '--fps', String(opts.fps || 60),
+      '--bitrate', String(opts.bitrate || 8000000),
+    ];
+
+    console.log('[NativeStream] Disparando streamer nativo C++:', binPath, args.join(' '));
+
+    const child = spawn(binPath, args, {
+      cwd: dirname(binPath),
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+
+    nativeStreamProcess = child;
+
+    child.stdout?.on('data', (chunk) => {
+      const text = chunk.toString();
+      console.log('[NativeStream STDOUT]', text.trim());
+      win?.webContents.send('NATIVE_STREAM_LOG', { type: 'stdout', text: text.trim() });
+      const match = text.match(/\[VOXY_TELEMETRY\]\s*(\{.*\})/);
+      if (match) {
+        try {
+          const telemetry = JSON.parse(match[1]);
+          win?.webContents.send('NATIVE_STREAM_TELEMETRY', telemetry);
+        } catch (_) {}
+      }
+    });
+
+    child.stderr?.on('data', (chunk) => {
+      const text = chunk.toString().trim();
+      console.error('[NativeStream STDERR]', text);
+      win?.webContents.send('NATIVE_STREAM_LOG', { type: 'stderr', text });
+    });
+
+    child.on('exit', (code, signal) => {
+      console.log(`[NativeStream] Processo encerrou (code: ${code}, signal: ${signal})`);
+      win?.webContents.send('NATIVE_STREAM_LOG', { type: 'exit', text: `Processo encerrou (code: ${code}, signal: ${signal})` });
+      if (nativeStreamProcess === child) {
+        nativeStreamProcess = null;
+        win?.webContents.send('NATIVE_STREAM_STOPPED', { code, signal });
+      }
+    });
+
+    return { success: true };
+  });
+
+  ipcMain.handle('STOP_NATIVE_STREAM', async () => {
+    if (!nativeStreamProcess) return { success: true };
+    try {
+      nativeStreamProcess.stdin?.write('stop\n');
+      setTimeout(() => {
+        if (nativeStreamProcess) {
+          nativeStreamProcess.kill();
+          nativeStreamProcess = null;
+        }
+      }, 1500);
+    } catch (_) {}
+    return { success: true };
+  });
 
   // IPC para checagem e instalação de atualizações
   ipcMain.handle('CHECK_FOR_UPDATES', async () => {

@@ -16,6 +16,7 @@ interface ParticipantCardProps {
     hasVideo: boolean;
     isMuted: boolean;
     lkParticipant: any;
+    nativeTelemetry?: any;
   };
   isMaximized: boolean;
   isHorizontal?: boolean;
@@ -75,7 +76,7 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
             muted
             className={styles.videoElement}
           />
-          {p.track && <DevStreamDiagnostics track={p.track} />}
+          {p.track && <DevStreamDiagnostics track={p.track} nativeTelemetry={p.nativeTelemetry} />}
         </div>
       ) : p.isStreaming && !p.isLocal ? (
         /* Stream não assistida ainda */

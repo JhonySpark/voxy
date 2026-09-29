@@ -4,11 +4,11 @@ import {
   useParticipants,
   useLocalParticipant,
   useRoomContext,
+  useTracks,
   RoomAudioRenderer,
 } from '@livekit/components-react';
 import {
   Track,
-  TrackEvent,
   LocalVideoTrack,
   LocalAudioTrack,
   VideoQuality,
@@ -42,6 +42,7 @@ export interface VoiceRoomProps {
   userVolumes: Record<string, number>;
   onVolumeChange: (id: string, volume: number) => void;
   onSpeakersChange?: (speakers: string[]) => void;
+  livekitUrl?: string;
 }
 
 // Global hook in RTCPeerConnection to inject high bitrate floor and ceiling in SDP WebRTC
@@ -52,18 +53,8 @@ if (typeof window !== 'undefined' && window.RTCPeerConnection && !(window as any
     if (desc && desc.sdp && (desc.type === 'offer' || desc.type === 'answer')) {
       try {
         let sdp = desc.sdp;
+        // Injeta limite de bandwidth na seção de vídeo de forma segura sem quebrar o BUNDLE
         sdp = sdp.replace(/(m=video\s+\d+\s+[^\r\n]*)/gi, `$1\r\nb=AS:16000\r\nb=TIAS:16000000`);
-
-        const codecMatch = sdp.match(/a=rtpmap:(\d+)\s+(?:VP8|H264)\/90000/i);
-        if (codecMatch) {
-          const pt = codecMatch[1];
-          const fmtpRegex = new RegExp(`(a=fmtp:${pt}\\s+[^\\r\\n]*)`, 'i');
-          if (fmtpRegex.test(sdp)) {
-            sdp = sdp.replace(fmtpRegex, `$1;x-google-min-bitrate=4500;x-google-max-bitrate=16000;x-google-start-bitrate=8000`);
-          } else {
-            sdp = sdp.replace(codecMatch[0], `${codecMatch[0]}\r\na=fmtp:${pt} x-google-min-bitrate=4500;x-google-max-bitrate=16000;x-google-start-bitrate=8000`);
-          }
-        }
         desc = new RTCSessionDescription({ type: desc.type, sdp }) as any;
       } catch (err) {
         console.warn('[Voxy WebRTC] Erro ao otimizar SDP:', err);
@@ -168,7 +159,7 @@ export const VoiceRoom: React.FC<VoiceRoomProps> = (props) => {
       data-lk-theme="default"
       style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
     >
-      <VoiceRoomInner {...props} />
+      <VoiceRoomInner {...props} livekitUrl={livekitUrl} />
       <RoomAudioRenderer />
     </LiveKitRoom>
   );
@@ -180,12 +171,17 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
   onMuteChange,
   userVolumes,
   onSpeakersChange,
+  livekitUrl,
+  channelId,
 }) => {
   const { t } = useTranslation();
   const room = useRoomContext();
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
+  const screenTracks = useTracks([Track.Source.ScreenShare]);
   const [screenTrack, setScreenTrack] = useState<LocalVideoTrack | null>(null);
+  const [isNativeStreaming, setIsNativeStreaming] = useState(false);
+  const [nativeTelemetry, setNativeTelemetry] = useState<{ fps: number; mbps: number; encodeMs: number; totalFrames: number } | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [showSources, setShowSources] = useState(false);
   const [categorizedSources, setCategorizedSources] = useState<{ games: any[]; windows: any[]; screens: any[] }>({
@@ -203,10 +199,47 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
   const prevParticipantsCount = useRef(0);
   const isInitialLoad = useRef(true);
 
+  // Escuta telemetria do Pipeline Nativo C++ (WGC + NVENC + LiveKit C++)
+  useEffect(() => {
+    if (!ipcRenderer) return;
+
+    const handleTelemetry = (_event: any, data: any) => {
+      setNativeTelemetry(data);
+    };
+
+    const handleStopped = (_event: any, data: any) => {
+      console.warn('[Voxy Stream] Stream nativo encerrado:', data);
+      setIsNativeStreaming(false);
+      setNativeTelemetry(null);
+    };
+
+    const handleNativeLog = (_event: any, data: { type: string; text: string }) => {
+      if (data.type === 'stderr') {
+        console.error(`%c[NativeStream C++] ${data.text}`, 'color: #ef4444; font-weight: bold;');
+      } else if (data.type === 'exit') {
+        console.warn(`%c[NativeStream C++] ${data.text}`, 'color: #eab308; font-weight: bold;');
+      } else {
+        console.log(`%c[NativeStream C++] ${data.text}`, 'color: #10b981;');
+      }
+    };
+
+    ipcRenderer.on('NATIVE_STREAM_TELEMETRY', handleTelemetry);
+    ipcRenderer.on('NATIVE_STREAM_STOPPED', handleStopped);
+    ipcRenderer.on('NATIVE_STREAM_LOG', handleNativeLog);
+
+    return () => {
+      ipcRenderer.removeListener('NATIVE_STREAM_TELEMETRY', handleTelemetry);
+      ipcRenderer.removeListener('NATIVE_STREAM_STOPPED', handleStopped);
+      ipcRenderer.removeListener('NATIVE_STREAM_LOG', handleNativeLog);
+    };
+  }, []);
+
   // Notifica participantes para a barra/sidebar e toca som ao conectar novo participante
   useEffect(() => {
+    const realParticipants = participants.filter((p) => !p.identity.endsWith('#screen'));
+
     onParticipantsChange(
-      participants.map((p) => ({
+      realParticipants.map((p) => ({
         id: p.identity,
         username: p.name || p.identity,
         isMuted: !p.isMicrophoneEnabled,
@@ -214,14 +247,14 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
     );
 
     if (!isInitialLoad.current && prevParticipantsCount.current > 0) {
-      if (participants.length > prevParticipantsCount.current) {
+      if (realParticipants.length > prevParticipantsCount.current) {
         const audio = new Audio(chatConnectedSound);
         audio.volume = 0.3;
         audio.play().catch(console.error);
       }
     }
 
-    prevParticipantsCount.current = participants.length;
+    prevParticipantsCount.current = realParticipants.length;
     isInitialLoad.current = false;
   }, [participants, onParticipantsChange]);
 
@@ -245,11 +278,20 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
       if (!p.isLocal) {
         const screenVideoPub = p.getTrackPublication(Track.Source.ScreenShare) as any;
         const screenAudioPub = p.getTrackPublication(Track.Source.ScreenShareAudio) as any;
-        const isWatching = watchingStreams.has(p.identity);
+        
+        // Verifica se é a própria tela nativa do usuário local
+        const isOwnScreen = localParticipant && p.identity === `${localParticipant.identity}#screen`;
+        
+        // Se for um participante de tela (#screen), o ID base é o ID do usuário correspondente
+        const baseId = p.identity.endsWith('#screen') ? p.identity.slice(0, -'#screen'.length) : p.identity;
+        
+        // Deve subscrever se for a própria tela ou se o usuário estiver assistindo
+        const isWatching = isOwnScreen || watchingStreams.has(baseId) || watchingStreams.has(p.identity);
         
         [screenVideoPub, screenAudioPub].forEach(pub => {
           if (pub) {
             if (typeof pub.setSubscribed === 'function' && pub.isSubscribed !== isWatching) {
+              console.log('[Voxy Stream] Configurando subscrição de', p.identity, '-> isWatching =', isWatching);
               pub.setSubscribed(isWatching);
             }
             if (isWatching && pub.kind === 'video') {
@@ -264,7 +306,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         });
       }
     });
-  }, [participants, watchingStreams]);
+  }, [participants, watchingStreams, localParticipant]);
 
   const toggleWatchStream = (id: string) => {
     setWatchingStreams((prev) => {
@@ -317,6 +359,17 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
   };
 
   const toggleScreenShare = async () => {
+    if (isNativeStreaming) {
+      try {
+        await ipcRenderer?.invoke('STOP_NATIVE_STREAM');
+      } catch (err) {
+        console.error('Error stopping native stream', err);
+      }
+      setIsNativeStreaming(false);
+      setNativeTelemetry(null);
+      return;
+    }
+
     if (screenTrack) {
       try {
         await localParticipant.unpublishTrack(screenTrack);
@@ -388,8 +441,10 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
           }
         }
 
-        lkTrack.on(TrackEvent.Muted, () => toggleScreenShare());
-        vTrack.onended = () => toggleScreenShare();
+        vTrack.onended = () => {
+          console.log('[Voxy Stream] Captura displayMedia encerrada pelo usuário/sistema.');
+          toggleScreenShare();
+        };
 
         if (aTrack) {
           const lkAudioTrack = new LocalAudioTrack(aTrack);
@@ -406,10 +461,74 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
 
   const selectSource = async (sourceId: string, shareAudio: boolean = false) => {
     setShowSources(false);
+    console.log('[Voxy Stream] selectSource chamado para fonte:', sourceId, { shareAudio });
+
     try {
       const is1080 = streamRes === StreamResolution.FHD_1080;
       const targetFps = streamFps === StreamFramerate.FPS_60 ? 60 : 30;
+      const isWindow = sourceId.startsWith('window:');
+      const hwndMatch = sourceId.match(/^window:(\d+)/);
 
+      // Checa se o Pipeline Nativo C++ (WGC + NVENC + LiveKit C++) está disponível
+      const isNativeSupported = isWindow && hwndMatch && ipcRenderer 
+        ? await ipcRenderer.invoke('IS_NATIVE_STREAM_SUPPORTED').catch((err: unknown) => {
+            console.warn('[Voxy Stream] Erro ao checar IS_NATIVE_STREAM_SUPPORTED:', err);
+            return false;
+          })
+        : false;
+
+      console.log('[Voxy Stream] Avaliação do stream nativo:', { isWindow, hwndMatch: hwndMatch?.[1], isNativeSupported });
+
+      if (isNativeSupported && hwndMatch) {
+        console.log('[Voxy Stream] Ativando Pipeline Nativo Zero-Copy (WGC + NVENC + LiveKit C++)...');
+        const hwnd = hwndMatch[1];
+        const targetWidth = is1080 ? 1920 : 1280;
+        const targetHeight = is1080 ? 1080 : 720;
+        const targetBitrate = is1080 ? (targetFps === 60 ? 15000000 : 10000000) : (targetFps === 60 ? 10000000 : 8000000);
+
+        try {
+          console.log('[Voxy Stream] Solicitando token de tela no backend...');
+          const res = await api.post(`${ApiRoutes.CHANNELS}/${channelId}/voice-token?screen=true`);
+          const streamToken = res.data.token;
+          console.log('[Voxy Stream] Token recebido com sucesso. Disparando voxy_native_streamer...');
+
+          await ipcRenderer.invoke('START_NATIVE_STREAM', {
+            url: livekitUrl,
+            token: streamToken,
+            hwnd,
+            width: targetWidth,
+            height: targetHeight,
+            fps: targetFps,
+            bitrate: targetBitrate,
+          });
+
+          setIsNativeStreaming(true);
+
+          if (shareAudio) {
+            try {
+              const aStream = await (navigator.mediaDevices as any).getUserMedia({
+                audio: { mandatory: { chromeMediaSource: 'desktop' } },
+                video: false,
+              });
+              const aTrack = aStream.getAudioTracks()[0];
+              if (aTrack) {
+                const lkAudioTrack = new LocalAudioTrack(aTrack);
+                await localParticipant.publishTrack(lkAudioTrack, {
+                  name: 'screen_audio',
+                  source: Track.Source.ScreenShareAudio,
+                });
+              }
+            } catch (err) {
+              console.warn('[Voxy] Falha ao capturar áudio do sistema:', err);
+            }
+          }
+          return;
+        } catch (err) {
+          console.error('[Voxy] Falha ao iniciar stream nativo, fazendo fallback para WebRTC padrão:', err);
+        }
+      }
+
+      console.log('[Voxy Stream] Usando pipeline WebRTC padrão para captura de desktop...');
       const constraints: any = {
         audio: shareAudio
           ? {
@@ -422,8 +541,11 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
           mandatory: {
             chromeMediaSource: 'desktop',
             chromeMediaSourceId: sourceId,
+            minWidth: is1080 ? 1920 : 1280,
             maxWidth: is1080 ? 3840 : 2560,
+            minHeight: is1080 ? 1080 : 720,
             maxHeight: is1080 ? 1080 : 720,
+            minFrameRate: targetFps,
             maxFrameRate: targetFps,
           },
         },
@@ -438,6 +560,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
       }
 
       const lkTrack = new LocalVideoTrack(vTrack);
+      lkTrack.source = Track.Source.ScreenShare;
       const targetBitrate = is1080 ? (targetFps === 60 ? 12000000 : 8000000) : (targetFps === 60 ? 7000000 : 5000000);
       const minBitrate = is1080 ? (targetFps === 60 ? 6000000 : 4000000) : (targetFps === 60 ? 3500000 : 2500000);
 
@@ -481,8 +604,10 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         }
       }
 
-      lkTrack.on(TrackEvent.Muted, () => toggleScreenShare());
-      vTrack.onended = () => toggleScreenShare();
+      vTrack.onended = () => {
+        console.log('[Voxy Stream] Captura getUserMedia encerrada pelo usuário/sistema.');
+        toggleScreenShare();
+      };
 
       if (aTrack && shareAudio) {
         const lkAudioTrack = new LocalAudioTrack(aTrack);
@@ -492,35 +617,67 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         });
       }
     } catch (e) {
-      console.error(e);
+      console.error('[Voxy Stream] Erro em selectSource:', e);
     }
   };
 
-  const allParticipants = participants.map((p) => {
-    const screenSharePub = p.getTrackPublication(Track.Source.ScreenShare);
-    const hasScreenShare = screenSharePub?.isSubscribed && screenSharePub?.videoTrack;
-    const isStreaming = p.isLocal ? !!screenTrack : !!screenSharePub;
-    const isWatching = p.isLocal || watchingStreams.has(p.identity);
-
-    let activeTrack: any = null;
-
-    if (p.isLocal && screenTrack) {
-      activeTrack = screenTrack;
-    } else if (hasScreenShare && isWatching) {
-      activeTrack = screenSharePub.videoTrack;
+  // Agrupa participantes virtuais de tela (`userId#screen`)
+  const screenParticipants = new Map<string, any>();
+  participants.forEach((p) => {
+    if (p.identity.endsWith('#screen')) {
+      const baseId = p.identity.slice(0, -'#screen'.length);
+      screenParticipants.set(baseId, p);
     }
-
-    return {
-      id: p.identity,
-      username: p.isLocal ? t('chat.you') : p.name || p.identity,
-      isLocal: p.isLocal,
-      track: activeTrack,
-      isStreaming,
-      hasVideo: !!activeTrack,
-      isMuted: p.isLocal ? isMuted : !p.isMicrophoneEnabled,
-      lkParticipant: p,
-    };
   });
+
+  // Mapeia tracks de tela recebidas ativas via useTracks
+  const screenTrackMap = new Map<string, any>();
+  screenTracks.forEach((tr) => {
+    const vTrack = tr.publication?.videoTrack || (tr as any).track;
+    if (vTrack) {
+      screenTrackMap.set(tr.participant.identity, vTrack);
+    }
+  });
+
+  const allParticipants = participants
+    .filter((p) => !p.identity.endsWith('#screen'))
+    .map((p) => {
+      const screenPart = screenParticipants.get(p.identity);
+      const screenPartPub = screenPart?.getTrackPublication(Track.Source.ScreenShare);
+      const directPub = p.getTrackPublication(Track.Source.ScreenShare);
+      const screenSharePub = screenPartPub || directPub;
+
+      const remoteScreenVideo = screenTrackMap.get(`${p.identity}#screen`) 
+        || screenTrackMap.get(p.identity) 
+        || screenSharePub?.videoTrack;
+
+      const isStreaming = p.isLocal ? (!!screenTrack || isNativeStreaming || !!screenSharePub) : !!screenSharePub;
+      const isWatching = p.isLocal || watchingStreams.has(p.identity);
+
+      let activeTrack: any = null;
+
+      if (p.isLocal) {
+        if (screenTrack) {
+          activeTrack = screenTrack;
+        } else if (remoteScreenVideo) {
+          activeTrack = remoteScreenVideo;
+        }
+      } else if (remoteScreenVideo && isWatching) {
+        activeTrack = remoteScreenVideo;
+      }
+
+      return {
+        id: p.identity,
+        username: p.isLocal ? t('chat.you') : p.name || p.identity,
+        isLocal: p.isLocal,
+        track: activeTrack,
+        isStreaming,
+        hasVideo: !!activeTrack,
+        isMuted: p.isLocal ? isMuted : !p.isMicrophoneEnabled,
+        lkParticipant: p,
+        nativeTelemetry: p.isLocal ? nativeTelemetry : null,
+      };
+    });
 
   const activeMaximizedId = maximizedId;
   const maximizedParticipant = allParticipants.find((p) => p.id === activeMaximizedId);
@@ -587,10 +744,40 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         </div>
       )}
 
+      {/* Floating HUD for Native Streamer */}
+      {isNativeStreaming && (
+        <div style={{
+          position: 'absolute',
+          top: 12,
+          right: 12,
+          background: 'rgba(15, 23, 42, 0.88)',
+          border: '1px solid rgba(34, 197, 94, 0.45)',
+          borderRadius: 8,
+          padding: '6px 14px',
+          color: '#22c55e',
+          fontSize: 12,
+          fontWeight: 600,
+          zIndex: 60,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(8px)',
+        }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block', boxShadow: '0 0 8px #22c55e' }} />
+          <span>GPU NVENC Nativo (Zero-Copy)</span>
+          {nativeTelemetry && (
+            <span style={{ color: '#94a3b8', fontWeight: 400, borderLeft: '1px solid rgba(255,255,255,0.15)', paddingLeft: 8 }}>
+              {nativeTelemetry.fps} FPS • {nativeTelemetry.mbps?.toFixed(1)} Mbps • {nativeTelemetry.encodeMs?.toFixed(1)}ms
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Control Bar */}
       <VoiceControlBar
         isMuted={isMuted}
-        isSharingScreen={!!screenTrack}
+        isSharingScreen={!!screenTrack || isNativeStreaming}
         onToggleMute={toggleMute}
         onToggleScreenShare={toggleScreenShare}
         onDisconnect={onDisconnect}

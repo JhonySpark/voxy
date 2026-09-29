@@ -18,7 +18,7 @@
  * - Frames capturados diretamente na memória VRAM da GPU dedicada
  * - Sem cópias desnecessárias para CPU ou RAM do sistema
  * - Suporta jogos em modo janela sem borda e tela cheia
- * - Livre de interferência de anti-cheats (Vanguard, EAC, BattlEye) pois usa a API oficial do Windows
+ * - Livre de interferência de anti-cheats (Vanguard, EAC, BattlEye)
  */
 class WGCCaptureEngine {
 public:
@@ -27,20 +27,27 @@ public:
     WGCCaptureEngine();
     ~WGCCaptureEngine();
 
-    // Inicializa o dispositivo Direct3D 11 na GPU dedicada
-    bool InitializeD3D();
+    // Inicializa o dispositivo Direct3D 11 na GPU dedicada (ou usa um existente)
+    bool InitializeD3D(ID3D11Device* existingDevice = nullptr, ID3D11DeviceContext* existingContext = nullptr);
 
     // Inicia a captura de uma janela pelo seu HWND
     bool StartCapture(HWND targetHwnd, FrameCallback callback);
+
+    // Inicia a captura de um monitor pelo seu HMONITOR
+    bool StartCaptureMonitor(HMONITOR targetMonitor, FrameCallback callback);
 
     // Para a captura ativa
     void StopCapture();
 
     bool IsCapturing() const { return m_isCapturing; }
+    ID3D11Device* GetDevice() const { return m_d3dDevice; }
+    ID3D11DeviceContext* GetContext() const { return m_d3dContext; }
 
 private:
     bool m_isCapturing = false;
+    bool m_ownsDevice = true;
     HWND m_targetHwnd = nullptr;
+    HMONITOR m_targetMonitor = nullptr;
     FrameCallback m_frameCallback;
 
     // Direct3D 11 GPU Resources
@@ -53,5 +60,6 @@ private:
     winrt::Windows::Graphics::Capture::GraphicsCaptureSession m_captureSession = nullptr;
     winrt::Windows::Graphics::Capture::Direct3D11CaptureFramePool::FrameArrived_revoker m_frameArrivedRevoker;
 
+    bool SetupCaptureSession(winrt::Windows::Graphics::Capture::GraphicsCaptureItem const& item);
     void OnFrameArrived(winrt::Windows::Graphics::Capture::Direct3D11CaptureFramePool const& sender, winrt::Windows::Foundation::IInspectable const& args);
 };

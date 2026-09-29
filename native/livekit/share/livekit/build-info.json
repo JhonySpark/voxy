@@ -1,0 +1,8 @@
+{
+  "sdk": "cpp",
+  "sdk_version": "1.12.0",
+  "cpp_git_commit": "e6e191b",
+  "rust_submodule_commit": "5a656c4b",
+  "livekit_ffi_version": "0.12.80",
+  "build_date": "2026-09-23T21:43:48Z"
+}
