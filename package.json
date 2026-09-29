@@ -1,7 +1,7 @@
 {
   "name": "voxy",
   "private": true,
-  "version": "0.2.3",
+  "version": "0.2.4",
   "type": "module",
   "main": "dist-electron/main.js",
   "author": "D4rk Side",
@@ -12,7 +12,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "dist": "npm run build && dotenv -e .env -- electron-builder --win",
-    "dist:publish": "npm run build && dotenv -e .env -- electron-builder --win --publish always"
+    "dist:publish": "node scripts/ensure-tag.js && npm run build && dotenv -e .env -- electron-builder --win --publish always"
   },
   "build": {
     "appId": "br.com.d4rkside.voxy",

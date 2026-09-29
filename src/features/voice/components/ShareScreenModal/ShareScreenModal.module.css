@@ -132,6 +132,31 @@
   color: #ffffff;
 }
 
+.tabBtn.disabledTab {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: auto;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+}
+
+.tabBtn.disabledTab:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+}
+
+.bitrateNotice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.85rem;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: #fbbf24;
+  line-height: 1.4;
+}
+
 .sourceGrid {
   flex: 1;
   overflow-y: auto;

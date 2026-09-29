@@ -54,14 +54,14 @@ if (typeof window !== 'undefined' && window.RTCPeerConnection && !(window as any
         let sdp = desc.sdp;
         sdp = sdp.replace(/(m=video\s+\d+\s+[^\r\n]*)/gi, `$1\r\nb=AS:12000\r\nb=TIAS:12000000`);
 
-        const vp8Match = sdp.match(/a=rtpmap:(\d+)\s+VP8\/90000/i);
-        if (vp8Match) {
-          const pt = vp8Match[1];
+        const codecMatch = sdp.match(/a=rtpmap:(\d+)\s+(?:VP8|H264)\/90000/i);
+        if (codecMatch) {
+          const pt = codecMatch[1];
           const fmtpRegex = new RegExp(`(a=fmtp:${pt}\\s+[^\\r\\n]*)`, 'i');
           if (fmtpRegex.test(sdp)) {
-            sdp = sdp.replace(fmtpRegex, `$1;x-google-min-bitrate=4500;x-google-max-bitrate=14000;x-google-start-bitrate=7000`);
+            sdp = sdp.replace(fmtpRegex, `$1;x-google-min-bitrate=2500;x-google-max-bitrate=14000;x-google-start-bitrate=5000`);
           } else {
-            sdp = sdp.replace(vp8Match[0], `${vp8Match[0]}\r\na=fmtp:${pt} x-google-min-bitrate=4500;x-google-max-bitrate=14000;x-google-start-bitrate=7000`);
+            sdp = sdp.replace(codecMatch[0], `${codecMatch[0]}\r\na=fmtp:${pt} x-google-min-bitrate=2500;x-google-max-bitrate=14000;x-google-start-bitrate=5000`);
           }
         }
         desc = new RTCSessionDescription({ type: desc.type, sdp }) as any;
@@ -85,8 +85,8 @@ export const VoiceRoom: React.FC<VoiceRoomProps> = (props) => {
       adaptiveStream: false,
       dynacast: false,
       publishDefaults: {
-        videoCodec: 'vp8' as const,
-        degradationPreference: 'maintain-resolution' as RTCDegradationPreference,
+        videoCodec: 'h264' as const,
+        degradationPreference: 'maintain-framerate' as RTCDegradationPreference,
         simulcast: false,
       },
     };
@@ -234,25 +234,29 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
     };
   }, [room, onSpeakersChange]);
 
-  // Gerenciamento de subscrição seletiva para economizar banda
+  // Gerenciamento de subscrição seletiva para economizar banda e cortar áudio não assistido
   useEffect(() => {
     participants.forEach((p) => {
       if (!p.isLocal) {
-        const screenPub = p.getTrackPublication(Track.Source.ScreenShare) as any;
+        const screenVideoPub = p.getTrackPublication(Track.Source.ScreenShare);
+        const screenAudioPub = p.getTrackPublication(Track.Source.ScreenShareAudio);
         const isWatching = watchingStreams.has(p.identity);
-        if (screenPub) {
-          if (typeof screenPub.setSubscribed === 'function' && screenPub.isSubscribed !== isWatching) {
-            screenPub.setSubscribed(isWatching);
-          }
-          if (isWatching) {
-            if (typeof screenPub.setVideoQuality === 'function') {
-              screenPub.setVideoQuality(VideoQuality.HIGH);
+        
+        [screenVideoPub, screenAudioPub].forEach(pub => {
+          if (pub) {
+            if (typeof pub.setSubscribed === 'function' && pub.isSubscribed !== isWatching) {
+              pub.setSubscribed(isWatching);
             }
-            if (typeof screenPub.setVideoFPS === 'function') {
-              screenPub.setVideoFPS(60);
+            if (isWatching && pub.kind === 'video') {
+              if (typeof pub.setVideoQuality === 'function') {
+                pub.setVideoQuality(VideoQuality.HIGH);
+              }
+              if (typeof pub.setVideoFPS === 'function') {
+                pub.setVideoFPS(60);
+              }
             }
           }
-        }
+        });
       }
     });
   }, [participants, watchingStreams]);
@@ -334,12 +338,14 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         const vTrack = stream.getVideoTracks()[0];
         const aTrack = stream.getAudioTracks()[0];
 
+        vTrack.contentHint = 'motion';
+
         const lkTrack = new LocalVideoTrack(vTrack);
         await localParticipant.publishTrack(lkTrack, {
           name: 'screen_share',
           source: Track.Source.ScreenShare,
           simulcast: false,
-          videoCodec: 'vp8',
+          videoCodec: 'h264',
         });
         setScreenTrack(lkTrack);
 
@@ -391,12 +397,14 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
       const vTrack = stream.getVideoTracks()[0];
       const aTrack = stream.getAudioTracks()[0];
 
+      vTrack.contentHint = 'motion';
+
       const lkTrack = new LocalVideoTrack(vTrack);
       await localParticipant.publishTrack(lkTrack, {
         name: 'screen_share',
         source: Track.Source.ScreenShare,
         simulcast: false,
-        videoCodec: 'vp8',
+        videoCodec: 'h264',
       });
       setScreenTrack(lkTrack);
 

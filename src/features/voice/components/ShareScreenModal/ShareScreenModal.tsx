@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import styles from './ShareScreenModal.module.css';
-import { Gamepad2, AppWindow, Monitor } from 'lucide-react';
+import { Gamepad2, AppWindow, Monitor, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export interface DesktopSource {
@@ -123,15 +123,45 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
 
           <button
             type="button"
+            disabled={activeTab === 'games'}
             className={`${styles.tabBtn} ${
               activeTab === 'screens' ? styles.active : styles.inactive
-            }`}
-            onClick={() => setActiveTab('screens')}
+            } ${activeTab === 'games' ? styles.disabledTab : ''}`}
+            onClick={() => {
+              if (activeTab !== 'games') {
+                setActiveTab('screens');
+              }
+            }}
+            title={
+              activeTab === 'games'
+                ? t(
+                    'voice.screensDisabledForGames',
+                    'O compartilhamento de tela inteira foi desabilitado para jogos para preservar a taxa de bits (bitrate).'
+                  )
+                : undefined
+            }
           >
             <Monitor size={16} />
-            <span>{t('voice.screens')} ({categorizedSources.screens.length})</span>
+            <span>
+              {t('voice.screens')}{' '}
+              {activeTab === 'games'
+                ? `(${t('voice.disabled', 'Desabilitado')})`
+                : `(${categorizedSources.screens.length})`}
+            </span>
           </button>
         </div>
+
+        {activeTab === 'games' && (
+          <div className={styles.bitrateNotice}>
+            <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+            <span>
+              {t(
+                'voice.screensNoticeForGames',
+                'O compartilhamento de tela inteira foi desabilitado para jogos para preservar a qualidade de bitrate e manter 60 FPS direto da GPU. Selecione a janela do jogo diretamente.'
+              )}
+            </span>
+          </div>
+        )}
 
         {/* Sources Grid */}
         <div className={styles.sourceGrid}>

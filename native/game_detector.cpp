@@ -164,39 +164,90 @@ BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam) {
     // 1. Processo carregou módulos de renderização 3D reais (Direct3D 11, Direct3D 12, Vulkan, OpenGL, D3D9+DXGI)
     bool uses3DGraphics = (info.hasD3D11 || info.hasD3D12 || info.hasVulkan || info.hasOpenGL || (info.hasD3D9 && info.hasDXGI));
 
-    // 2. Processo protegido por Anti-Cheat (EAC, BattlEye, Vanguard bloqueiam PROCESS_VM_READ)
-    bool isAntiCheatGame = info.isAntiCheatProtected;
-
-    // 3. Executável está em diretório de jogos ou tem convenção de engine de jogo (Unreal/Unity: *Game.exe, *Shipping.exe)
+    // 2. Executável está em diretório de jogos ou tem convenção de engine de jogo (Unreal/Unity: *Game.exe, *Shipping.exe)
     bool isGameDirectoryOrNaming = (
         lowerFullPath.find("steamapps") != std::string::npos ||
         lowerFullPath.find("epic games") != std::string::npos ||
         lowerFullPath.find("riot games") != std::string::npos ||
+        lowerFullPath.find("ubisoft") != std::string::npos ||
+        lowerFullPath.find("gog galaxy") != std::string::npos ||
+        lowerFullPath.find("battlenet") != std::string::npos ||
+        lowerFullPath.find("battle.net") != std::string::npos ||
+        lowerFullPath.find("ea games") != std::string::npos ||
+        lowerFullPath.find("origin games") != std::string::npos ||
+        lowerFullPath.find("roblox") != std::string::npos ||
+        lowerFullPath.find("minecraft") != std::string::npos ||
+        lowerFullPath.find("hoyoverse") != std::string::npos ||
+        lowerFullPath.find("genshin") != std::string::npos ||
         lowerFullPath.find("\\games\\") != std::string::npos ||
         lowerFullPath.find("/games/") != std::string::npos ||
+        lowerFullPath.find("\\jogos\\") != std::string::npos ||
+        lowerFullPath.find("/jogos/") != std::string::npos ||
         lowerProc.find("game.exe") != std::string::npos ||
         lowerProc.find("shipping.exe") != std::string::npos
     );
 
-    // Aplicativos comuns que NUNCA são jogos (para evitar falsos positivos de navegadores e IDEs)
+    // 3. Processo protegido por Anti-Cheat (só considera anti-cheat se estiver em pasta de jogos ou for processo de anti-cheat)
+    bool isAntiCheatGame = (info.isAntiCheatProtected && (isGameDirectoryOrNaming ||
+        lowerProc.find("vgc") != std::string::npos ||
+        lowerProc.find("easyanticheat") != std::string::npos ||
+        lowerProc.find("battleye") != std::string::npos));
+
+    // Aplicativos comuns e ferramentas de sistema que NUNCA são jogos (evita falsos positivos com ANGLE/DirectX e UAC)
     bool isKnownDesktopApp = (
+        lowerProc.find("teams") != std::string::npos ||
+        lowerProc.find("ms-teams") != std::string::npos ||
+        lowerProc.find("skype") != std::string::npos ||
+        lowerProc.find("zoom") != std::string::npos ||
+        lowerProc.find("webex") != std::string::npos ||
+        lowerProc.find("telegram") != std::string::npos ||
+        lowerProc.find("whatsapp") != std::string::npos ||
+        lowerProc.find("discord") != std::string::npos ||
+        lowerProc.find("slack") != std::string::npos ||
+        lowerProc.find("spotify") != std::string::npos ||
         lowerProc.find("chrome") != std::string::npos ||
         lowerProc.find("msedge") != std::string::npos ||
         lowerProc.find("firefox") != std::string::npos ||
         lowerProc.find("brave") != std::string::npos ||
         lowerProc.find("opera") != std::string::npos ||
+        lowerProc.find("vivaldi") != std::string::npos ||
         lowerProc.find("code") != std::string::npos ||
         lowerProc.find("devenv") != std::string::npos ||
-        lowerProc.find("discord") != std::string::npos ||
-        lowerProc.find("slack") != std::string::npos ||
-        lowerProc.find("spotify") != std::string::npos ||
-        lowerProc.find("steam") != std::string::npos ||
-        lowerProc.find("epicgameslauncher") != std::string::npos ||
+        lowerProc.find("rider") != std::string::npos ||
+        lowerProc.find("idea64") != std::string::npos ||
+        lowerProc.find("pycharm") != std::string::npos ||
         lowerProc.find("antigravity") != std::string::npos ||
-        lowerProc.find("whatsapp") != std::string::npos ||
+        lowerProc.find("partition") != std::string::npos ||
+        lowerProc.find("minitool") != std::string::npos ||
+        lowerProc.find("diskgen") != std::string::npos ||
+        lowerProc.find("aomei") != std::string::npos ||
+        lowerProc.find("rufus") != std::string::npos ||
+        lowerProc.find("easeus") != std::string::npos ||
+        lowerProc.find("outlook") != std::string::npos ||
+        lowerProc.find("winword") != std::string::npos ||
+        lowerProc.find("excel") != std::string::npos ||
+        lowerProc.find("powerpnt") != std::string::npos ||
+        lowerProc.find("onenote") != std::string::npos ||
+        lowerProc.find("notepad") != std::string::npos ||
+        lowerProc.find("calculator") != std::string::npos ||
+        lowerProc.find("cmd.exe") != std::string::npos ||
+        lowerProc.find("powershell") != std::string::npos ||
+        lowerProc.find("windowsterminal") != std::string::npos ||
         lowerProc.find("powertoys") != std::string::npos ||
+        lowerProc.find("steam.exe") != std::string::npos ||
+        lowerProc.find("epicgameslauncher") != std::string::npos ||
+        lowerProc.find("origin.exe") != std::string::npos ||
+        lowerProc.find("upc.exe") != std::string::npos ||
+        lowerProc.find("ubisoftconnect") != std::string::npos ||
+        lowerProc.find("gog_galaxy") != std::string::npos ||
+        lowerProc.find("battle.net") != std::string::npos ||
+        lowerProc.find("riotclientservices") != std::string::npos ||
         lowerProc.find("wdadesktop") != std::string::npos ||
-        lowerProc.find("notes") != std::string::npos
+        lowerProc.find("notes") != std::string::npos ||
+        lowerProc.find("photoshop") != std::string::npos ||
+        lowerProc.find("illustrator") != std::string::npos ||
+        lowerProc.find("figma") != std::string::npos ||
+        lowerProc.find("canva") != std::string::npos
     );
 
     // É um jogo se usar gráficos 3D ou for protegido por anti-cheat ou estiver em pasta/nome de jogo

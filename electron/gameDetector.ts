@@ -156,6 +156,61 @@ export async function getCategorizedSources(): Promise<{
       graphicsInfo = nativeReport.graphics;
     }
 
+    // Filtro de segurança para ferramentas desktop e utilitários que usam aceleração gráfica ou rodam como Admin
+    const procName = nativeReport?.processName ? nativeReport.processName.toLowerCase() : '';
+    const isExcludedApp =
+      procName.includes('teams') ||
+      procName.includes('skype') ||
+      procName.includes('zoom') ||
+      procName.includes('webex') ||
+      procName.includes('telegram') ||
+      procName.includes('whatsapp') ||
+      procName.includes('discord') ||
+      procName.includes('slack') ||
+      procName.includes('spotify') ||
+      procName.includes('chrome') ||
+      procName.includes('msedge') ||
+      procName.includes('firefox') ||
+      procName.includes('brave') ||
+      procName.includes('opera') ||
+      procName.includes('vivaldi') ||
+      procName.includes('code') ||
+      procName.includes('devenv') ||
+      procName.includes('rider') ||
+      procName.includes('idea') ||
+      procName.includes('pycharm') ||
+      procName.includes('antigravity') ||
+      procName.includes('partition') ||
+      procName.includes('minitool') ||
+      procName.includes('diskgen') ||
+      procName.includes('aomei') ||
+      procName.includes('rufus') ||
+      procName.includes('easeus') ||
+      procName.includes('outlook') ||
+      procName.includes('winword') ||
+      procName.includes('excel') ||
+      procName.includes('powerpnt') ||
+      procName.includes('onenote') ||
+      procName.includes('notepad') ||
+      procName.includes('calculator') ||
+      procName.includes('cmd') ||
+      procName.includes('powershell') ||
+      procName.includes('windowsterminal') ||
+      procName.includes('powertoys') ||
+      procName.includes('steam') ||
+      procName.includes('epicgameslauncher') ||
+      procName.includes('photoshop') ||
+      procName.includes('illustrator') ||
+      procName.includes('figma') ||
+      procName.includes('canva') ||
+      lowerCleanName.includes('partition wizard') ||
+      lowerCleanName.includes('minitool') ||
+      lowerCleanName.includes('microsoft teams');
+
+    if (isExcludedApp) {
+      isGame = false;
+    }
+
     const item: CaptureSourceItem = {
       id: source.id,
       name: cleanSourceName || source.name,
