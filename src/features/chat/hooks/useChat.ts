@@ -27,10 +27,15 @@ export function useChat({
   const activeViewRef = useRef(activeView);
   const activeFriendIdRef = useRef(activeFriendId);
   const activeChannelIdRef = useRef(activeChannelId);
+  const myIdRef = useRef(myId);
 
   useEffect(() => {
     activeViewRef.current = activeView;
   }, [activeView]);
+
+  useEffect(() => {
+    myIdRef.current = myId;
+  }, [myId]);
 
   useEffect(() => {
     activeFriendIdRef.current = activeFriendId;
@@ -131,11 +136,17 @@ export function useChat({
     };
 
     const onNewChannelMessage = (msg: ChatMessage) => {
+      // Evita duplicação da própria mensagem que já foi enviada de forma otimista
+      if (msg.senderId === myIdRef.current) return;
+
       if (
         activeViewRef.current === DashboardView.SERVER &&
         activeChannelIdRef.current === msg.channelId
       ) {
-        setMessages((prev) => [...prev, msg]);
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === msg.id)) return prev;
+          return [...prev, msg];
+        });
       } else if (msg.channelId) {
         setUnreadChannels((prev) => ({
           ...prev,

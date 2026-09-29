@@ -88,13 +88,28 @@
 }
 
 .select {
-  background-color: transparent;
-  color: #ffffff;
-  border: none;
+  background-color: #141a26;
+  color: #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 0.2rem 0.5rem;
   font-size: 0.85rem;
   outline: none;
   cursor: pointer;
   font-weight: 600;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.select:focus,
+.select:hover {
+  border-color: var(--brand-primary, #34d399);
+  background-color: #1a2234;
+}
+
+.select option {
+  background-color: #0f131c;
+  color: #ffffff;
+  padding: 0.5rem;
 }
 
 .tabs {

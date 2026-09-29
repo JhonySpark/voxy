@@ -52,16 +52,16 @@ if (typeof window !== 'undefined' && window.RTCPeerConnection && !(window as any
     if (desc && desc.sdp && (desc.type === 'offer' || desc.type === 'answer')) {
       try {
         let sdp = desc.sdp;
-        sdp = sdp.replace(/(m=video\s+\d+\s+[^\r\n]*)/gi, `$1\r\nb=AS:12000\r\nb=TIAS:12000000`);
+        sdp = sdp.replace(/(m=video\s+\d+\s+[^\r\n]*)/gi, `$1\r\nb=AS:16000\r\nb=TIAS:16000000`);
 
         const codecMatch = sdp.match(/a=rtpmap:(\d+)\s+(?:VP8|H264)\/90000/i);
         if (codecMatch) {
           const pt = codecMatch[1];
           const fmtpRegex = new RegExp(`(a=fmtp:${pt}\\s+[^\\r\\n]*)`, 'i');
           if (fmtpRegex.test(sdp)) {
-            sdp = sdp.replace(fmtpRegex, `$1;x-google-min-bitrate=2500;x-google-max-bitrate=14000;x-google-start-bitrate=5000`);
+            sdp = sdp.replace(fmtpRegex, `$1;x-google-min-bitrate=4500;x-google-max-bitrate=16000;x-google-start-bitrate=8000`);
           } else {
-            sdp = sdp.replace(codecMatch[0], `${codecMatch[0]}\r\na=fmtp:${pt} x-google-min-bitrate=2500;x-google-max-bitrate=14000;x-google-start-bitrate=5000`);
+            sdp = sdp.replace(codecMatch[0], `${codecMatch[0]}\r\na=fmtp:${pt} x-google-min-bitrate=4500;x-google-max-bitrate=16000;x-google-start-bitrate=8000`);
           }
         }
         desc = new RTCSessionDescription({ type: desc.type, sdp }) as any;
@@ -85,9 +85,14 @@ export const VoiceRoom: React.FC<VoiceRoomProps> = (props) => {
       adaptiveStream: false,
       dynacast: false,
       publishDefaults: {
-        videoCodec: 'h264' as const,
+        videoCodec: 'vp8' as const,
         degradationPreference: 'maintain-framerate' as RTCDegradationPreference,
         simulcast: false,
+        screenShareEncoding: {
+          maxBitrate: 12_000_000,
+          maxFramerate: 60,
+          priority: 'high' as const,
+        },
       },
     };
   }, []);
@@ -329,8 +334,8 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
       try {
         const stream = await navigator.mediaDevices.getDisplayMedia({
           video: {
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
+            width: { ideal: 2560, max: 3840 },
+            height: { ideal: 1080, max: 1080 },
             frameRate: { ideal: 60, max: 60 },
           },
           audio: true,
@@ -338,20 +343,50 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         const vTrack = stream.getVideoTracks()[0];
         const aTrack = stream.getAudioTracks()[0];
 
-        vTrack.contentHint = 'motion';
+        if ('contentHint' in vTrack) {
+          (vTrack as any).contentHint = 'motion';
+        }
 
         const lkTrack = new LocalVideoTrack(vTrack);
         await localParticipant.publishTrack(lkTrack, {
           name: 'screen_share',
           source: Track.Source.ScreenShare,
           simulcast: false,
-          videoCodec: 'h264',
-          videoEncoding: {
-            maxBitrate: 8000000,
+          videoCodec: 'vp8',
+          // @ts-ignore
+          degradationPreference: 'maintain-framerate',
+          screenShareEncoding: {
+            maxBitrate: 12000000,
             maxFramerate: 60,
+            priority: 'high',
+          },
+          videoEncoding: {
+            maxBitrate: 12000000,
+            maxFramerate: 60,
+            priority: 'high',
           },
         });
         setScreenTrack(lkTrack);
+
+        if (lkTrack.sender) {
+          try {
+            const params = lkTrack.sender.getParameters();
+            if (params.encodings && params.encodings.length > 0) {
+              params.encodings[0].maxBitrate = 12000000;
+              (params.encodings[0] as any).minBitrate = 6000000;
+              params.encodings[0].maxFramerate = 60;
+              params.encodings[0].scaleResolutionDownBy = 1.0;
+              if ('networkPriority' in params.encodings[0]) {
+                (params.encodings[0] as any).networkPriority = 'high';
+              }
+              // @ts-ignore
+              params.degradationPreference = 'maintain-framerate';
+              await lkTrack.sender.setParameters(params);
+            }
+          } catch (err) {
+            console.warn('[Voxy WebRTC] Erro ao aplicar sender parameters:', err);
+          }
+        }
 
         lkTrack.on(TrackEvent.Muted, () => toggleScreenShare());
         vTrack.onended = () => toggleScreenShare();
@@ -387,11 +422,8 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
           mandatory: {
             chromeMediaSource: 'desktop',
             chromeMediaSourceId: sourceId,
-            minWidth: is1080 ? 1920 : 1280,
-            maxWidth: is1080 ? 1920 : 1280,
-            minHeight: is1080 ? 1080 : 720,
+            maxWidth: is1080 ? 3840 : 2560,
             maxHeight: is1080 ? 1080 : 720,
-            minFrameRate: targetFps,
             maxFrameRate: targetFps,
           },
         },
@@ -401,27 +433,53 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
       const vTrack = stream.getVideoTracks()[0];
       const aTrack = stream.getAudioTracks()[0];
 
-      vTrack.contentHint = 'motion';
+      if ('contentHint' in vTrack) {
+        (vTrack as any).contentHint = 'motion';
+      }
 
       const lkTrack = new LocalVideoTrack(vTrack);
-      let targetBitrate = 8000000;
-      if (!is1080) {
-        targetBitrate = targetFps === 60 ? 4000000 : 2500000;
-      } else {
-        targetBitrate = targetFps === 60 ? 8000000 : 5000000;
-      }
+      const targetBitrate = is1080 ? (targetFps === 60 ? 12000000 : 8000000) : (targetFps === 60 ? 7000000 : 5000000);
+      const minBitrate = is1080 ? (targetFps === 60 ? 6000000 : 4000000) : (targetFps === 60 ? 3500000 : 2500000);
 
       await localParticipant.publishTrack(lkTrack, {
         name: 'screen_share',
         source: Track.Source.ScreenShare,
         simulcast: false,
-        videoCodec: 'h264',
+        videoCodec: 'vp8',
+        // @ts-ignore
+        degradationPreference: 'maintain-framerate',
+        screenShareEncoding: {
+          maxBitrate: targetBitrate,
+          maxFramerate: targetFps,
+          priority: 'high',
+        },
         videoEncoding: {
           maxBitrate: targetBitrate,
           maxFramerate: targetFps,
+          priority: 'high',
         },
       });
       setScreenTrack(lkTrack);
+
+      if (lkTrack.sender) {
+        try {
+          const params = lkTrack.sender.getParameters();
+          if (params.encodings && params.encodings.length > 0) {
+            params.encodings[0].maxBitrate = targetBitrate;
+            (params.encodings[0] as any).minBitrate = minBitrate;
+            params.encodings[0].maxFramerate = targetFps;
+            params.encodings[0].scaleResolutionDownBy = 1.0;
+            if ('networkPriority' in params.encodings[0]) {
+              (params.encodings[0] as any).networkPriority = 'high';
+            }
+            // @ts-ignore
+            params.degradationPreference = 'maintain-framerate';
+            await lkTrack.sender.setParameters(params);
+          }
+        } catch (err) {
+          console.warn('[Voxy WebRTC] Erro ao aplicar sender parameters:', err);
+        }
+      }
 
       lkTrack.on(TrackEvent.Muted, () => toggleScreenShare());
       vTrack.onended = () => toggleScreenShare();
