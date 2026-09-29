@@ -4,6 +4,7 @@ import { Settings, Fullscreen, Minimize } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { VideoRenderer } from '../VideoRenderer/VideoRenderer';
 import { StreamSettingsMenu } from '../StreamSettingsMenu/StreamSettingsMenu';
+import { DevStreamDiagnostics } from '../../../../components/DevStreamDiagnostics';
 
 interface MaximizedStreamViewProps {
   participant: {
@@ -83,7 +84,10 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
         }`}
       >
         {participant.hasVideo ? (
-          <VideoRenderer track={participant.track} className={styles.videoElement} />
+          <>
+            <VideoRenderer track={participant.track} className={styles.videoElement} />
+            {participant.track && <DevStreamDiagnostics track={participant.track} />}
+          </>
         ) : (
           <div className={styles.avatarPlaceholder}>
             {participant.username === t('chat.you') ? 'ME' : participant.username.charAt(0).toUpperCase()}

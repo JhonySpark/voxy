@@ -4,6 +4,7 @@ import { Mic, MicOff, Maximize, Minimize, Settings, MonitorUp, Eye } from 'lucid
 import { useTranslation } from 'react-i18next';
 import { useIsSpeaking } from '@livekit/components-react';
 import { StreamSettingsMenu } from '../StreamSettingsMenu/StreamSettingsMenu';
+import { DevStreamDiagnostics } from '../../../../components/DevStreamDiagnostics';
 
 interface ParticipantCardProps {
   participant: {
@@ -74,6 +75,7 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
             muted
             className={styles.videoElement}
           />
+          {p.track && <DevStreamDiagnostics track={p.track} />}
         </div>
       ) : p.isStreaming && !p.isLocal ? (
         /* Stream não assistida ainda */

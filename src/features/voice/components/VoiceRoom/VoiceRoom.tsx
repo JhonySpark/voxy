@@ -346,6 +346,10 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
           source: Track.Source.ScreenShare,
           simulcast: false,
           videoCodec: 'h264',
+          videoEncoding: {
+            maxBitrate: 8000000,
+            maxFramerate: 60,
+          },
         });
         setScreenTrack(lkTrack);
 
@@ -400,11 +404,22 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
       vTrack.contentHint = 'motion';
 
       const lkTrack = new LocalVideoTrack(vTrack);
+      let targetBitrate = 8000000;
+      if (!is1080) {
+        targetBitrate = targetFps === 60 ? 4000000 : 2500000;
+      } else {
+        targetBitrate = targetFps === 60 ? 8000000 : 5000000;
+      }
+
       await localParticipant.publishTrack(lkTrack, {
         name: 'screen_share',
         source: Track.Source.ScreenShare,
         simulcast: false,
         videoCodec: 'h264',
+        videoEncoding: {
+          maxBitrate: targetBitrate,
+          maxFramerate: targetFps,
+        },
       });
       setScreenTrack(lkTrack);
 
