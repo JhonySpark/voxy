@@ -17,6 +17,7 @@
   "build": {
     "appId": "br.com.d4rkside.voxy",
     "productName": "Voxy",
+    "artifactName": "Voxy-Setup-${version}.${ext}",
     "copyright": "Copyright © 2026 D4rk Side",
     "icon": "build/icon.ico",
     "directories": {
