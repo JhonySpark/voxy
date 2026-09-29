@@ -238,8 +238,8 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
   useEffect(() => {
     participants.forEach((p) => {
       if (!p.isLocal) {
-        const screenVideoPub = p.getTrackPublication(Track.Source.ScreenShare);
-        const screenAudioPub = p.getTrackPublication(Track.Source.ScreenShareAudio);
+        const screenVideoPub = p.getTrackPublication(Track.Source.ScreenShare) as any;
+        const screenAudioPub = p.getTrackPublication(Track.Source.ScreenShareAudio) as any;
         const isWatching = watchingStreams.has(p.identity);
         
         [screenVideoPub, screenAudioPub].forEach(pub => {
