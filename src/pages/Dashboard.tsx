@@ -13,7 +13,10 @@ import {
   StorageKeys,
   RealtimeEvents,
   AppRoutes,
+  SettingsTabEnum,
+  ApiRoutes,
 } from '../core/enums';
+import { httpClient } from '../infrastructure/adapters/http/http-client.adapter';
 
 // Subcomponentes refatorados
 import { ServerSidebar } from '../features/servers/components/ServerSidebar/ServerSidebar';
@@ -21,11 +24,14 @@ import { ChannelList } from '../features/servers/components/ChannelList/ChannelL
 import { CreateServerModal } from '../features/servers/components/ServerModals/CreateServerModal';
 import { CreateChannelModal } from '../features/servers/components/ServerModals/CreateChannelModal';
 import { InviteServerModal } from '../features/servers/components/ServerModals/InviteServerModal';
+import { ServerSettingsModal } from '../features/servers/components/ServerModals/ServerSettingsModal';
 import { FriendsSidebar } from '../features/friends/components/FriendsSidebar/FriendsSidebar';
 import type { FriendUser } from '../features/friends/components/FriendsSidebar/FriendsSidebar';
 import { AddFriendModal } from '../features/friends/components/AddFriendModal/AddFriendModal';
 import { ChatArea } from '../features/chat/components/ChatArea/ChatArea';
 import { UserProfileBar } from '../features/user/components/UserProfileBar/UserProfileBar';
+import { EditProfileModal } from '../features/user/components/EditProfileModal/EditProfileModal';
+import type { UserProfileData } from '../features/user/components/UserPopout/UserPopout';
 
 // Custom Hooks refatorados da Fase 3
 import { useFriends } from '../features/friends/hooks/useFriends';
@@ -95,10 +101,16 @@ export default function Dashboard() {
 
   // Modais
   const [showServerModal, setShowServerModal] = useState(false);
+  const [showServerSettingsModal, setShowServerSettingsModal] = useState(false);
   const [showFriendModal, setShowFriendModal] = useState(false);
   const [showChannelModal, setShowChannelModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTabEnum>(SettingsTabEnum.VOICE);
+
+  // Perfil do Usuário
+  const [currentUserProfile, setCurrentUserProfile] = useState<UserProfileData | null>(null);
 
   // Dispositivos de Áudio
   const [selectedAudioInput, setSelectedAudioInput] = useState<string>(
@@ -131,7 +143,14 @@ export default function Dashboard() {
 
     const initData = async () => {
       try {
-        await Promise.allSettled([fetchFriends(), fetchServers()]);
+        const [, , meRes] = await Promise.allSettled([
+          fetchFriends(),
+          fetchServers(),
+          httpClient.get<UserProfileData>(ApiRoutes.USERS_ME),
+        ]);
+        if (meRes.status === 'fulfilled' && meRes.value) {
+          setCurrentUserProfile(meRes.value);
+        }
       } catch (err) {
         console.error('Error in initial load', err);
       } finally {
@@ -161,6 +180,32 @@ export default function Dashboard() {
       };
     }
   }, [connectedVoiceChannel]);
+
+  // Sincronizar perfis atualizados em tempo real (avatar, banner, etc.)
+  useEffect(() => {
+    const onUserProfileUpdated = (data: { userId: string } & Partial<UserProfileData>) => {
+      // Se for o próprio usuário
+      setCurrentUserProfile((prev) => (prev && prev.id === data.userId ? { ...prev, ...data } : prev));
+
+      // Se for o amigo com chat aberto no momento
+      setActiveFriend((curr) => {
+        if (!curr || curr.id !== data.userId) return curr;
+        return {
+          ...curr,
+          displayName: data.displayName !== undefined ? data.displayName : curr.displayName,
+          avatarUrl: data.avatarUrl !== undefined ? data.avatarUrl : curr.avatarUrl,
+          bannerUrl: data.bannerUrl !== undefined ? data.bannerUrl : curr.bannerUrl,
+          bannerColor: data.bannerColor !== undefined ? data.bannerColor : curr.bannerColor,
+          bio: data.bio !== undefined ? data.bio : curr.bio,
+        };
+      });
+    };
+
+    realtimeClient.on(RealtimeEvents.USER_PROFILE_UPDATED, onUserProfileUpdated);
+    return () => {
+      realtimeClient.off(RealtimeEvents.USER_PROFILE_UPDATED, onUserProfileUpdated);
+    };
+  }, []);
 
   // Mudança de Conversa Ativa
   useEffect(() => {
@@ -260,15 +305,20 @@ export default function Dashboard() {
             }}
             onOpenCreateChannelModal={() => setShowChannelModal(true)}
             onOpenInviteModal={() => setShowInviteModal(true)}
+            onOpenServerSettings={() => setShowServerSettingsModal(true)}
           />
         ) : null}
 
         {/* Rodapé do Perfil do Usuário */}
         <UserProfileBar
-          username={myUsername}
+          user={currentUserProfile || { id: myId, username: myUsername }}
           connectedVoiceChannel={connectedVoiceChannel}
           onDisconnectVoice={() => setConnectedVoiceChannel(null)}
-          onOpenSettings={() => setShowSettingsModal(true)}
+          onOpenSettings={(tab) => {
+            setSettingsInitialTab(tab || SettingsTabEnum.VOICE);
+            setShowSettingsModal(true);
+          }}
+          onOpenEditProfile={() => setShowEditProfileModal(true)}
           onLogout={handleLogout}
         />
       </div>
@@ -352,7 +402,24 @@ export default function Dashboard() {
           setSelectedAudioInput(input);
           setSelectedAudioOutput(output);
         }}
+        initialTab={settingsInitialTab}
+        currentUser={currentUserProfile}
+        onOpenEditProfile={() => {
+          setShowSettingsModal(false);
+          setShowEditProfileModal(true);
+        }}
       />
+
+      {currentUserProfile && (
+        <EditProfileModal
+          isOpen={showEditProfileModal}
+          onClose={() => setShowEditProfileModal(false)}
+          user={currentUserProfile}
+          onProfileUpdated={(updated) =>
+            setCurrentUserProfile((prev) => (prev ? { ...prev, ...updated } : prev))
+          }
+        />
+      )}
 
       <AddFriendModal
         isOpen={showFriendModal}
@@ -383,6 +450,13 @@ export default function Dashboard() {
             isOpen={showInviteModal}
             server={activeServer}
             onClose={() => setShowInviteModal(false)}
+          />
+
+          <ServerSettingsModal
+            isOpen={showServerSettingsModal}
+            server={activeServer}
+            onClose={() => setShowServerSettingsModal(false)}
+            onServerUpdated={fetchServers}
           />
         </>
       )}

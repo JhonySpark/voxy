@@ -1,10 +1,10 @@
-import React, { useRef, useState, useEffect } from 'react';
-import styles from './MaximizedStreamView.module.css';
-import { Settings, Fullscreen, Minimize } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { VideoRenderer } from '../VideoRenderer/VideoRenderer';
-import { StreamSettingsMenu } from '../StreamSettingsMenu/StreamSettingsMenu';
-import { DevStreamDiagnostics } from '../../../../components/DevStreamDiagnostics';
+import React, { useRef, useState, useEffect } from "react";
+import styles from "./MaximizedStreamView.module.css";
+import { Settings, Fullscreen, Minimize } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { VideoRenderer } from "../VideoRenderer/VideoRenderer";
+import { StreamSettingsMenu } from "../StreamSettingsMenu/StreamSettingsMenu";
+import { DevStreamDiagnostics } from "../../../../components/DevStreamDiagnostics";
 
 interface MaximizedStreamViewProps {
   participant: {
@@ -43,9 +43,9 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
     };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
     };
   }, []);
 
@@ -73,29 +73,39 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
     <div
       className={styles.container}
       style={{
-        padding: isFullscreen ? 0 : '1rem',
-        gap: isFullscreen ? 0 : '1rem',
+        padding: isFullscreen ? 0 : "1rem",
+        gap: isFullscreen ? 0 : "1rem",
       }}
     >
       <div
         ref={fullscreenContainerRef}
         onMouseMove={handleContainerMouseMove}
-        className={`${styles.fullscreenWrapper} ${isFullscreen ? styles.isFullscreen : ''} ${
-          isFullscreen && !showControls ? styles.hideCursor : ''
+        className={`${styles.fullscreenWrapper} ${isFullscreen ? styles.isFullscreen : ""} ${
+          isFullscreen && !showControls ? styles.hideCursor : ""
         }`}
       >
         {participant.hasVideo ? (
           <>
-            <VideoRenderer track={participant.track} className={styles.videoElement} />
-            {import.meta.env.DEV && participant.track && <DevStreamDiagnostics track={participant.track} nativeTelemetry={participant.nativeTelemetry} />}
+            <VideoRenderer
+              track={participant.track}
+              className={styles.videoElement}
+            />
+            {import.meta.env.DEV && participant.track && (
+              <DevStreamDiagnostics
+                track={participant.track}
+                nativeTelemetry={participant.nativeTelemetry}
+              />
+            )}
           </>
         ) : (
           <div className={styles.avatarPlaceholder}>
-            {participant.username === t('chat.you') ? 'ME' : participant.username.charAt(0).toUpperCase()}
+            {participant.username === t("chat.you")
+              ? "ME"
+              : participant.username.charAt(0).toUpperCase()}
           </div>
         )}
 
-        {isFullscreen && (
+        {/*         {isFullscreen && (
           <button
             type="button"
             onClick={() => void document.exitFullscreen()}
@@ -105,9 +115,12 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
             <Minimize size={18} />
             <span>Sair da tela cheia</span>
           </button>
-        )}
+        )} */}
 
-        <div className={styles.userBadge} style={{ opacity: showControls ? 1 : 0 }}>
+        <div
+          className={styles.userBadge}
+          style={{ opacity: showControls ? 1 : 0 }}
+        >
           {participant.username}
         </div>
 
@@ -115,14 +128,14 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
           className={styles.controlsBar}
           style={{
             opacity: showControls ? 1 : 0,
-            pointerEvents: showControls ? 'auto' : 'none',
+            pointerEvents: showControls ? "auto" : "none",
           }}
         >
           {!participant.isLocal && participant.isStreaming && (
             <button
               onClick={() => setShowSettings(!showSettings)}
               className={styles.controlButton}
-              title={t('voice.streamSettings', 'Configurações da Transmissão')}
+              title={t("voice.streamSettings", "Configurações da Transmissão")}
             >
               <Settings size={20} />
             </button>
@@ -131,7 +144,11 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
           <button
             onClick={toggleFullscreen}
             className={styles.controlButton}
-            title={isFullscreen ? t('voice.exitFullscreen', 'Sair da Tela Cheia') : t('voice.fullscreen', 'Tela Cheia')}
+            title={
+              isFullscreen
+                ? t("voice.exitFullscreen", "Sair da Tela Cheia")
+                : t("voice.fullscreen", "Tela Cheia")
+            }
           >
             {isFullscreen ? <Minimize size={20} /> : <Fullscreen size={20} />}
           </button>
@@ -139,7 +156,7 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
           <button
             onClick={onRestoreGrid}
             className={styles.controlButton}
-            title={t('voice.restoreGrid', 'Restaurar Grid')}
+            title={t("voice.restoreGrid", "Restaurar Grid")}
           >
             <Minimize size={20} />
           </button>

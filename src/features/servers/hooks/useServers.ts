@@ -68,14 +68,20 @@ export function useServers() {
       fetchServers();
     };
 
+    const onUserProfileUpdated = () => {
+      fetchServers();
+    };
+
     realtimeClient.on(RealtimeEvents.VOICE_STATE_UPDATE, onVoiceUpdate);
     realtimeClient.on(RealtimeEvents.CHANNEL_CREATED, onServerRefresh);
     realtimeClient.on(RealtimeEvents.SERVER_UPDATED, onServerRefresh);
+    realtimeClient.on(RealtimeEvents.USER_PROFILE_UPDATED, onUserProfileUpdated);
 
     return () => {
       realtimeClient.off(RealtimeEvents.VOICE_STATE_UPDATE, onVoiceUpdate);
       realtimeClient.off(RealtimeEvents.CHANNEL_CREATED, onServerRefresh);
       realtimeClient.off(RealtimeEvents.SERVER_UPDATED, onServerRefresh);
+      realtimeClient.off(RealtimeEvents.USER_PROFILE_UPDATED, onUserProfileUpdated);
     };
   }, [fetchServers]);
 

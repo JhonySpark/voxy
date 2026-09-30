@@ -71,6 +71,9 @@ export const RealtimeEvents = {
   // Friends
   FRIEND_ACTION: 'friendAction',
   FRIEND_ACTION_UPDATE: 'friendActionUpdate',
+
+  // User Profile
+  USER_PROFILE_UPDATED: 'userProfileUpdated',
 } as const;
 export type RealtimeEvents = (typeof RealtimeEvents)[keyof typeof RealtimeEvents];
 
@@ -105,6 +108,9 @@ export const ApiRoutes = {
   SERVERS_JOIN: '/servers/join',
   CHANNELS: '/channels',
   CHAT: '/chat',
+  USERS_ME: '/users/me',
+  USERS_PROFILE: '/users/profile',
+  USERS_CHANGE_PASSWORD: '/users/change-password',
 } as const;
 export type ApiRoutes = (typeof ApiRoutes)[keyof typeof ApiRoutes];
 
@@ -117,6 +123,7 @@ export const ToastTypeEnum = {
 export type ToastTypeEnum = (typeof ToastTypeEnum)[keyof typeof ToastTypeEnum];
 
 export const SettingsTabEnum = {
+  ACCOUNT: 'account',
   VOICE: 'voice',
   APPEARANCE: 'appearance',
   NOTIFICATIONS: 'notifications',

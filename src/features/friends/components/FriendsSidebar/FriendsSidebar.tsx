@@ -2,11 +2,17 @@ import React, { useState } from 'react';
 import styles from './FriendsSidebar.module.css';
 import { Plus, UserPlus, Search, Check, X, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { getMediaUrl } from '../../../../core/utils/media.util';
 
 export interface FriendUser {
   id: string;
   username: string;
   email: string;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+  bannerUrl?: string | null;
+  bannerColor?: string | null;
+  bio?: string | null;
 }
 
 interface FriendsSidebarProps {
@@ -32,9 +38,10 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
 }) => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
+  const [failedAvatars, setFailedAvatars] = useState<Record<string, boolean>>({});
 
   const filteredFriends = friends.filter((f) =>
-    f.username.toLowerCase().includes(searchTerm.toLowerCase())
+    (f.displayName || f.username).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -109,25 +116,42 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
             <ChevronDown size={14} />
           </div>
           <div>
-            {filteredFriends.map((friend) => (
-              <div
-                key={friend.id}
-                className={`${styles.friendItem} ${
-                  activeFriend?.id === friend.id ? styles.active : ''
-                }`}
-                onClick={() => onSelectFriend(friend)}
-              >
-                <div className={styles.userInfo}>
-                  <div className={styles.avatar}>
-                    {friend.username.charAt(0).toUpperCase()}
+            {filteredFriends.map((friend) => {
+              const avatarMedia = getMediaUrl(friend.avatarUrl);
+              const hasFailed = failedAvatars[friend.id];
+              const nameToShow = friend.displayName || friend.username;
+
+              return (
+                <div
+                  key={friend.id}
+                  className={`${styles.friendItem} ${
+                    activeFriend?.id === friend.id ? styles.active : ''
+                  }`}
+                  onClick={() => onSelectFriend(friend)}
+                >
+                  <div className={styles.userInfo}>
+                    {avatarMedia && !hasFailed ? (
+                      <img
+                        src={avatarMedia}
+                        alt={nameToShow}
+                        className={styles.avatarImg}
+                        onError={() =>
+                          setFailedAvatars((prev) => ({ ...prev, [friend.id]: true }))
+                        }
+                      />
+                    ) : (
+                      <div className={styles.avatar}>
+                        {nameToShow.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <span className={styles.userName}>{nameToShow}</span>
                   </div>
-                  <span className={styles.userName}>{friend.username}</span>
+                  {unreadDMs[friend.id] > 0 && activeFriend?.id !== friend.id && (
+                    <div className={styles.badge}>{unreadDMs[friend.id]}</div>
+                  )}
                 </div>
-                {unreadDMs[friend.id] > 0 && activeFriend?.id !== friend.id && (
-                  <div className={styles.badge}>{unreadDMs[friend.id]}</div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

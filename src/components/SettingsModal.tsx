@@ -12,27 +12,97 @@ import {
   Sparkles, 
   Check, 
   RotateCcw,
-  RefreshCw
+  RefreshCw,
+  User,
+  KeyRound,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { ipcRenderer } from 'electron';
 import { useTranslation } from 'react-i18next';
 import packageJson from '../../package.json';
-import { SettingsTabEnum, StorageKeys, IpcChannels, LanguageEnum } from '../core/enums';
+import { SettingsTabEnum, StorageKeys, IpcChannels, LanguageEnum, ApiRoutes } from '../core/enums';
+import { httpClient } from '../infrastructure/adapters/http/http-client.adapter';
+import type { UserProfileData } from '../features/user/components/UserPopout/UserPopout';
+import { getMediaUrl } from '../core/utils/media.util';
 import './SettingsModal.css';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onDeviceChange?: (inputDevice: string, outputDevice: string) => void;
+  initialTab?: SettingsTabEnum;
+  currentUser?: UserProfileData | null;
+  onOpenEditProfile?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
-  onDeviceChange
+  onDeviceChange,
+  initialTab,
+  currentUser,
+  onOpenEditProfile
 }) => {
   const { t, i18n } = useTranslation();
-  const [activeTab, setActiveTab] = useState<SettingsTabEnum>(SettingsTabEnum.VOICE);
+  const [activeTab, setActiveTab] = useState<SettingsTabEnum>(initialTab || SettingsTabEnum.VOICE);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab, isOpen]);
+
+  // Alteração de Senha
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordFeedback, setPasswordFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [avatarError, setAvatarError] = useState(false);
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [currentUser?.avatarUrl]);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordFeedback(null);
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordFeedback({ type: 'error', message: 'Preencha todos os campos.' });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordFeedback({ type: 'error', message: 'A nova senha deve ter no mínimo 6 caracteres.' });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordFeedback({ type: 'error', message: 'As senhas não coincidem.' });
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      await httpClient.patch(ApiRoutes.USERS_CHANGE_PASSWORD, {
+        currentPassword,
+        newPassword,
+      });
+      setPasswordFeedback({ type: 'success', message: 'Senha alterada com sucesso!' });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      setPasswordFeedback({
+        type: 'error',
+        message: err.response?.data?.message || 'Erro ao alterar senha. Verifique sua senha atual.',
+      });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
 
   // Versão da aplicação (sincronizada com package.json)
   const APP_VERSION = `v${packageJson.version}`;
@@ -314,7 +384,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* Sidebar */}
           <div className="settings-sidebar">
             <div className="settings-sidebar-nav">
-              <div className="settings-sidebar-section">{t('settings.devices')}</div>
+              <div className="settings-sidebar-section">{t('settings.userSettings', 'Configurações de Usuário')}</div>
+              <button 
+                className={`settings-tab-btn ${activeTab === SettingsTabEnum.ACCOUNT ? 'active' : ''}`}
+                onClick={() => setActiveTab(SettingsTabEnum.ACCOUNT)}
+              >
+                <User size={16} />
+                <span>{t('settings.myAccount', 'Minha Conta')}</span>
+              </button>
+
+              <div className="settings-sidebar-section" style={{ marginTop: '0.75rem' }}>{t('settings.devices')}</div>
               <button 
                 className={`settings-tab-btn ${activeTab === SettingsTabEnum.VOICE ? 'active' : ''}`}
                 onClick={() => setActiveTab(SettingsTabEnum.VOICE)}
@@ -375,6 +454,137 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* Content Area */}
           <div className="settings-content">
+            {activeTab === SettingsTabEnum.ACCOUNT && (
+              <div className="account-container">
+                {/* Card Visual de Perfil */}
+                <div className="account-profile-card">
+                  <div 
+                    className="account-banner"
+                    style={{
+                      backgroundColor: currentUser?.bannerColor || '#1e293b',
+                      backgroundImage: getMediaUrl(currentUser?.bannerUrl) ? `url(${getMediaUrl(currentUser?.bannerUrl)})` : undefined,
+                    }}
+                  />
+                  <div className="account-profile-body">
+                    <div className="account-profile-left">
+                      <div className="account-avatar-wrapper">
+                        {getMediaUrl(currentUser?.avatarUrl) && !avatarError ? (
+                          <img 
+                            src={getMediaUrl(currentUser?.avatarUrl)} 
+                            alt={currentUser?.displayName || currentUser?.username} 
+                            className="account-avatar-img" 
+                            onError={() => setAvatarError(true)}
+                          />
+                        ) : (
+                          <div className="account-avatar-fallback">
+                            {(currentUser?.displayName || currentUser?.username || 'U').charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div className="account-names">
+                        <div className="account-display-name">
+                          {currentUser?.displayName || currentUser?.username || 'Usuário'}
+                        </div>
+                        <div className="account-username">
+                          @{currentUser?.username || 'usuario'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {onOpenEditProfile && (
+                      <button 
+                        type="button" 
+                        className="account-edit-profile-btn"
+                        onClick={onOpenEditProfile}
+                      >
+                        <Sparkles size={14} />
+                        <span>{t('user.editProfile', 'Editar Perfil de Usuário')}</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Informações da Conta */}
+                <div className="account-section">
+                  <span className="account-section-title">{t('user.accountDetails', 'Dados da Conta')}</span>
+                  <div className="account-info-box">
+                    <div className="account-info-row">
+                      <span className="account-info-label">{t('user.displayName', 'Nome de exibição')}</span>
+                      <span className="account-info-value">{currentUser?.displayName || 'Não definido'}</span>
+                    </div>
+                    <div className="account-info-row">
+                      <span className="account-info-label">{t('user.username', 'Nome de usuário')}</span>
+                      <span className="account-info-value">@{currentUser?.username || '-'}</span>
+                    </div>
+                    <div className="account-info-row">
+                      <span className="account-info-label">{t('user.email', 'E-mail')}</span>
+                      <span className="account-info-value">{currentUser?.email || '••••••••@••••.com'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Segurança / Alterar Senha */}
+                <div className="account-section">
+                  <span className="account-section-title">{t('user.securityTitle', 'Segurança e Senha')}</span>
+                  <form onSubmit={handleChangePassword} className="account-password-form">
+                    {passwordFeedback && (
+                      <div className={`account-feedback ${passwordFeedback.type}`}>
+                        {passwordFeedback.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                        <span>{passwordFeedback.message}</span>
+                      </div>
+                    )}
+
+                    <div className="account-input-group">
+                      <label className="account-input-label">{t('user.currentPassword', 'Senha atual')}</label>
+                      <input
+                        type="password"
+                        className="account-input"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder="Digite sua senha atual"
+                        autoComplete="current-password"
+                      />
+                    </div>
+
+                    <div className="account-input-group">
+                      <label className="account-input-label">{t('user.newPassword', 'Nova senha')}</label>
+                      <input
+                        type="password"
+                        className="account-input"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Mínimo de 6 caracteres"
+                        autoComplete="new-password"
+                      />
+                    </div>
+
+                    <div className="account-input-group">
+                      <label className="account-input-label">{t('user.confirmPassword', 'Confirmar nova senha')}</label>
+                      <input
+                        type="password"
+                        className="account-input"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirme a nova senha"
+                        autoComplete="new-password"
+                      />
+                    </div>
+
+                    <div className="account-password-actions">
+                      <button
+                        type="submit"
+                        className="account-change-pwd-btn"
+                        disabled={isChangingPassword}
+                      >
+                        <KeyRound size={14} />
+                        <span>{isChangingPassword ? 'Salvando...' : t('user.updatePassword', 'Atualizar Senha')}</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
             {activeTab === SettingsTabEnum.VOICE && (
               <>
                 {/* 2-Columns Grid for Input and Output */}

@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import styles from './Modals.module.css';
+import { Camera, Image as ImageIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../../../components/common/Toast/ToastContext';
 import { httpClient } from '../../../../infrastructure/adapters/http/http-client.adapter';
 import { ApiRoutes } from '../../../../core/enums';
+import type { ServerItem } from '../ServerSidebar/ServerSidebar';
 
 interface CreateServerModalProps {
   isOpen: boolean;
@@ -21,10 +23,27 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
   const { toast } = useToast();
   const [serverName, setServerName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
+  const [iconFile, setIconFile] = useState<File | null>(null);
+  const [iconPreview, setIconPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
 
   if (!isOpen) return null;
+
+  const handleIconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error(t('user.invalidImageType', 'Por favor, selecione uma imagem válida.'));
+      return;
+    }
+
+    setIconFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setIconPreview(objectUrl);
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,9 +55,20 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
 
     setIsCreating(true);
     try {
-      await httpClient.post(ApiRoutes.SERVERS, { name: trimmed });
+      const newServer = await httpClient.post<ServerItem>(ApiRoutes.SERVERS, { name: trimmed });
+
+      if (iconFile && newServer?.id) {
+        const formData = new FormData();
+        formData.append('file', iconFile);
+        await httpClient.post(`/storage/server/${newServer.id}/icon`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      }
+
       toast.success(t('server.createdSuccess', { name: trimmed }));
       setServerName('');
+      setIconFile(null);
+      setIconPreview(null);
       onClose();
       onServerCreated();
     } catch (err: any) {
@@ -76,6 +106,33 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
         <h2 className={styles.title}>{t('server.createServer')}</h2>
 
         <form onSubmit={handleCreate} className={styles.inputGroup}>
+          <div className={styles.iconUploadSection}>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleIconChange}
+              accept="image/*"
+              style={{ display: 'none' }}
+            />
+            <div 
+              className={styles.iconPreviewWrapper}
+              onClick={() => fileInputRef.current?.click()}
+              title={t('server.uploadIcon', 'Escolher ícone do servidor')}
+            >
+              {iconPreview ? (
+                <img src={iconPreview} alt="Ícone preview" className={styles.iconPreviewImg} />
+              ) : (
+                <div className={styles.iconPlaceholder}>
+                  <Camera size={24} />
+                </div>
+              )}
+              <div className={styles.iconOverlay}>
+                <ImageIcon size={20} />
+              </div>
+            </div>
+            <span className={styles.iconUploadHint}>{t('server.iconHint', 'Ícone opcional (clique para escolher)')}</span>
+          </div>
+
           <label className={styles.label}>{t('server.serverName')}</label>
           <input
             type="text"

@@ -3,6 +3,7 @@ import styles from './ServerSidebar.module.css';
 import heroLogo from '../../../../assets/logo.png';
 import { Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { getMediaUrl } from '../../../../core/utils/media.util';
 
 export interface ChannelItem {
   id: string;
@@ -14,6 +15,7 @@ export interface ServerItem {
   id: string;
   name: string;
   ownerId: string;
+  iconUrl?: string | null;
   channels: ChannelItem[];
 }
 
@@ -41,6 +43,7 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({
   onOpenCreateServerModal,
 }) => {
   const { t } = useTranslation();
+  const [failedIcons, setFailedIcons] = React.useState<Record<string, boolean>>({});
 
   return (
     <div className={styles.sidebar}>
@@ -75,6 +78,8 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({
           }, 0) || 0;
 
         const initials = server.name.substring(0, 2).toUpperCase();
+        const iconUrl = getMediaUrl(server.iconUrl);
+        const hasFailed = failedIcons[server.id];
 
         return (
           <div
@@ -87,7 +92,18 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({
             onClick={() => onSelectServer(server)}
             title={server.name}
           >
-            {initials}
+            {iconUrl && !hasFailed ? (
+              <img
+                src={iconUrl}
+                alt={server.name}
+                className={styles.serverImg}
+                onError={() =>
+                  setFailedIcons((prev) => ({ ...prev, [server.id]: true }))
+                }
+              />
+            ) : (
+              initials
+            )}
             {unreadCount > 0 && (
               <div className={styles.badge}>
                 {unreadCount > 99 ? '99+' : unreadCount}

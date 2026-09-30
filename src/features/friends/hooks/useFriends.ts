@@ -64,12 +64,38 @@ export function useFriends() {
       fetchFriends();
     };
 
+    const onUserProfileUpdated = (data: {
+      userId: string;
+      displayName?: string | null;
+      avatarUrl?: string | null;
+      bannerUrl?: string | null;
+      bannerColor?: string | null;
+      bio?: string | null;
+    }) => {
+      setFriends((prev) =>
+        prev.map((f) =>
+          f.id === data.userId
+            ? {
+                ...f,
+                displayName: data.displayName !== undefined ? data.displayName : f.displayName,
+                avatarUrl: data.avatarUrl !== undefined ? data.avatarUrl : (f as any).avatarUrl,
+                bannerUrl: data.bannerUrl !== undefined ? data.bannerUrl : (f as any).bannerUrl,
+                bannerColor: data.bannerColor !== undefined ? data.bannerColor : (f as any).bannerColor,
+                bio: data.bio !== undefined ? data.bio : (f as any).bio,
+              }
+            : f
+        )
+      );
+    };
+
     realtimeClient.on(RealtimeEvents.FRIEND_ACTION, onFriendAction);
     realtimeClient.on(RealtimeEvents.FRIEND_ACTION_UPDATE, onFriendAction);
+    realtimeClient.on(RealtimeEvents.USER_PROFILE_UPDATED, onUserProfileUpdated);
 
     return () => {
       realtimeClient.off(RealtimeEvents.FRIEND_ACTION, onFriendAction);
       realtimeClient.off(RealtimeEvents.FRIEND_ACTION_UPDATE, onFriendAction);
+      realtimeClient.off(RealtimeEvents.USER_PROFILE_UPDATED, onUserProfileUpdated);
     };
   }, [fetchFriends]);
 

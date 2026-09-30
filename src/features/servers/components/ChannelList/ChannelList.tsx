@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styles from './ChannelList.module.css';
-import { Hash, Volume2, Plus, UserPlus, Search, ChevronDown, Mic, MicOff } from 'lucide-react';
+import { Hash, Volume2, Plus, UserPlus, Search, ChevronDown, Mic, MicOff, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import * as Slider from '@radix-ui/react-slider';
@@ -22,6 +22,7 @@ interface ChannelListProps {
   onConnectVoice: (channel: ChannelItem) => void;
   onOpenCreateChannelModal: () => void;
   onOpenInviteModal: () => void;
+  onOpenServerSettings?: () => void;
 }
 
 const LiveTimer: React.FC<{ startedAt?: number }> = ({ startedAt }) => {
@@ -64,6 +65,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
   onConnectVoice,
   onOpenCreateChannelModal,
   onOpenInviteModal,
+  onOpenServerSettings,
 }) => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
@@ -86,11 +88,25 @@ export const ChannelList: React.FC<ChannelListProps> = ({
     <div className={styles.container}>
       {/* Header */}
       <div className={styles.header}>
-        <div className={styles.serverNameWrapper}>
+        <div 
+          className={styles.serverNameWrapper}
+          onClick={isOwner && onOpenServerSettings ? onOpenServerSettings : undefined}
+          style={{ cursor: isOwner && onOpenServerSettings ? 'pointer' : 'default' }}
+          title={isOwner ? t('server.settingsTitle', 'Configurações do Servidor') : undefined}
+        >
           <span className={styles.serverTitle}>{server.name}</span>
           <ChevronDown size={14} color="#64748b" />
         </div>
         <div className={styles.headerActions}>
+          {isOwner && onOpenServerSettings && (
+            <button
+              className={styles.iconBtn}
+              title={t('server.settingsTitle', 'Configurações do Servidor')}
+              onClick={onOpenServerSettings}
+            >
+              <Settings size={16} />
+            </button>
+          )}
           {isOwner && <span className={styles.ownerBadge}>{t('common.owner')}</span>}
           <button
             className={styles.iconBtn}

@@ -18,6 +18,11 @@ export class HttpClientAdapter implements IHttpClientPort {
     return res.data;
   }
 
+  async patch<T = any>(url: string, data?: any, config?: any): Promise<T> {
+    const res = await api.patch<T>(url, data, config);
+    return res.data;
+  }
+
   async delete<T = any>(url: string, config?: any): Promise<T> {
     const res = await api.delete<T>(url, config);
     return res.data;

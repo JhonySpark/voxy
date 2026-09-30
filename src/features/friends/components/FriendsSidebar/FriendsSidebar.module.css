@@ -152,6 +152,15 @@
   flex-shrink: 0;
 }
 
+.avatarImg {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  display: block;
+}
+
 .userName {
   font-size: 0.875rem;
   font-weight: 500;

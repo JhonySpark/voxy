@@ -33,7 +33,13 @@ export const SelectiveAudioRenderer: React.FC<SelectiveAudioRendererProps> = ({
           micPub.audioTrack.attach(el);
         }
         const userVol = userVolumes[p.identity] ?? 100;
-        el.volume = Math.max(0, Math.min(1.0, userVol / 100));
+        const isMicMuted = userVol <= 0;
+        const targetMicVol = isMicMuted ? 0 : Math.max(0, Math.min(1.0, userVol / 100));
+        el.muted = isMicMuted;
+        el.volume = targetMicVol;
+        if (typeof (micPub.audioTrack as any).setVolume === 'function') {
+          (micPub.audioTrack as any).setVolume(targetMicVol);
+        }
       }
 
       // 2. Áudio da Transmissão de Tela: SÓ toca e SÓ subscreve se o usuário estiver assistindo!
@@ -60,7 +66,24 @@ export const SelectiveAudioRenderer: React.FC<SelectiveAudioRendererProps> = ({
             screenAudioPub.audioTrack.attach(el);
           }
           const streamVol = streamVolumes[streamOwnerId] ?? 100;
-          el.volume = Math.max(0, Math.min(1.0, streamVol / 100));
+          const isMuted = streamVol <= 0;
+          const targetVol = isMuted ? 0 : Math.max(0, Math.min(1.0, streamVol / 100));
+          
+          el.muted = isMuted;
+          el.volume = targetVol;
+
+          // Aplica também em todos os elementos de áudio anexados pelo LiveKit (ex: RoomAudioRenderer)
+          if (Array.isArray(screenAudioPub.audioTrack.attachedElements)) {
+            screenAudioPub.audioTrack.attachedElements.forEach((audioEl: HTMLAudioElement) => {
+              audioEl.muted = isMuted;
+              audioEl.volume = targetVol;
+            });
+          }
+
+          // Aplica também diretamente no WebRTC AudioTrack do LiveKit caso suportado
+          if (typeof (screenAudioPub.audioTrack as any).setVolume === 'function') {
+            (screenAudioPub.audioTrack as any).setVolume(targetVol);
+          }
         } else if (!isWatching && el) {
           // Desconecta e pausa o áudio imediatamente se parou de assistir
           el.pause();

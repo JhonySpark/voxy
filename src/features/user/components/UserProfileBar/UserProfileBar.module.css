@@ -1,6 +1,7 @@
 .container {
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .activeCallBar {
@@ -55,10 +56,52 @@
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.75rem;
   background: rgba(15, 23, 42, 0.65);
   backdrop-filter: blur(12px);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.userClickable {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 8px;
+  transition: background-color 0.15s ease;
+}
+
+.userClickable:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.avatarWrapper {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.statusDot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--brand-primary, #34d399);
+  border: 2px solid #0f172a;
 }
 
 .avatar {
@@ -84,12 +127,22 @@
 }
 
 .userName {
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: #f1f5f9;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.userHandle {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
 }
 
 .actionBtn {
