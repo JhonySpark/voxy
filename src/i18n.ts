@@ -15,6 +15,7 @@ const resources = {
       "common.owner": "OWNER",
       "common.live": "LIVE",
       "common.today": "Today",
+      "common.yesterday": "Yesterday",
 
       // Auth - Login
       "auth.login.title": "Welcome to Voxy",
@@ -211,6 +212,7 @@ const resources = {
       "common.owner": "DONO",
       "common.live": "AO VIVO",
       "common.today": "Hoje",
+      "common.yesterday": "Ontem",
 
       // Auth - Login
       "auth.login.title": "Bem-vindo(a) ao Voxy",
@@ -407,6 +409,7 @@ const resources = {
       "common.owner": "PROPIETARIO",
       "common.live": "EN VIVO",
       "common.today": "Hoy",
+      "common.yesterday": "Ayer",
 
       // Auth - Login
       "auth.login.title": "Bienvenido(a) a Voxy",

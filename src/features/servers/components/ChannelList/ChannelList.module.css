@@ -161,15 +161,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.45rem 0.75rem;
-  margin: 0 0.5rem;
+  padding: 0.4rem 1rem;
+  margin: 0.25rem 1rem;
   border-radius: 8px;
   cursor: pointer;
   transition: background-color 0.15s, color 0.15s;
 }
 
 .channelItem:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(255, 255, 255, 0.04);
 }
 
 .channelItem.active {

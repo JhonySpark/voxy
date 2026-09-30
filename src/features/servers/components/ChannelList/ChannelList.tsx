@@ -122,7 +122,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
         {/* Text Channels Section */}
         <div>
           <div className={styles.sectionTitleWrapper}>
-            <span>{t('channel.textChannels')}</span>
+            <span className={styles.sectionTitle}>{t('channel.textChannels')}</span>
             <ChevronDown size={14} />
           </div>
           <div>

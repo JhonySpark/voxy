@@ -40,7 +40,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   onNewMessageChange,
   onSendMessage,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -52,6 +52,27 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     type === 'DM'
       ? t('chat.dmPlaceholder', { name: targetName })
       : t('chat.messagePlaceholder', { name: targetName });
+
+  const isSameCalendarDay = (left: Date, right: Date) =>
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate();
+
+  const formatDateSeparator = (value: string) => {
+    const date = new Date(value);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
+    if (isSameCalendarDay(date, today)) return t('common.today');
+    if (isSameCalendarDay(date, yesterday)) return t('common.yesterday');
+
+    return new Intl.DateTimeFormat(i18n.language, {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    }).format(date);
+  };
 
   return (
     <div className={styles.container}>
@@ -76,7 +97,13 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
       {/* Messages */}
       <div className={styles.messagesList}>
-        {messages.map((msg) => {
+        {messages.map((msg, index) => {
+          const previousMessage = messages[index - 1];
+          const messageDate = new Date(msg.createdAt);
+          const showDateSeparator = !previousMessage || !isSameCalendarDay(
+            messageDate,
+            new Date(previousMessage.createdAt)
+          );
           const isMe = msg.senderId === myId;
           const author = isMe ? t('chat.you') : (msg.sender?.username || t('voice.remoteUser'));
           const time = new Date(msg.createdAt).toLocaleTimeString([], {
@@ -85,31 +112,37 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           });
 
           return (
-            <div
-              key={msg.id}
-              className={`${styles.messageRow} ${
-                isMe ? styles.myMessage : styles.otherMessage
-              }`}
-            >
-              {!isMe && (
-                <div className={styles.avatar} style={{ width: 28, height: 28, fontSize: '0.75rem' }}>
-                  {author.charAt(0).toUpperCase()}
+            <React.Fragment key={msg.id}>
+              {showDateSeparator && (
+                <div className={styles.dateSeparator}>
+                  <span>{formatDateSeparator(msg.createdAt)}</span>
                 </div>
               )}
-              <div className={styles.messageBubbleWrapper}>
-                <div className={styles.messageMeta}>
-                  <span className={styles.authorName}>{author}</span>
-                  <span className={styles.time}>{time}</span>
-                </div>
-                <div
-                  className={`${styles.bubble} ${
-                    isMe ? styles.myBubble : styles.otherBubble
-                  }`}
-                >
-                  {msg.content}
+              <div
+                className={`${styles.messageRow} ${
+                  isMe ? styles.myMessage : styles.otherMessage
+                }`}
+              >
+                {!isMe && (
+                  <div className={styles.avatar} style={{ width: 28, height: 28, fontSize: '0.75rem' }}>
+                    {author.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className={styles.messageBubbleWrapper}>
+                  <div className={styles.messageMeta}>
+                    <span className={styles.authorName}>{author}</span>
+                    <span className={styles.time}>{time}</span>
+                  </div>
+                  <div
+                    className={`${styles.bubble} ${
+                      isMe ? styles.myBubble : styles.otherBubble
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
                 </div>
               </div>
-            </div>
+            </React.Fragment>
           );
         })}
         <div ref={messagesEndRef} />
