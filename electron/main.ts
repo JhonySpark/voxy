@@ -35,9 +35,11 @@ app.commandLine.appendSwitch('enable-webrtc-hw-h264-encoding')
 app.commandLine.appendSwitch('enable-webrtc-hw-decoding')
 app.commandLine.appendSwitch('ignore-gpu-blocklist')
 app.commandLine.appendSwitch('enable-gpu-rasterization')
-app.commandLine.appendSwitch('enable-zero-copy')
-app.commandLine.appendSwitch('enable-gpu-memory-buffer-video-frames')
-app.commandLine.appendSwitch('enable-features', 'WebRtcAllowWgcScreenCapturer,DXGIZeroCopyVideo,ZeroCopy')
+// O streamer nativo já faz WGC -> D3D11 -> NVENC sem cópias pela RAM. Não
+// habilite os caminhos experimentais de frames GPU do Chromium: eles deixam
+// superfícies de vídeo vivas no renderer e podem crescer indefinidamente em
+// transmissões longas. Mantemos apenas o capturador WGC do fallback WebRTC.
+app.commandLine.appendSwitch('enable-features', 'WebRtcAllowWgcScreenCapturer')
 app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion')
 app.commandLine.appendSwitch('disable-renderer-backgrounding')
 app.commandLine.appendSwitch('disable-backgrounding-occluded-windows')
