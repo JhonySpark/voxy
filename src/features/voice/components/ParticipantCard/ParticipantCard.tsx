@@ -76,7 +76,7 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
             muted
             className={styles.videoElement}
           />
-          {p.track && <DevStreamDiagnostics track={p.track} nativeTelemetry={p.nativeTelemetry} />}
+          {import.meta.env.DEV && p.track && <DevStreamDiagnostics track={p.track} nativeTelemetry={p.nativeTelemetry} />}
         </div>
       ) : p.isStreaming && !p.isLocal ? (
         /* Stream não assistida ainda */

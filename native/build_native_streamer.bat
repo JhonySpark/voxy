@@ -15,10 +15,10 @@ copy /Y "livekit\bin\*.dll" "..\electron\bin\" >nul
 echo [3/3] Compilando voxy_native_streamer.exe...
 cl.exe /nologo /O2 /EHsc /std:c++17 /await:strict ^
     /I"livekit\include" /I"nvenc\include" ^
-    wgc_capture.cpp nvenc_encoder.cpp d3d11_scaler.cpp voxy_native_streamer.cpp ^
+    wgc_capture.cpp nvenc_encoder.cpp d3d11_scaler.cpp process_loopback_audio.cpp voxy_native_streamer.cpp ^
     /Fe:"..\electron\bin\voxy_native_streamer.exe" ^
     /link /LIBPATH:"livekit\lib" livekit.lib ^
-    d3d11.lib dxgi.lib d3dcompiler.lib windowsapp.lib user32.lib kernel32.lib ole32.lib
+    d3d11.lib dxgi.lib d3dcompiler.lib windowsapp.lib user32.lib kernel32.lib ole32.lib mmdevapi.lib
 
 if %errorlevel% neq 0 (
     echo [ERRO] Falha na compilacao com codigo %errorlevel%

@@ -192,6 +192,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
 
   const [streamRes, setStreamRes] = useState<StreamResolution>(StreamResolution.HD_720);
   const [streamFps, setStreamFps] = useState<StreamFramerate>(StreamFramerate.FPS_30);
+  const [shareGameAudio, setShareGameAudio] = useState(true);
   const [streamVolumes, setStreamVolumes] = useState<Record<string, number>>({});
   const [watchingStreams, setWatchingStreams] = useState<Set<string>>(new Set());
   const [maximizedId, setMaximizedId] = useState<string | null>(null);
@@ -500,11 +501,14 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
             height: targetHeight,
             fps: targetFps,
             bitrate: targetBitrate,
+            captureProcessAudio: shareAudio,
           });
 
           setIsNativeStreaming(true);
 
-          if (shareAudio) {
+          // O áudio do jogo é publicado pelo WASAPI por processo no streamer
+          // nativo. Não inicie o loopback do Chromium: ele inclui a chamada.
+          if (shareAudio && !isNativeSupported) {
             try {
               const aStream = await (navigator.mediaDevices as any).getUserMedia({
                 audio: { mandatory: { chromeMediaSource: 'desktop' } },
@@ -530,13 +534,9 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
 
       console.log('[Voxy Stream] Usando pipeline WebRTC padrão para captura de desktop...');
       const constraints: any = {
-        audio: shareAudio
-          ? {
-              mandatory: {
-                chromeMediaSource: 'desktop',
-              },
-            }
-          : false,
+        // O fallback WebRTC nunca captura o mix do sistema, para não enviar
+        // as vozes remotas de volta para a transmissão.
+        audio: false,
         video: {
           mandatory: {
             chromeMediaSource: 'desktop',
@@ -745,7 +745,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
       )}
 
       {/* Floating HUD for Native Streamer */}
-      {isNativeStreaming && (
+      {import.meta.env.DEV && isNativeStreaming && (
         <div style={{
           position: 'absolute',
           top: 12,
@@ -789,8 +789,10 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         categorizedSources={categorizedSources}
         streamRes={streamRes}
         streamFps={streamFps}
+        shareAudio={shareGameAudio}
         onStreamResChange={setStreamRes}
         onStreamFpsChange={setStreamFps}
+        onShareAudioChange={setShareGameAudio}
         onSelectSource={selectSource}
         onClose={() => setShowSources(false)}
       />

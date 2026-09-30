@@ -98,6 +98,7 @@ app.whenReady().then(() => {
     height?: number;
     fps?: number;
     bitrate?: number;
+    captureProcessAudio?: boolean;
   }) => {
     const binPath = findNativeStreamerBin();
     if (!binPath) {
@@ -121,6 +122,7 @@ app.whenReady().then(() => {
       '--fps', String(opts.fps || 60),
       '--bitrate', String(opts.bitrate || 8000000),
     ];
+    if (opts.captureProcessAudio) args.push('--capture-process-audio');
 
     console.log('[NativeStream] Disparando streamer nativo C++:', binPath, args.join(' '));
 

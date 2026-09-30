@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import styles from './ShareScreenModal.module.css';
 import { Gamepad2, AppWindow, Monitor, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -20,9 +20,11 @@ interface ShareScreenModalProps {
   };
   streamRes: '720' | '1080';
   streamFps: '30' | '60';
+  shareAudio: boolean;
   onStreamResChange: (res: '720' | '1080') => void;
   onStreamFpsChange: (fps: '30' | '60') => void;
-  onSelectSource: (sourceId: string) => void;
+  onShareAudioChange: (shareAudio: boolean) => void;
+  onSelectSource: (sourceId: string, shareAudio: boolean) => void;
   onClose: () => void;
 }
 
@@ -31,22 +33,17 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
   categorizedSources,
   streamRes,
   streamFps,
+  shareAudio,
   onStreamResChange,
   onStreamFpsChange,
+  onShareAudioChange,
   onSelectSource,
   onClose,
 }) => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'games' | 'windows' | 'screens'>('games');
-
   if (!isOpen) return null;
 
-  const currentList =
-    activeTab === 'games'
-      ? categorizedSources.games
-      : activeTab === 'windows'
-      ? categorizedSources.windows
-      : categorizedSources.screens;
+  const currentList = categorizedSources.games;
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -59,9 +56,10 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
             </div>
             <div>
               <h2 className={styles.title}>{t('voice.shareModalTitle')}</h2>
-              <span className={styles.subtitle}>
-                {t('voice.shareAudio')}
-              </span>
+              <label className={styles.audioToggle}>
+                <input type="checkbox" checked={shareAudio} onChange={(event) => onShareAudioChange(event.target.checked)} />
+                <span>Compartilhar áudio do jogo/aplicativo</span>
+              </label>
             </div>
           </div>
 
@@ -92,15 +90,15 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
           </div>
         </div>
 
-        {/* Tabs */}
+        {streamFps === '60' && (
+          <div className={styles.experimentalNotice}>
+            <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+            <span>O compartilhamento em 60 FPS ainda está em fase de testes e pode apresentar instabilidade.</span>
+          </div>
+        )}
+
         <div className={styles.tabs}>
-          <button
-            type="button"
-            className={`${styles.tabBtn} ${
-              activeTab === 'games' ? styles.active : styles.inactive
-            }`}
-            onClick={() => setActiveTab('games')}
-          >
+          <div className={`${styles.tabBtn} ${styles.active}`}>
             <Gamepad2 size={16} />
             <span>Jogos</span>
             {categorizedSources.games.length > 0 && (
@@ -108,60 +106,16 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
                 {categorizedSources.games.length}
               </span>
             )}
-          </button>
-
-          <button
-            type="button"
-            className={`${styles.tabBtn} ${
-              activeTab === 'windows' ? styles.active : styles.inactive
-            }`}
-            onClick={() => setActiveTab('windows')}
-          >
+          </div>
+          <button type="button" disabled className={`${styles.tabBtn} ${styles.inactive} ${styles.disabledTab}`}>
             <AppWindow size={16} />
             <span>{t('voice.applications')} ({categorizedSources.windows.length})</span>
           </button>
-
-          <button
-            type="button"
-            disabled={activeTab === 'games'}
-            className={`${styles.tabBtn} ${
-              activeTab === 'screens' ? styles.active : styles.inactive
-            } ${activeTab === 'games' ? styles.disabledTab : ''}`}
-            onClick={() => {
-              if (activeTab !== 'games') {
-                setActiveTab('screens');
-              }
-            }}
-            title={
-              activeTab === 'games'
-                ? t(
-                    'voice.screensDisabledForGames',
-                    'O compartilhamento de tela inteira foi desabilitado para jogos para preservar a taxa de bits (bitrate).'
-                  )
-                : undefined
-            }
-          >
+          <button type="button" disabled className={`${styles.tabBtn} ${styles.inactive} ${styles.disabledTab}`}>
             <Monitor size={16} />
-            <span>
-              {t('voice.screens')}{' '}
-              {activeTab === 'games'
-                ? `(${t('voice.disabled', 'Desabilitado')})`
-                : `(${categorizedSources.screens.length})`}
-            </span>
+            <span>{t('voice.screens')} ({t('voice.disabled', 'Desabilitado')})</span>
           </button>
         </div>
-
-        {activeTab === 'games' && (
-          <div className={styles.bitrateNotice}>
-            <AlertTriangle size={15} style={{ flexShrink: 0 }} />
-            <span>
-              {t(
-                'voice.screensNoticeForGames',
-                'O compartilhamento de tela inteira foi desabilitado para jogos para preservar a qualidade de bitrate e manter 60 FPS direto da GPU. Selecione a janela do jogo diretamente.'
-              )}
-            </span>
-          </div>
-        )}
 
         {/* Sources Grid */}
         <div className={styles.sourceGrid}>
@@ -177,7 +131,7 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
               <div
                 key={s.id}
                 className={`${styles.sourceCard} ${s.isGame ? styles.isGame : ''}`}
-                onClick={() => onSelectSource(s.id)}
+                onClick={() => onSelectSource(s.id, shareAudio)}
               >
                 <div className={styles.thumbnailWrapper}>
                   <img src={s.thumbnail} alt={s.name} className={styles.thumbnailImg} />

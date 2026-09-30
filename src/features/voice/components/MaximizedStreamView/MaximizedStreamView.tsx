@@ -87,7 +87,7 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
         {participant.hasVideo ? (
           <>
             <VideoRenderer track={participant.track} className={styles.videoElement} />
-            {participant.track && <DevStreamDiagnostics track={participant.track} nativeTelemetry={participant.nativeTelemetry} />}
+            {import.meta.env.DEV && participant.track && <DevStreamDiagnostics track={participant.track} nativeTelemetry={participant.nativeTelemetry} />}
           </>
         ) : (
           <div className={styles.avatarPlaceholder}>

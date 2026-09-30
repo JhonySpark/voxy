@@ -66,6 +66,21 @@
   color: #94a3b8;
 }
 
+.audioToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.3rem;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.audioToggle input {
+  accent-color: var(--brand-primary, #34d399);
+  cursor: pointer;
+}
+
 .selectors {
   display: flex;
   gap: 0.8rem;
@@ -159,7 +174,7 @@
   color: #94a3b8;
 }
 
-.bitrateNotice {
+.experimentalNotice {
   display: flex;
   align-items: center;
   gap: 0.5rem;

@@ -12,6 +12,7 @@
 #include "wgc_capture.h"
 #include "nvenc_encoder.h"
 #include "d3d11_scaler.h"
+#include "process_loopback_audio.h"
 #include "livekit/livekit.h"
 
 std::atomic<bool> g_running(true);
@@ -48,6 +49,7 @@ int main(int argc, char* argv[]) {
     uint32_t reqHeight = 720;
     uint32_t fps = 60;
     uint32_t bitrate = 8000000;
+    bool captureProcessAudio = false;
 
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
@@ -58,6 +60,7 @@ int main(int argc, char* argv[]) {
         else if (arg == "--height" && i + 1 < argc) reqHeight = std::stoul(argv[++i]);
         else if (arg == "--fps" && i + 1 < argc) fps = std::stoul(argv[++i]);
         else if (arg == "--bitrate" && i + 1 < argc) bitrate = std::stoul(argv[++i]);
+        else if (arg == "--capture-process-audio") captureProcessAudio = true;
     }
 
     if (url.empty() || token.empty() || hwndVal == 0) {
@@ -70,6 +73,8 @@ int main(int argc, char* argv[]) {
         std::cerr << "Erro: HWND invalido ou janela nao existe: " << hwndVal << std::endl;
         return 1;
     }
+    DWORD targetProcessId = 0;
+    GetWindowThreadProcessId(targetHwnd, &targetProcessId);
 
     // Detecta as dimensoes nativas da janela ou tela para manter aspect ratio
     RECT clientRect = {};
@@ -158,6 +163,37 @@ int main(int argc, char* argv[]) {
               << (bitrate / 1000000.0) << " Mbps | Max FPS: " << fps << ")..." << std::endl;
     localPart->publishTrack(localTrack, pubOptions);
     std::cout << "[Voxy Native Streamer] Track publicada com sucesso: " << localTrack->name() << std::endl;
+
+    std::shared_ptr<livekit::AudioSource> processAudioSource;
+    std::shared_ptr<livekit::LocalAudioTrack> processAudioTrack;
+    ProcessLoopbackAudio processAudioCapture;
+    if (captureProcessAudio && targetProcessId) {
+        processAudioSource = std::make_shared<livekit::AudioSource>(48000, 2, 0);
+        processAudioTrack = livekit::LocalAudioTrack::createLocalAudioTrack("screen_audio", processAudioSource);
+        if (processAudioTrack) {
+            livekit::TrackPublishOptions audioOptions;
+            audioOptions.source = livekit::TrackSource::SOURCE_SCREENSHARE_AUDIO;
+            livekit::AudioEncodingOptions audioEncoding;
+            audioEncoding.max_bitrate = 128000;
+            audioOptions.audio_encoding = audioEncoding;
+            localPart->publishTrack(processAudioTrack, audioOptions);
+
+            if (processAudioCapture.Start(targetProcessId,
+                [processAudioSource](const int16_t* samples, uint32_t frames) {
+                    try {
+                        std::vector<int16_t> pcm(samples, samples + static_cast<size_t>(frames) * 2);
+                        processAudioSource->captureFrame(livekit::AudioFrame(std::move(pcm), 48000, 2, frames));
+                    } catch (const std::exception& err) {
+                        std::cerr << "[Voxy Process Audio] Falha ao enviar frame: " << err.what() << std::endl;
+                    }
+                })) {
+                std::cout << "[Voxy Process Audio] Capturando somente o PID " << targetProcessId
+                          << " e seus processos-filhos." << std::endl;
+            } else {
+                std::cerr << "[Voxy Process Audio] Áudio do jogo indisponível; transmissão seguirá sem áudio." << std::endl;
+            }
+        }
+    }
 
     // 4. Inicializa o WGCCaptureEngine, D3D11Scaler e o NVENCEncoder no mesmo ID3D11Device
     WGCCaptureEngine captureEngine;
@@ -303,6 +339,7 @@ int main(int argc, char* argv[]) {
     std::cout << "[Voxy Native Streamer] Finalizando pipeline nativo..." << std::endl;
 
     captureEngine.StopCapture();
+    processAudioCapture.Stop();
     encoder.Shutdown();
     scaler.Shutdown();
 

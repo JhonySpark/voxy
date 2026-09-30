@@ -39,7 +39,10 @@ export const SelectiveAudioRenderer: React.FC<SelectiveAudioRendererProps> = ({
       // 2. Áudio da Transmissão de Tela: SÓ toca e SÓ subscreve se o usuário estiver assistindo!
       const screenAudioPub = p.getTrackPublication(Track.Source.ScreenShareAudio) as any;
       if (screenAudioPub) {
-        const isWatching = watchingStreams.has(p.identity);
+        const streamOwnerId = p.identity.endsWith('#screen')
+          ? p.identity.slice(0, -'#screen'.length)
+          : p.identity;
+        const isWatching = watchingStreams.has(streamOwnerId);
         const key = `${p.identity}-screen-audio`;
 
         // Ativa/desativa a subscrição no LiveKit SFU (economiza banda e processamento)
@@ -56,7 +59,7 @@ export const SelectiveAudioRenderer: React.FC<SelectiveAudioRendererProps> = ({
             audioElementsRef.current.set(key, el);
             screenAudioPub.audioTrack.attach(el);
           }
-          const streamVol = streamVolumes[p.identity] ?? 100;
+          const streamVol = streamVolumes[streamOwnerId] ?? 100;
           el.volume = Math.max(0, Math.min(1.0, streamVol / 100));
         } else if (!isWatching && el) {
           // Desconecta e pausa o áudio imediatamente se parou de assistir
