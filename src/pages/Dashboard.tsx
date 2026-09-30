@@ -72,7 +72,9 @@ export default function Dashboard() {
     setNewMessage,
     unreadDMs,
     unreadChannels,
+    isLoadingMessages,
     sendMessage,
+    sendAttachmentMessage,
     fetchDMMessages,
     fetchChannelMessages,
   } = useChat({
@@ -173,7 +175,7 @@ export default function Dashboard() {
         realtimeClient.emit(RealtimeEvents.LEAVE_CHANNEL, { channelId: activeChannel.id });
       };
     }
-  }, [activeFriend, activeChannel, activeView, fetchDMMessages, fetchChannelMessages]);
+  }, [activeFriend?.id, activeChannel?.id, activeChannel?.type, activeView, fetchDMMessages, fetchChannelMessages]);
 
   const handleLogout = () => {
     localStorage.removeItem(StorageKeys.AUTH_TOKEN);
@@ -215,7 +217,11 @@ export default function Dashboard() {
         onSelectServer={(server) => {
           setActiveView(DashboardView.SERVER);
           setActiveServer(server);
-          setActiveChannel(server.channels?.[0] || null);
+          const defaultChannel =
+            server.channels?.find((ch) => ch.type === ChannelTypeEnum.TEXT) ||
+            server.channels?.[0] ||
+            null;
+          setActiveChannel(defaultChannel);
         }}
         onOpenCreateServerModal={() => setShowServerModal(true)}
       />
@@ -304,6 +310,8 @@ export default function Dashboard() {
             newMessage={newMessage}
             onNewMessageChange={setNewMessage}
             onSendMessage={sendMessage}
+            onSendAttachment={sendAttachmentMessage}
+            isLoading={isLoadingMessages}
           />
         ) : activeView === DashboardView.SERVER && activeChannel ? (
           activeChannel.type === ChannelTypeEnum.VOICE ? (
@@ -322,6 +330,8 @@ export default function Dashboard() {
               newMessage={newMessage}
               onNewMessageChange={setNewMessage}
               onSendMessage={sendMessage}
+              onSendAttachment={sendAttachmentMessage}
+              isLoading={isLoadingMessages}
             />
           )
         ) : (

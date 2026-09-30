@@ -23,11 +23,31 @@ export function useChat({
   const [newMessage, setNewMessage] = useState('');
   const [unreadDMs, setUnreadDMs] = useState<Record<string, number>>({});
   const [unreadChannels, setUnreadChannels] = useState<Record<string, number>>({});
+  const [isLoadingMessages, setIsLoadingMessages] = useState<boolean>(false);
+
+  // Cache em memória: chave ("dm_{friendId}" ou "channel_{channelId}") -> ChatMessage[]
+  const messageCacheRef = useRef<Map<string, ChatMessage[]>>(new Map());
 
   const activeViewRef = useRef(activeView);
   const activeFriendIdRef = useRef(activeFriendId);
   const activeChannelIdRef = useRef(activeChannelId);
   const myIdRef = useRef(myId);
+
+  // Rascunho de texto por conversa
+  const currentChatKey =
+    activeView === DashboardView.DM
+      ? `dm_${activeFriendId || ''}`
+      : `channel_${activeChannelId || ''}`;
+  const draftsRef = useRef<Map<string, string>>(new Map());
+  const prevChatKeyRef = useRef<string>(currentChatKey);
+
+  useEffect(() => {
+    if (prevChatKeyRef.current !== currentChatKey) {
+      draftsRef.current.set(prevChatKeyRef.current, newMessage);
+      setNewMessage(draftsRef.current.get(currentChatKey) || '');
+      prevChatKeyRef.current = currentChatKey;
+    }
+  }, [currentChatKey, newMessage]);
 
   useEffect(() => {
     activeViewRef.current = activeView;
@@ -51,21 +71,90 @@ export function useChat({
     }
   }, [activeChannelId]);
 
+  const areMessagesEqual = (a?: ChatMessage[], b?: ChatMessage[]) => {
+    if (!a || !b) return false;
+    if (a.length !== b.length) return false;
+    if (a.length === 0) return true;
+    return a[0].id === b[0].id && a[a.length - 1].id === b[b.length - 1].id;
+  };
+
   const fetchDMMessages = useCallback(async (friendId: string) => {
+    const cacheKey = `dm_${friendId}`;
+    const cached = messageCacheRef.current.get(cacheKey);
+
+    if (cached) {
+      // 0ms instant switch com dados em cache
+      setMessages(cached);
+      setIsLoadingMessages(false);
+    } else {
+      // Limpa imediatamente as mensagens da conversa anterior para não ficarem congeladas na tela
+      setMessages([]);
+      setIsLoadingMessages(true);
+    }
+
     try {
       const res = await httpClient.get<ChatMessage[]>(`${ApiRoutes.CHAT}/${friendId}`);
-      setMessages(res);
+      const isIdentical = areMessagesEqual(cached, res);
+      messageCacheRef.current.set(cacheKey, res);
+
+      // Só atualiza a tela se o usuário ainda estiver na conversa E se houver novas mensagens
+      if (
+        activeViewRef.current === DashboardView.DM &&
+        activeFriendIdRef.current === friendId
+      ) {
+        if (!isIdentical) {
+          setMessages(res);
+        }
+        setIsLoadingMessages(false);
+      }
     } catch (err) {
       console.error('Error fetching DM messages', err);
+      if (
+        activeViewRef.current === DashboardView.DM &&
+        activeFriendIdRef.current === friendId
+      ) {
+        setIsLoadingMessages(false);
+      }
     }
   }, []);
 
   const fetchChannelMessages = useCallback(async (channelId: string) => {
+    const cacheKey = `channel_${channelId}`;
+    const cached = messageCacheRef.current.get(cacheKey);
+
+    if (cached) {
+      // 0ms instant switch com dados em cache
+      setMessages(cached);
+      setIsLoadingMessages(false);
+    } else {
+      // Limpa imediatamente as mensagens do canal anterior para não ficarem congeladas na tela
+      setMessages([]);
+      setIsLoadingMessages(true);
+    }
+
     try {
       const res = await httpClient.get<ChatMessage[]>(`${ApiRoutes.CHANNELS}/${channelId}/messages`);
-      setMessages(res);
+      const isIdentical = areMessagesEqual(cached, res);
+      messageCacheRef.current.set(cacheKey, res);
+
+      // Só atualiza a tela se o usuário ainda estiver neste canal E se houver novas mensagens
+      if (
+        activeViewRef.current === DashboardView.SERVER &&
+        activeChannelIdRef.current === channelId
+      ) {
+        if (!isIdentical) {
+          setMessages(res);
+        }
+        setIsLoadingMessages(false);
+      }
     } catch (err) {
       console.error('Error fetching channel messages', err);
+      if (
+        activeViewRef.current === DashboardView.SERVER &&
+        activeChannelIdRef.current === channelId
+      ) {
+        setIsLoadingMessages(false);
+      }
     }
   }, []);
 
@@ -86,6 +175,12 @@ export function useChat({
       if (activeViewRef.current === DashboardView.DM && activeFriendIdRef.current) {
         tempMsg.receiverId = activeFriendIdRef.current;
         setMessages((prev) => [...prev, tempMsg]);
+
+        // Atualiza cache local
+        const cacheKey = `dm_${activeFriendIdRef.current}`;
+        const currentList = messageCacheRef.current.get(cacheKey) || [];
+        messageCacheRef.current.set(cacheKey, [...currentList, tempMsg]);
+
         realtimeClient.emit(RealtimeEvents.SEND_MESSAGE, {
           receiverId: activeFriendIdRef.current,
           content,
@@ -93,6 +188,12 @@ export function useChat({
       } else if (activeViewRef.current === DashboardView.SERVER && activeChannelIdRef.current) {
         tempMsg.channelId = activeChannelIdRef.current;
         setMessages((prev) => [...prev, tempMsg]);
+
+        // Atualiza cache local
+        const cacheKey = `channel_${activeChannelIdRef.current}`;
+        const currentList = messageCacheRef.current.get(cacheKey) || [];
+        messageCacheRef.current.set(cacheKey, [...currentList, tempMsg]);
+
         realtimeClient.emit(RealtimeEvents.SEND_CHANNEL_MESSAGE, {
           channelId: activeChannelIdRef.current,
           content,
@@ -104,14 +205,43 @@ export function useChat({
     [newMessage, myId, myUsername]
   );
 
+  const sendAttachmentMessage = useCallback(
+    (attachmentId: string, customContent = '') => {
+      if (activeViewRef.current === DashboardView.DM && activeFriendIdRef.current) {
+        realtimeClient.emit(RealtimeEvents.SEND_MESSAGE, {
+          receiverId: activeFriendIdRef.current,
+          content: customContent,
+          attachmentId,
+        });
+      } else if (activeViewRef.current === DashboardView.SERVER && activeChannelIdRef.current) {
+        realtimeClient.emit(RealtimeEvents.SEND_CHANNEL_MESSAGE, {
+          channelId: activeChannelIdRef.current,
+          content: customContent,
+          attachmentId,
+        });
+      }
+    },
+    [],
+  );
+
   // Eventos de Chat em Tempo Real
   useEffect(() => {
     const onNewMessage = (msg: ChatMessage) => {
+      // Atualiza o cache da DM desse remetente se existir
+      const cacheKey = `dm_${msg.senderId}`;
+      const cached = messageCacheRef.current.get(cacheKey);
+      if (cached && !cached.some((m) => m.id === msg.id)) {
+        messageCacheRef.current.set(cacheKey, [...cached, msg]);
+      }
+
       if (
         activeViewRef.current === DashboardView.DM &&
         activeFriendIdRef.current === msg.senderId
       ) {
-        setMessages((prev) => [...prev, msg]);
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === msg.id)) return prev;
+          return [...prev, msg];
+        });
       } else {
         setUnreadDMs((prev) => ({
           ...prev,
@@ -121,6 +251,20 @@ export function useChat({
     };
 
     const onMessageSent = (msg: ChatMessage) => {
+      // Atualiza o cache da DM do destinatário
+      if (msg.receiverId) {
+        const cacheKey = `dm_${msg.receiverId}`;
+        const cached = messageCacheRef.current.get(cacheKey);
+        if (cached) {
+          const filtered = cached.filter(
+            (m) => !(m.id.startsWith('temp-') && m.content === msg.content)
+          );
+          if (!filtered.some((m) => m.id === msg.id)) {
+            messageCacheRef.current.set(cacheKey, [...filtered, msg]);
+          }
+        }
+      }
+
       if (
         activeViewRef.current === DashboardView.DM &&
         activeFriendIdRef.current === msg.receiverId
@@ -139,6 +283,14 @@ export function useChat({
       // Evita duplicação da própria mensagem que já foi enviada de forma otimista
       if (msg.senderId === myIdRef.current) return;
 
+      if (msg.channelId) {
+        const cacheKey = `channel_${msg.channelId}`;
+        const cached = messageCacheRef.current.get(cacheKey);
+        if (cached && !cached.some((m) => m.id === msg.id)) {
+          messageCacheRef.current.set(cacheKey, [...cached, msg]);
+        }
+      }
+
       if (
         activeViewRef.current === DashboardView.SERVER &&
         activeChannelIdRef.current === msg.channelId
@@ -156,6 +308,19 @@ export function useChat({
     };
 
     const onChannelMessageSent = (msg: ChatMessage) => {
+      if (msg.channelId) {
+        const cacheKey = `channel_${msg.channelId}`;
+        const cached = messageCacheRef.current.get(cacheKey);
+        if (cached) {
+          const filtered = cached.filter(
+            (m) => !(m.id.startsWith('temp-') && m.content === msg.content)
+          );
+          if (!filtered.some((m) => m.id === msg.id)) {
+            messageCacheRef.current.set(cacheKey, [...filtered, msg]);
+          }
+        }
+      }
+
       if (
         activeViewRef.current === DashboardView.SERVER &&
         activeChannelIdRef.current === msg.channelId
@@ -189,7 +354,9 @@ export function useChat({
     setNewMessage,
     unreadDMs,
     unreadChannels,
+    isLoadingMessages,
     sendMessage,
+    sendAttachmentMessage,
     fetchDMMessages,
     fetchChannelMessages,
   };
