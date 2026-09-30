@@ -7,6 +7,12 @@ interface PreviousSample {
   bytes: number;
   frames: number;
   encodeTime?: number;
+  framesDropped?: number;
+  freezeCount?: number;
+  framesReceived?: number;
+  framesRendered?: number;
+  decodeTime?: number;
+  processingDelay?: number;
 }
 
 export function DevStreamDiagnostics({
@@ -74,22 +80,68 @@ export function DevStreamDiagnostics({
           const encodingMs = sending && previous && stat.totalEncodeTime !== undefined && frames > previous.frames
             ? (stat.totalEncodeTime - (previous.encodeTime ?? stat.totalEncodeTime)) * 1000 / (frames - previous.frames)
             : undefined;
+          const decodedDelta = previous ? frames - previous.frames : 0;
+          const receivedDelta = previous && stat.framesReceived !== undefined
+            ? stat.framesReceived - (previous.framesReceived ?? stat.framesReceived)
+            : 0;
+          const renderedDelta = previous && stat.framesRendered !== undefined
+            ? stat.framesRendered - (previous.framesRendered ?? stat.framesRendered)
+            : 0;
+          const decodeMs = !sending && previous && decodedDelta > 0 && stat.totalDecodeTime !== undefined
+            ? (stat.totalDecodeTime - (previous.decodeTime ?? stat.totalDecodeTime)) * 1000 / decodedDelta
+            : undefined;
+          const processingMs = !sending && previous && decodedDelta > 0 && stat.totalProcessingDelay !== undefined
+            ? (stat.totalProcessingDelay - (previous.processingDelay ?? stat.totalProcessingDelay)) * 1000 / decodedDelta
+            : undefined;
 
-          const sourceFps = trackSettings.frameRate ?? mediaSourceStat?.framesPerSecond;
+          const rawSourceFps = Number(trackSettings.frameRate ?? mediaSourceStat?.framesPerSecond);
+          const sourceFps = Number.isFinite(rawSourceFps) && rawSourceFps >= 0
+            ? Math.round(rawSourceFps)
+            : undefined;
           const sourceRes = (trackSettings.width && trackSettings.height) 
             ? `${trackSettings.width} × ${trackSettings.height}` 
             : (mediaSourceStat?.width && mediaSourceStat?.height ? `${mediaSourceStat.width} × ${mediaSourceStat.height}` : undefined);
+
+          const droppedPerSecond = previous && elapsed > 0 && stat.framesDropped !== undefined
+            ? Math.max(0, (stat.framesDropped - (previous.framesDropped ?? stat.framesDropped)) / elapsed)
+            : undefined;
+          const freezesPerSecond = previous && elapsed > 0 && stat.freezeCount !== undefined
+            ? Math.max(0, (stat.freezeCount - (previous.freezeCount ?? stat.freezeCount)) / elapsed)
+            : undefined;
+          const averageJitterBufferMs = stat.jitterBufferDelay !== undefined && stat.jitterBufferEmittedCount > 0
+            ? (stat.jitterBufferDelay / stat.jitterBufferEmittedCount) * 1000
+            : undefined;
 
           setValues({
             Direção: sending ? 'Envio (Transmitindo)' : 'Recepção (Assistindo)',
             'Resolução RTC': stat.frameWidth && stat.frameHeight ? `${stat.frameWidth} × ${stat.frameHeight}` : undefined,
             'Resolução da Fonte': sourceRes,
             FPS: stat.framesPerSecond ?? (previous && elapsed > 0 ? Math.round((frames - previous.frames) / elapsed) : undefined),
-            'FPS da Fonte': sourceFps ? Math.round(sourceFps) : undefined,
+            'FPS da Fonte': sourceFps,
             'Frames Codificados': sending ? stat.framesEncoded : undefined,
             'Frames Enviados': sending ? stat.framesSent : undefined,
+            'Pacotes descartados': sending ? undefined : stat.packetsDiscarded,
+            'Frames recebidos': sending ? undefined : stat.framesReceived,
+            'Frames decodificados': sending ? undefined : stat.framesDecoded,
+            'Frames renderizados': sending ? undefined : stat.framesRendered,
+            'Recebidos/s': !sending && previous && elapsed > 0 ? Number((receivedDelta / elapsed).toFixed(2)) : undefined,
+            'Decodificados/s': !sending && previous && elapsed > 0 ? Number((decodedDelta / elapsed).toFixed(2)) : undefined,
+            'Renderizados/s': !sending && previous && elapsed > 0 && stat.framesRendered !== undefined
+              ? Number((renderedDelta / elapsed).toFixed(2))
+              : undefined,
+            'Tempo total de decode (s)': !sending && Number.isFinite(stat.totalDecodeTime)
+              ? Number(stat.totalDecodeTime.toFixed(3))
+              : undefined,
+            'Decode ms/quadro': decodeMs !== undefined && decodeMs >= 0 ? Number(decodeMs.toFixed(2)) : undefined,
+            'Processamento ms/quadro': processingMs !== undefined && processingMs >= 0
+              ? Number(processingMs.toFixed(2))
+              : undefined,
+            'Atraso medio do jitter buffer (ms)': averageJitterBufferMs !== undefined
+              ? Number(averageJitterBufferMs.toFixed(2))
+              : undefined,
             'Mbps reais': previous && elapsed > 0 ? Number((((bytes - previous.bytes) * 8 / elapsed) / 1e6).toFixed(2)) : undefined,
             Codec: codec?.mimeType,
+            'Codec fmtp': codec?.sdpFmtpLine,
             Encoder: sending ? stat.encoderImplementation : undefined,
             Decoder: sending ? undefined : stat.decoderImplementation,
             'Encoding ms/quadro': encodingMs !== undefined && encodingMs >= 0 ? Number(encodingMs.toFixed(2)) : undefined,
@@ -98,9 +150,27 @@ export function DevStreamDiagnostics({
             'RTT (ms)': pair?.currentRoundTripTime !== undefined ? Math.round(pair.currentRoundTripTime * 1000) : undefined,
             'Pacotes perdidos': stat.packetsLost,
             'Quadros descartados': stat.framesDropped,
+            'Descartados/s': droppedPerSecond !== undefined ? Number(droppedPerSecond.toFixed(2)) : undefined,
             Travamentos: stat.freezeCount,
+            'Travamentos/s': freezesPerSecond !== undefined ? Number(freezesPerSecond.toFixed(2)) : undefined,
+            'Duração total de travamentos (s)': stat.totalFreezesDuration,
+            'Keyframes decodificados': sending ? undefined : stat.keyFramesDecoded,
+            NACKs: sending ? undefined : stat.nackCount,
+            PLIs: sending ? undefined : stat.pliCount,
+            FIRs: sending ? undefined : stat.firCount,
           });
-          previous = { timestamp: stat.timestamp, bytes, frames, encodeTime: stat.totalEncodeTime };
+          previous = {
+            timestamp: stat.timestamp,
+            bytes,
+            frames,
+            encodeTime: stat.totalEncodeTime,
+            framesDropped: stat.framesDropped,
+            freezeCount: stat.freezeCount,
+            framesReceived: stat.framesReceived,
+            framesRendered: stat.framesRendered,
+            decodeTime: stat.totalDecodeTime,
+            processingDelay: stat.totalProcessingDelay,
+          };
         });
       } catch (error) {
         if (!cancelled) setValues({ Estado: error instanceof Error ? error.message : 'Não foi possível ler as estatísticas.' });

@@ -1,25 +1,29 @@
 #include "nvenc_encoder.h"
-#include <iostream>
 
-typedef NVENCSTATUS (NVENCAPI *PNvEncodeAPICreateInstance)(NV_ENCODE_API_FUNCTION_LIST *functionList);
+#include <iostream>
+#include <utility>
+
+typedef NVENCSTATUS(NVENCAPI* PNvEncodeAPICreateInstance)(NV_ENCODE_API_FUNCTION_LIST* functionList);
 
 NVENCEncoder::NVENCEncoder() {}
+NVENCEncoder::~NVENCEncoder() { Shutdown(); }
 
-NVENCEncoder::~NVENCEncoder() {
+bool NVENCEncoder::Initialize(ID3D11Device* device, uint32_t width, uint32_t height,
+                              uint32_t fps, uint32_t bitrateBps, OutputCallback outputCallback) {
     Shutdown();
-}
-
-bool NVENCEncoder::Initialize(ID3D11Device* device, uint32_t width, uint32_t height, uint32_t fps, uint32_t bitrateBps) {
-    if (m_initialized) {
-        Shutdown();
-    }
+    if (!device || !outputCallback) return false;
 
     m_d3dDevice = device;
+    m_d3dDevice->GetImmediateContext(&m_d3dContext);
     m_width = width;
     m_height = height;
     m_fps = fps > 0 ? fps : 60;
     m_bitrate = bitrateBps > 0 ? bitrateBps : 8000000;
+    m_outputCallback = std::move(outputCallback);
     m_forceNextKeyframe = true;
+    m_droppedFrames = 0;
+    m_stopping = false;
+    m_abortOutput = false;
 
     m_hNvenc = LoadLibraryW(L"nvEncodeAPI64.dll");
     if (!m_hNvenc) {
@@ -27,121 +31,98 @@ bool NVENCEncoder::Initialize(ID3D11Device* device, uint32_t width, uint32_t hei
         return false;
     }
 
-    auto pfnCreate = (PNvEncodeAPICreateInstance)GetProcAddress(m_hNvenc, "NvEncodeAPICreateInstance");
-    if (!pfnCreate) {
+    auto createInstance = reinterpret_cast<PNvEncodeAPICreateInstance>(
+        GetProcAddress(m_hNvenc, "NvEncodeAPICreateInstance"));
+    if (!createInstance) {
         std::cerr << "[NVENC] Erro: NvEncodeAPICreateInstance nao encontrada!" << std::endl;
         Shutdown();
         return false;
     }
 
+    m_nvenc = {};
     m_nvenc.version = NV_ENCODE_API_FUNCTION_LIST_VER;
-    NVENCSTATUS status = pfnCreate(&m_nvenc);
+    NVENCSTATUS status = createInstance(&m_nvenc);
     if (status != NV_ENC_SUCCESS) {
-        std::cerr << "[NVENC] Erro: falha em NvEncodeAPICreateInstance: " << status << std::endl;
+        std::cerr << "[NVENC] Falha em NvEncodeAPICreateInstance: " << status << std::endl;
         Shutdown();
         return false;
     }
 
-    // Abre a sessao de codificacao no dispositivo D3D11
     NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS openParams = {};
     openParams.version = NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS_VER;
     openParams.deviceType = NV_ENC_DEVICE_TYPE_DIRECTX;
-    openParams.device = m_d3dDevice;
+    openParams.device = m_d3dDevice.Get();
     openParams.apiVersion = NVENCAPI_VERSION;
-
     status = m_nvenc.nvEncOpenEncodeSessionEx(&openParams, &m_encoder);
     if (status != NV_ENC_SUCCESS || !m_encoder) {
-        std::cerr << "[NVENC] Erro: falha ao abrir sessao NVENC: " << status << std::endl;
+        std::cerr << "[NVENC] Falha ao abrir sessao: " << status << std::endl;
         Shutdown();
         return false;
     }
 
-    // Configura o Preset de Baixa Latencia para Jogos
-    // Configura o Preset de Baixa Latencia para Jogos (Tenta P4 para alta qualidade; fallback para P3 e P1)
-    NV_ENC_PRESET_CONFIG presetConfig = {};
-    presetConfig.version = NV_ENC_PRESET_CONFIG_VER;
-    presetConfig.presetCfg.version = NV_ENC_CONFIG_VER;
+    NV_ENC_CAPS_PARAM caps = {};
+    caps.version = NV_ENC_CAPS_PARAM_VER;
+    caps.capsToQuery = NV_ENC_CAPS_ASYNC_ENCODE_SUPPORT;
+    int asyncSupported = 0;
+    status = m_nvenc.nvEncGetEncodeCaps(m_encoder, NV_ENC_CODEC_H264_GUID, &caps, &asyncSupported);
+    if (status != NV_ENC_SUCCESS || asyncSupported == 0) {
+        std::cerr << "[NVENC] Driver/GPU sem suporte a encode assincrono." << std::endl;
+        Shutdown();
+        return false;
+    }
 
-    GUID usedPreset = NV_ENC_PRESET_P4_GUID;
-    NV_ENC_TUNING_INFO usedTuning = NV_ENC_TUNING_INFO_LOW_LATENCY;
+    NV_ENC_PRESET_CONFIG preset = {};
+    preset.version = NV_ENC_PRESET_CONFIG_VER;
+    preset.presetCfg.version = NV_ENC_CONFIG_VER;
+    GUID presetGuid = NV_ENC_PRESET_P4_GUID;
+    NV_ENC_TUNING_INFO tuning = NV_ENC_TUNING_INFO_LOW_LATENCY;
     status = m_nvenc.nvEncGetEncodePresetConfigEx(
-        m_encoder,
-        NV_ENC_CODEC_H264_GUID,
-        NV_ENC_PRESET_P4_GUID,
-        NV_ENC_TUNING_INFO_LOW_LATENCY,
-        &presetConfig
-    );
-
+        m_encoder, NV_ENC_CODEC_H264_GUID, presetGuid, tuning, &preset);
     if (status != NV_ENC_SUCCESS) {
+        presetGuid = NV_ENC_PRESET_P3_GUID;
         status = m_nvenc.nvEncGetEncodePresetConfigEx(
-            m_encoder,
-            NV_ENC_CODEC_H264_GUID,
-            NV_ENC_PRESET_P3_GUID,
-            NV_ENC_TUNING_INFO_LOW_LATENCY,
-            &presetConfig
-        );
-        usedPreset = NV_ENC_PRESET_P3_GUID;
+            m_encoder, NV_ENC_CODEC_H264_GUID, presetGuid, tuning, &preset);
     }
-
     if (status != NV_ENC_SUCCESS) {
+        presetGuid = NV_ENC_PRESET_P1_GUID;
+        tuning = NV_ENC_TUNING_INFO_ULTRA_LOW_LATENCY;
         status = m_nvenc.nvEncGetEncodePresetConfigEx(
-            m_encoder,
-            NV_ENC_CODEC_H264_GUID,
-            NV_ENC_PRESET_P1_GUID,
-            NV_ENC_TUNING_INFO_ULTRA_LOW_LATENCY,
-            &presetConfig
-        );
-        usedPreset = NV_ENC_PRESET_P1_GUID;
-        usedTuning = NV_ENC_TUNING_INFO_ULTRA_LOW_LATENCY;
+            m_encoder, NV_ENC_CODEC_H264_GUID, presetGuid, tuning, &preset);
+    }
+    if (status != NV_ENC_SUCCESS) {
+        std::cerr << "[NVENC] Falha ao carregar preset: " << status << std::endl;
+        Shutdown();
+        return false;
     }
 
-    bool hasPresetConfig = (status == NV_ENC_SUCCESS);
-    if (hasPresetConfig) {
-        m_encodeConfig = presetConfig.presetCfg;
+    m_encodeConfig = preset.presetCfg;
+    m_encodeConfig.profileGUID = NV_ENC_H264_PROFILE_HIGH_GUID;
+    m_encodeConfig.encodeCodecConfig.h264Config.entropyCodingMode = NV_ENC_H264_ENTROPY_CODING_MODE_CABAC;
+    m_encodeConfig.encodeCodecConfig.h264Config.sliceMode = 0;
+    m_encodeConfig.encodeCodecConfig.h264Config.sliceModeData = 0;
+    m_encodeConfig.gopLength = m_fps * 2;
+    m_encodeConfig.frameIntervalP = 1;
+    m_encodeConfig.encodeCodecConfig.h264Config.idrPeriod = m_fps * 2;
+    m_encodeConfig.encodeCodecConfig.h264Config.repeatSPSPPS = 1;
+    m_encodeConfig.encodeCodecConfig.h264Config.maxNumRefFrames = 1;
+    m_encodeConfig.encodeCodecConfig.h264Config.outputAUD = 1;
+    m_encodeConfig.rcParams.rateControlMode = NV_ENC_PARAMS_RC_CBR;
+    m_encodeConfig.rcParams.averageBitRate = m_bitrate;
+    m_encodeConfig.rcParams.maxBitRate = m_bitrate;
+    m_encodeConfig.rcParams.vbvBufferSize = (m_bitrate * 2) / m_fps;
+    m_encodeConfig.rcParams.vbvInitialDelay = m_encodeConfig.rcParams.vbvBufferSize;
+    m_encodeConfig.rcParams.zeroReorderDelay = 1;
+    m_encodeConfig.rcParams.enableAQ = 1;
+    m_encodeConfig.rcParams.aqStrength = 6;
+    m_encodeConfig.rcParams.enableTemporalAQ = 0;
+    m_encodeConfig.rcParams.enableMinQP = 0;
+    m_encodeConfig.rcParams.enableMaxQP = 0;
 
-        // 1. High Profile com transform 8x8 e CABAC para fidelidade gráfica
-        m_encodeConfig.profileGUID = NV_ENC_H264_PROFILE_HIGH_GUID;
-        m_encodeConfig.encodeCodecConfig.h264Config.entropyCodingMode = NV_ENC_H264_ENTROPY_CODING_MODE_CABAC;
-
-        // 2. Fatia única padrão para máxima compatibilidade com o depacketizer WebRTC
-        m_encodeConfig.encodeCodecConfig.h264Config.sliceMode = 0;
-        m_encodeConfig.encodeCodecConfig.h264Config.sliceModeData = 0;
-
-        // 3. Controle de quadros de referência (GOP e IDR)
-        m_encodeConfig.gopLength = m_fps * 2;
-        m_encodeConfig.frameIntervalP = 1; // Sem B-frames para zero latência
-        m_encodeConfig.encodeCodecConfig.h264Config.idrPeriod = m_fps * 2;
-        m_encodeConfig.encodeCodecConfig.h264Config.repeatSPSPPS = 1;
-        m_encodeConfig.encodeCodecConfig.h264Config.maxNumRefFrames = 1;
-        m_encodeConfig.encodeCodecConfig.h264Config.outputAUD = 1;
-
-        // 4. Rate Control: CBR estrito com buffer VBV de baixa latência (2 quadros)
-        // Isso impede explosão para 25 Mbps e garante taxa estável sem descarte no WebRTC
-        m_encodeConfig.rcParams.rateControlMode = NV_ENC_PARAMS_RC_CBR;
-        m_encodeConfig.rcParams.averageBitRate = m_bitrate;
-        m_encodeConfig.rcParams.maxBitRate = m_bitrate;
-        m_encodeConfig.rcParams.vbvBufferSize = (m_bitrate * 2) / m_fps;
-        m_encodeConfig.rcParams.vbvInitialDelay = m_encodeConfig.rcParams.vbvBufferSize;
-        m_encodeConfig.rcParams.zeroReorderDelay = 1;
-
-        // 5. Adaptive Quantization Espacial para suavizar texturas
-        m_encodeConfig.rcParams.enableAQ = 1;
-        m_encodeConfig.rcParams.aqStrength = 6;
-        m_encodeConfig.rcParams.enableTemporalAQ = 0; // Desativa AQ temporal que conflita com CBR ultra-low latency
-
-        // 6. Deixa o rate control gerenciar QP sem travar teto (o teto anterior forçava picos de 25 Mbps)
-        m_encodeConfig.rcParams.enableMinQP = 0;
-        m_encodeConfig.rcParams.enableMaxQP = 0;
-    } else {
-        std::cerr << "[NVENC] Aviso: nvEncGetEncodePresetConfigEx retornou: " << status << std::endl;
-    }
-
-    // Inicializa o Encoder
     m_initParams = {};
     m_initParams.version = NV_ENC_INITIALIZE_PARAMS_VER;
     m_initParams.encodeGUID = NV_ENC_CODEC_H264_GUID;
-    m_initParams.presetGUID = usedPreset;
-    m_initParams.tuningInfo = usedTuning;
+    m_initParams.presetGUID = presetGuid;
+    m_initParams.tuningInfo = tuning;
     m_initParams.encodeWidth = m_width;
     m_initParams.encodeHeight = m_height;
     m_initParams.darWidth = m_width;
@@ -149,155 +130,329 @@ bool NVENCEncoder::Initialize(ID3D11Device* device, uint32_t width, uint32_t hei
     m_initParams.frameRateNum = m_fps;
     m_initParams.frameRateDen = 1;
     m_initParams.enablePTD = 1;
-    m_initParams.encodeConfig = hasPresetConfig ? &m_encodeConfig : nullptr;
+    m_initParams.enableEncodeAsync = 1;
+    m_initParams.encodeConfig = &m_encodeConfig;
 
     status = m_nvenc.nvEncInitializeEncoder(m_encoder, &m_initParams);
-    if (status != NV_ENC_SUCCESS && m_initParams.encodeConfig != nullptr) {
-        std::cerr << "[NVENC] Tentando inicializacao com preset nativo direto (encodeConfig = nullptr)..." << std::endl;
-        m_initParams.encodeConfig = nullptr;
-        status = m_nvenc.nvEncInitializeEncoder(m_encoder, &m_initParams);
-    }
-
     if (status != NV_ENC_SUCCESS) {
-        std::cerr << "[NVENC] Erro fatal: falha em nvEncInitializeEncoder: " << status << std::endl;
+        std::cerr << "[NVENC] Falha ao inicializar encode assincrono: " << status << std::endl;
         Shutdown();
         return false;
     }
-
-    // Cria o buffer de saida bitstream
-    NV_ENC_CREATE_BITSTREAM_BUFFER bitstreamParams = {};
-    bitstreamParams.version = NV_ENC_CREATE_BITSTREAM_BUFFER_VER;
-    status = m_nvenc.nvEncCreateBitstreamBuffer(m_encoder, &bitstreamParams);
-    if (status != NV_ENC_SUCCESS) {
-        std::cerr << "[NVENC] Erro: falha ao criar buffer de bitstream: " << status << std::endl;
+    if (!CreateBufferPool()) {
         Shutdown();
         return false;
     }
-    m_bitstreamBuffer = bitstreamParams.bitstreamBuffer;
 
     m_initialized = true;
-    std::cout << "[NVENC] Inicializado com sucesso: " << m_width << "x" << m_height 
-              << " @ " << m_fps << " FPS | " << (m_bitrate / 1000000.0) << " Mbps (Zero-Copy GPU Direct)" << std::endl;
+    m_acceptingFrames = true;
+    m_outputThread = std::thread(&NVENCEncoder::OutputLoop, this);
+    std::cout << "[NVENC] Inicializado: " << m_width << "x" << m_height << " @ " << m_fps
+              << " FPS | " << (m_bitrate / 1000000.0) << " Mbps | 4 slots assincronos GPU" << std::endl;
     return true;
 }
 
-bool NVENCEncoder::EncodeTexture(ID3D11Texture2D* texture, bool forceKeyframe, std::vector<uint8_t>& outBitstream, bool& isKeyframe) {
-    if (!m_initialized || !texture) return false;
+bool NVENCEncoder::CreateBufferPool() {
+    D3D11_TEXTURE2D_DESC desc = {};
+    desc.Width = m_width;
+    desc.Height = m_height;
+    desc.MipLevels = 1;
+    desc.ArraySize = 1;
+    desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    desc.SampleDesc.Count = 1;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 
-    // Registra a textura no NVENC se for uma nova textura
-    if (m_registeredTexture != texture) {
-        if (m_registeredResource) {
-            m_nvenc.nvEncUnregisterResource(m_encoder, m_registeredResource);
-            m_registeredResource = nullptr;
-        }
-
-        NV_ENC_REGISTER_RESOURCE regParams = {};
-        regParams.version = NV_ENC_REGISTER_RESOURCE_VER;
-        regParams.resourceType = NV_ENC_INPUT_RESOURCE_TYPE_DIRECTX;
-        regParams.resourceToRegister = texture;
-        regParams.width = m_width;
-        regParams.height = m_height;
-        regParams.pitch = 0;
-        regParams.bufferFormat = NV_ENC_BUFFER_FORMAT_ARGB; // WGC DXGI_FORMAT_B8G8R8A8_UNORM
-        regParams.bufferUsage = NV_ENC_INPUT_IMAGE;
-
-        NVENCSTATUS status = m_nvenc.nvEncRegisterResource(m_encoder, &regParams);
-        if (status != NV_ENC_SUCCESS) {
-            std::cerr << "[NVENC] Erro ao registrar textura: " << status << std::endl;
+    for (size_t i = 0; i < kBufferCount; ++i) {
+        BufferSlot& slot = m_slots[i];
+        HRESULT hr = m_d3dDevice->CreateTexture2D(&desc, nullptr, &slot.inputTexture);
+        if (FAILED(hr)) {
+            std::cerr << "[NVENC] Falha ao criar textura do slot " << i << ": " << std::hex << hr << std::dec << std::endl;
             return false;
         }
-        m_registeredResource = regParams.registeredResource;
-        m_registeredTexture = texture;
+
+        NV_ENC_REGISTER_RESOURCE registration = {};
+        registration.version = NV_ENC_REGISTER_RESOURCE_VER;
+        registration.resourceType = NV_ENC_INPUT_RESOURCE_TYPE_DIRECTX;
+        registration.resourceToRegister = slot.inputTexture.Get();
+        registration.width = m_width;
+        registration.height = m_height;
+        registration.bufferFormat = NV_ENC_BUFFER_FORMAT_ARGB;
+        registration.bufferUsage = NV_ENC_INPUT_IMAGE;
+        NVENCSTATUS status = m_nvenc.nvEncRegisterResource(m_encoder, &registration);
+        if (status != NV_ENC_SUCCESS) {
+            std::cerr << "[NVENC] Falha ao registrar textura do slot " << i << ": " << status << std::endl;
+            return false;
+        }
+        slot.registeredResource = registration.registeredResource;
+
+        NV_ENC_CREATE_BITSTREAM_BUFFER bitstream = {};
+        bitstream.version = NV_ENC_CREATE_BITSTREAM_BUFFER_VER;
+        status = m_nvenc.nvEncCreateBitstreamBuffer(m_encoder, &bitstream);
+        if (status != NV_ENC_SUCCESS) {
+            std::cerr << "[NVENC] Falha ao criar bitstream do slot " << i << ": " << status << std::endl;
+            return false;
+        }
+        slot.bitstreamBuffer = bitstream.bitstreamBuffer;
+
+        slot.completionEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+        if (!slot.completionEvent) return false;
+        NV_ENC_EVENT_PARAMS eventParams = {};
+        eventParams.version = NV_ENC_EVENT_PARAMS_VER;
+        eventParams.completionEvent = slot.completionEvent;
+        status = m_nvenc.nvEncRegisterAsyncEvent(m_encoder, &eventParams);
+        if (status != NV_ENC_SUCCESS) {
+            std::cerr << "[NVENC] Falha ao registrar evento do slot " << i << ": " << status << std::endl;
+            return false;
+        }
+        slot.eventRegistered = true;
     }
 
-    // Mapeia o recurso para codificacao
-    NV_ENC_MAP_INPUT_RESOURCE mapParams = {};
-    mapParams.version = NV_ENC_MAP_INPUT_RESOURCE_VER;
-    mapParams.registeredResource = m_registeredResource;
-    NVENCSTATUS status = m_nvenc.nvEncMapInputResource(m_encoder, &mapParams);
-    if (status != NV_ENC_SUCCESS) {
-        std::cerr << "[NVENC] Erro ao mapear recurso: " << status << std::endl;
+    m_eosEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    if (!m_eosEvent) return false;
+    NV_ENC_EVENT_PARAMS eosEvent = {};
+    eosEvent.version = NV_ENC_EVENT_PARAMS_VER;
+    eosEvent.completionEvent = m_eosEvent;
+    NVENCSTATUS status = m_nvenc.nvEncRegisterAsyncEvent(m_encoder, &eosEvent);
+    if (status != NV_ENC_SUCCESS) return false;
+    m_eosEventRegistered = true;
+    return true;
+}
+
+bool NVENCEncoder::SubmitTexture(ID3D11Texture2D* texture, bool forceKeyframe, int64_t timestampUs) {
+    if (!m_initialized || !m_acceptingFrames || !texture) return false;
+    if (forceKeyframe) m_forceNextKeyframe = true;
+
+    size_t slotIndex = kBufferCount;
+    {
+        std::lock_guard<std::mutex> lock(m_stateMutex);
+        if (!m_acceptingFrames) return false;
+        for (size_t i = 0; i < kBufferCount; ++i) {
+            if (!m_slots[i].inUse) {
+                slotIndex = i;
+                m_slots[i].inUse = true;
+                break;
+            }
+        }
+    }
+    if (slotIndex == kBufferCount) {
+        ++m_droppedFrames;
         return false;
     }
 
-    // Executa a codificacao do quadro na GPU
-    NV_ENC_PIC_PARAMS picParams = {};
-    picParams.version = NV_ENC_PIC_PARAMS_VER;
-    picParams.inputBuffer = mapParams.mappedResource;
-    picParams.bufferFmt = NV_ENC_BUFFER_FORMAT_ARGB;
-    picParams.inputWidth = m_width;
-    picParams.inputHeight = m_height;
-    picParams.outputBitstream = m_bitstreamBuffer;
-    picParams.pictureStruct = NV_ENC_PIC_STRUCT_FRAME;
+    BufferSlot& slot = m_slots[slotIndex];
+    slot.timestampUs = timestampUs;
+    slot.requestedKeyframe = forceKeyframe || m_forceNextKeyframe.load();
+    ResetEvent(slot.completionEvent);
 
-    bool requestIDR = forceKeyframe || m_forceNextKeyframe;
-    if (requestIDR) {
-        picParams.encodePicFlags = NV_ENC_PIC_FLAG_FORCEIDR | NV_ENC_PIC_FLAG_OUTPUT_SPSPPS;
-        m_forceNextKeyframe = false;
+    // Cópia GPU->GPU: o scaler pode reutilizar sua saída sem sobrescrever
+    // uma superfície que ainda esteja sendo lida pelo NVENC.
+    m_d3dContext->CopyResource(slot.inputTexture.Get(), texture);
+
+    NVENCSTATUS status;
+    {
+        std::lock_guard<std::mutex> apiLock(m_apiMutex);
+        NV_ENC_MAP_INPUT_RESOURCE mapping = {};
+        mapping.version = NV_ENC_MAP_INPUT_RESOURCE_VER;
+        mapping.registeredResource = slot.registeredResource;
+        status = m_nvenc.nvEncMapInputResource(m_encoder, &mapping);
+        if (status == NV_ENC_SUCCESS) {
+            slot.mappedResource = mapping.mappedResource;
+            NV_ENC_PIC_PARAMS picture = {};
+            picture.version = NV_ENC_PIC_PARAMS_VER;
+            picture.inputBuffer = slot.mappedResource;
+            picture.bufferFmt = mapping.mappedBufferFmt;
+            picture.inputWidth = m_width;
+            picture.inputHeight = m_height;
+            picture.outputBitstream = slot.bitstreamBuffer;
+            picture.completionEvent = slot.completionEvent;
+            picture.pictureStruct = NV_ENC_PIC_STRUCT_FRAME;
+            if (slot.requestedKeyframe) {
+                picture.encodePicFlags = NV_ENC_PIC_FLAG_FORCEIDR | NV_ENC_PIC_FLAG_OUTPUT_SPSPPS;
+            }
+            status = m_nvenc.nvEncEncodePicture(m_encoder, &picture);
+        }
     }
 
-    status = m_nvenc.nvEncEncodePicture(m_encoder, &picParams);
-    if (status != NV_ENC_SUCCESS) {
-        std::cerr << "[NVENC] Erro ao codificar quadro: " << status << std::endl;
-        m_nvenc.nvEncUnmapInputResource(m_encoder, mapParams.mappedResource);
+    if (status != NV_ENC_SUCCESS && status != NV_ENC_ERR_NEED_MORE_INPUT) {
+        std::cerr << "[NVENC] Falha ao submeter frame: " << status << std::endl;
+        if (slot.requestedKeyframe) m_forceNextKeyframe = true;
+        ReleaseSlot(slotIndex);
         return false;
     }
-
-    // Trava e le os bytes NAL codificados
-    NV_ENC_LOCK_BITSTREAM lockParams = {};
-    lockParams.version = NV_ENC_LOCK_BITSTREAM_VER;
-    lockParams.outputBitstream = m_bitstreamBuffer;
-    lockParams.doNotWait = 0;
-
-    status = m_nvenc.nvEncLockBitstream(m_encoder, &lockParams);
-    if (status == NV_ENC_SUCCESS) {
-        uint8_t* bitstreamBytes = reinterpret_cast<uint8_t*>(lockParams.bitstreamBufferPtr);
-        outBitstream.assign(bitstreamBytes, bitstreamBytes + lockParams.bitstreamSizeInBytes);
-        isKeyframe = (lockParams.pictureType == NV_ENC_PIC_TYPE_IDR || lockParams.pictureType == NV_ENC_PIC_TYPE_I || requestIDR);
-        m_nvenc.nvEncUnlockBitstream(m_encoder, m_bitstreamBuffer);
+    if (slot.requestedKeyframe) m_forceNextKeyframe = false;
+    {
+        std::lock_guard<std::mutex> lock(m_stateMutex);
+        m_pendingSlots.push_back(slotIndex);
     }
-
-    m_nvenc.nvEncUnmapInputResource(m_encoder, mapParams.mappedResource);
-    return (status == NV_ENC_SUCCESS);
+    m_pendingCondition.notify_one();
+    return true;
 }
 
-void NVENCEncoder::RequestKeyframe() {
-    m_forceNextKeyframe = true;
+void NVENCEncoder::OutputLoop() {
+    while (true) {
+        size_t slotIndex;
+        {
+            std::unique_lock<std::mutex> lock(m_stateMutex);
+            m_pendingCondition.wait(lock, [&] { return !m_pendingSlots.empty() || m_stopping.load(); });
+            if (m_pendingSlots.empty()) {
+                if (m_stopping) break;
+                continue;
+            }
+            slotIndex = m_pendingSlots.front();
+        }
+
+        BufferSlot& slot = m_slots[slotIndex];
+        DWORD waitResult = WAIT_TIMEOUT;
+        while (waitResult == WAIT_TIMEOUT && !m_abortOutput) {
+            waitResult = WaitForSingleObject(slot.completionEvent, 100);
+        }
+
+        EncodedFrame frame;
+        bool ready = false;
+        if (waitResult == WAIT_OBJECT_0 && !m_abortOutput) {
+            NV_ENC_LOCK_BITSTREAM lock = {};
+            lock.version = NV_ENC_LOCK_BITSTREAM_VER;
+            lock.outputBitstream = slot.bitstreamBuffer;
+            lock.doNotWait = 1;
+            std::lock_guard<std::mutex> apiLock(m_apiMutex);
+            NVENCSTATUS status = m_nvenc.nvEncLockBitstream(m_encoder, &lock);
+            if (status == NV_ENC_SUCCESS) {
+                const auto* bytes = reinterpret_cast<const uint8_t*>(lock.bitstreamBufferPtr);
+                frame.data.assign(bytes, bytes + lock.bitstreamSizeInBytes);
+                frame.timestampUs = slot.timestampUs;
+                frame.isKeyframe = lock.pictureType == NV_ENC_PIC_TYPE_IDR ||
+                                   lock.pictureType == NV_ENC_PIC_TYPE_I ||
+                                   slot.requestedKeyframe;
+                m_nvenc.nvEncUnlockBitstream(m_encoder, slot.bitstreamBuffer);
+                ready = !frame.data.empty();
+            } else {
+                std::cerr << "[NVENC] Falha ao obter bitstream: " << status << std::endl;
+            }
+            if (slot.mappedResource) {
+                m_nvenc.nvEncUnmapInputResource(m_encoder, slot.mappedResource);
+                slot.mappedResource = nullptr;
+            }
+        }
+
+        {
+            std::lock_guard<std::mutex> stateLock(m_stateMutex);
+            if (!m_pendingSlots.empty() && m_pendingSlots.front() == slotIndex) m_pendingSlots.pop_front();
+            slot.inUse = false;
+        }
+
+        if (ready && m_outputCallback) {
+            try {
+                m_outputCallback(std::move(frame));
+            } catch (const std::exception& error) {
+                std::cerr << "[NVENC] Callback de saida falhou: " << error.what() << std::endl;
+            } catch (...) {
+                std::cerr << "[NVENC] Callback de saida falhou." << std::endl;
+            }
+        }
+    }
 }
+
+void NVENCEncoder::ReleaseSlot(size_t slotIndex) {
+    BufferSlot& slot = m_slots[slotIndex];
+    if (slot.mappedResource && m_encoder) {
+        std::lock_guard<std::mutex> apiLock(m_apiMutex);
+        m_nvenc.nvEncUnmapInputResource(m_encoder, slot.mappedResource);
+        slot.mappedResource = nullptr;
+    }
+    std::lock_guard<std::mutex> stateLock(m_stateMutex);
+    slot.inUse = false;
+}
+
+void NVENCEncoder::RequestKeyframe() { m_forceNextKeyframe = true; }
 
 bool NVENCEncoder::Reconfigure(uint32_t bitrateBps, uint32_t fps) {
     if (!m_initialized || bitrateBps == 0 || fps == 0) return false;
-    m_bitrate = bitrateBps;
-    m_fps = fps;
-
-    NV_ENC_RECONFIGURE_PARAMS reconfigParams = {};
-    reconfigParams.version = NV_ENC_RECONFIGURE_PARAMS_VER;
-    reconfigParams.reInitEncodeParams = m_initParams;
-    reconfigParams.reInitEncodeParams.encodeConfig = &m_encodeConfig;
-    m_encodeConfig.rcParams.averageBitRate = m_bitrate;
-    m_encodeConfig.rcParams.maxBitRate = m_bitrate;
-    m_encodeConfig.rcParams.vbvBufferSize = (m_bitrate * 2) / m_fps;
+    NV_ENC_RECONFIGURE_PARAMS params = {};
+    params.version = NV_ENC_RECONFIGURE_PARAMS_VER;
+    params.reInitEncodeParams = m_initParams;
+    params.reInitEncodeParams.encodeConfig = &m_encodeConfig;
+    m_encodeConfig.rcParams.averageBitRate = bitrateBps;
+    m_encodeConfig.rcParams.maxBitRate = bitrateBps;
+    m_encodeConfig.rcParams.vbvBufferSize = (bitrateBps * 2) / fps;
     m_encodeConfig.rcParams.vbvInitialDelay = m_encodeConfig.rcParams.vbvBufferSize;
-    m_initParams.frameRateNum = m_fps;
-
-    NVENCSTATUS status = m_nvenc.nvEncReconfigureEncoder(m_encoder, &reconfigParams);
+    m_initParams.frameRateNum = fps;
+    std::lock_guard<std::mutex> apiLock(m_apiMutex);
+    NVENCSTATUS status = m_nvenc.nvEncReconfigureEncoder(m_encoder, &params);
     if (status != NV_ENC_SUCCESS) {
-        std::cerr << "[NVENC] Erro ao reconfigurar encoder: " << status << std::endl;
+        std::cerr << "[NVENC] Falha ao reconfigurar: " << status << std::endl;
         return false;
     }
+    m_bitrate = bitrateBps;
+    m_fps = fps;
     return true;
 }
 
+void NVENCEncoder::DestroyBufferPool() {
+    if (!m_encoder) return;
+    for (auto& slot : m_slots) {
+        if (slot.mappedResource) {
+            m_nvenc.nvEncUnmapInputResource(m_encoder, slot.mappedResource);
+            slot.mappedResource = nullptr;
+        }
+        if (slot.registeredResource) {
+            m_nvenc.nvEncUnregisterResource(m_encoder, slot.registeredResource);
+            slot.registeredResource = nullptr;
+        }
+        if (slot.bitstreamBuffer) {
+            m_nvenc.nvEncDestroyBitstreamBuffer(m_encoder, slot.bitstreamBuffer);
+            slot.bitstreamBuffer = nullptr;
+        }
+        if (slot.completionEvent) {
+            if (slot.eventRegistered) {
+                NV_ENC_EVENT_PARAMS event = {};
+                event.version = NV_ENC_EVENT_PARAMS_VER;
+                event.completionEvent = slot.completionEvent;
+                m_nvenc.nvEncUnregisterAsyncEvent(m_encoder, &event);
+            }
+            CloseHandle(slot.completionEvent);
+            slot.completionEvent = nullptr;
+            slot.eventRegistered = false;
+        }
+        slot.inputTexture.Reset();
+        slot.inUse = false;
+    }
+    if (m_eosEvent) {
+        if (m_eosEventRegistered) {
+            NV_ENC_EVENT_PARAMS event = {};
+            event.version = NV_ENC_EVENT_PARAMS_VER;
+            event.completionEvent = m_eosEvent;
+            m_nvenc.nvEncUnregisterAsyncEvent(m_encoder, &event);
+        }
+        CloseHandle(m_eosEvent);
+        m_eosEvent = nullptr;
+        m_eosEventRegistered = false;
+    }
+}
+
 void NVENCEncoder::Shutdown() {
+    m_acceptingFrames = false;
+    if (m_encoder && m_initialized && m_eosEvent) {
+        ResetEvent(m_eosEvent);
+        NV_ENC_PIC_PARAMS eos = {};
+        eos.version = NV_ENC_PIC_PARAMS_VER;
+        eos.encodePicFlags = NV_ENC_PIC_FLAG_EOS;
+        eos.completionEvent = m_eosEvent;
+        std::lock_guard<std::mutex> apiLock(m_apiMutex);
+        m_nvenc.nvEncEncodePicture(m_encoder, &eos);
+    }
+
+    m_stopping = true;
+    m_pendingCondition.notify_all();
+    if (m_eosEvent && WaitForSingleObject(m_eosEvent, 3000) != WAIT_OBJECT_0) {
+        m_abortOutput = true;
+        for (auto& slot : m_slots) if (slot.completionEvent) SetEvent(slot.completionEvent);
+    }
+    if (m_outputThread.joinable()) m_outputThread.join();
+
     if (m_encoder) {
-        if (m_registeredResource) {
-            m_nvenc.nvEncUnregisterResource(m_encoder, m_registeredResource);
-            m_registeredResource = nullptr;
-        }
-        if (m_bitstreamBuffer) {
-            m_nvenc.nvEncDestroyBitstreamBuffer(m_encoder, m_bitstreamBuffer);
-            m_bitstreamBuffer = nullptr;
-        }
+        std::lock_guard<std::mutex> apiLock(m_apiMutex);
+        DestroyBufferPool();
         m_nvenc.nvEncDestroyEncoder(m_encoder);
         m_encoder = nullptr;
     }
@@ -305,6 +460,14 @@ void NVENCEncoder::Shutdown() {
         FreeLibrary(m_hNvenc);
         m_hNvenc = nullptr;
     }
-    m_registeredTexture = nullptr;
+    {
+        std::lock_guard<std::mutex> stateLock(m_stateMutex);
+        m_pendingSlots.clear();
+    }
+    m_outputCallback = nullptr;
+    m_d3dContext.Reset();
+    m_d3dDevice.Reset();
     m_initialized = false;
+    m_stopping = false;
+    m_abortOutput = false;
 }

@@ -98,14 +98,37 @@ int main(int argc, char* argv[]) {
     double aspectRatio = static_cast<double>(srcW) / static_cast<double>(srcH);
     uint32_t targetWidth = static_cast<uint32_t>(std::round(targetHeight * aspectRatio));
 
-    // Alinhamento para múltiplos de 16 (macroblocos H.264 e NVENC)
-    targetWidth = (targetWidth + 15) & ~15;
-    targetHeight = (targetHeight + 1) & ~1;
+    // Em 60 FPS, "1080p" ultrawide calculado apenas pela altura chegava a
+    // 2592x1080: ~35% mais pixels que 1920x1080 e carga de macroblocos de
+    // H.264 Level 5.1. Mantém a proporção, mas respeita o orçamento de pixels
+    // do preset selecionado. O caminho estável de 30 FPS permanece inalterado.
+    bool cappedForHighFps = false;
+    if (fps > 30 && reqWidth > 0 && reqHeight > 0) {
+        const uint64_t pixelBudget = static_cast<uint64_t>(reqWidth) * reqHeight;
+        const uint64_t requestedPixels = static_cast<uint64_t>(targetWidth) * targetHeight;
+        if (requestedPixels > pixelBudget) {
+            targetHeight = static_cast<uint32_t>(std::floor(std::sqrt(pixelBudget / aspectRatio)));
+            targetWidth = static_cast<uint32_t>(std::floor(targetHeight * aspectRatio));
+            cappedForHighFps = true;
+        }
+    }
+
+    // Para o modo limitado, arredonda para baixo para não ultrapassar o
+    // orçamento. Nos demais casos preserva o comportamento anterior.
+    targetWidth = cappedForHighFps
+        ? (std::max)(16u, targetWidth & ~15u)
+        : (targetWidth + 15) & ~15u;
+    targetHeight = cappedForHighFps
+        ? (std::max)(2u, targetHeight & ~1u)
+        : (targetHeight + 1) & ~1u;
 
     std::cout << "[Voxy Native Streamer] Janela de origem: " << srcW << "x" << srcH 
               << " (Aspect Ratio: " << aspectRatio << ")" << std::endl;
     std::cout << "[Voxy Native Streamer] Resolução de saída GPU: " << targetWidth << "x" << targetHeight 
               << " @ " << fps << " FPS (" << (bitrate / 1000000.0) << " Mbps)" << std::endl;
+    if (cappedForHighFps) {
+        std::cout << "[Voxy Native Streamer] Resolução ultrawide limitada ao orçamento de pixels do preset para 60 FPS." << std::endl;
+    }
 
     // 1. Inicializa o LiveKit C++ SDK
     livekit::initialize(livekit::LogLevel::Warn);
@@ -214,8 +237,30 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    std::atomic<uint64_t> frameCount(0);
+    std::atomic<uint64_t> livekitRejectedFrames(0);
+
     NVENCEncoder encoder;
-    if (!encoder.Initialize(d3dDevice, targetWidth, targetHeight, fps, bitrate)) {
+    if (!encoder.Initialize(
+        d3dDevice,
+        targetWidth,
+        targetHeight,
+        fps,
+        bitrate,
+        [encodedSource, targetWidth, targetHeight, &frameCount, &livekitRejectedFrames](NVENCEncoder::EncodedFrame&& encoded) {
+            livekit::EncodedVideoSource::Frame lkFrame;
+            lkFrame.is_keyframe = encoded.isKeyframe;
+            lkFrame.width = targetWidth;
+            lkFrame.height = targetHeight;
+            lkFrame.timestamp_us = encoded.timestampUs;
+            lkFrame.data = std::move(encoded.data);
+
+            if (encodedSource->captureFrame(lkFrame)) {
+                ++frameCount;
+            } else {
+                ++livekitRejectedFrames;
+            }
+        })) {
         std::cerr << "[Voxy Native Streamer] Falha ao inicializar NVENC Hardware Encoder!" << std::endl;
         scaler.Shutdown();
         room->disconnect();
@@ -224,25 +269,38 @@ int main(int argc, char* argv[]) {
     }
 
     // 5. Inicia a captura WGC direta na GPU com limitador de framerate de alta precisao
-    std::atomic<uint64_t> frameCount(0);
-
-    const int64_t targetFrameIntervalUs = 1000000 / fps;
-    const int64_t minFrameIntervalUs = static_cast<int64_t>(targetFrameIntervalUs * 0.85);
-    auto lastFrameTime = std::chrono::steady_clock::now();
+    const auto targetFrameInterval = std::chrono::nanoseconds(1000000000ULL / fps);
+    const auto pacingTolerance = std::chrono::microseconds(500);
+    auto nextFrameDeadline = std::chrono::steady_clock::time_point{};
+    bool pacingStarted = false;
+    int64_t lastCaptureTimestampUs = 0;
     uint32_t activeEncoderBitrate = bitrate;
+    uint32_t desiredEncoderBitrate = bitrate;
 
     bool started = captureEngine.StartCapture(targetHwnd, [&](ID3D11Texture2D* texture, uint32_t w, uint32_t h) {
         if (!g_running.load()) return;
 
         // Pacing de quadros: quando o jogo roda a taxas altas (ex: 149 FPS no jogo),
         // descarta quadros intermediarios redundantes para manter o envio exatamente estavel a 60 / 30 FPS
-        auto now = std::chrono::steady_clock::now();
-        int64_t elapsedUs = std::chrono::duration_cast<std::chrono::microseconds>(now - lastFrameTime).count();
-        if (frameCount.load() > 0 && elapsedUs < minFrameIntervalUs) {
+        const auto now = std::chrono::steady_clock::now();
+        if (!pacingStarted) {
+            nextFrameDeadline = now;
+            pacingStarted = true;
+        }
+        if (now + pacingTolerance < nextFrameDeadline) {
             return;
         }
-        lastFrameTime = now;
-        const auto captureTime = std::chrono::system_clock::now();
+        if (now > nextFrameDeadline + targetFrameInterval) {
+            nextFrameDeadline = now + targetFrameInterval;
+        } else {
+            nextFrameDeadline += targetFrameInterval;
+        }
+
+        // steady_clock não salta quando o relógio do sistema é ajustado.
+        int64_t captureTimestampUs = std::chrono::duration_cast<std::chrono::microseconds>(
+            now.time_since_epoch()).count();
+        captureTimestampUs = (std::max)(captureTimestampUs, lastCaptureTimestampUs + 1);
+        lastCaptureTimestampUs = captureTimestampUs;
 
         // Redimensiona a textura capturada na GPU preservando tela cheia (sem cortes)
         ID3D11Texture2D* scaledTexture = scaler.Scale(texture, targetWidth, targetHeight);
@@ -264,38 +322,20 @@ int main(int argc, char* argv[]) {
             // aplicacao que deve reconfigurar o codificador externo.
             const uint64_t requestedBps = feedback.rate_control->target_bitrate_bps;
             const uint32_t targetBps = static_cast<uint32_t>(std::min<uint64_t>(requestedBps, bitrate));
-            if (targetBps > 0 && targetBps != activeEncoderBitrate && encoder.Reconfigure(targetBps, fps)) {
-                activeEncoderBitrate = targetBps;
-                std::cout << "[Voxy Native Streamer] NVENC reconfigurado para "
-                          << (targetBps / 1000000.0) << " Mbps" << std::endl;
-            }
+            if (targetBps > 0) desiredEncoderBitrate = targetBps;
+        }
+        // Se o driver estiver momentaneamente ocupado, a meta permanece e a
+        // reconfiguração será tentada novamente no próximo frame.
+        if (desiredEncoderBitrate != activeEncoderBitrate &&
+            encoder.Reconfigure(desiredEncoderBitrate, fps)) {
+            activeEncoderBitrate = desiredEncoderBitrate;
+            std::cout << "[Voxy Native Streamer] NVENC reconfigurado para "
+                      << (activeEncoderBitrate / 1000000.0) << " Mbps" << std::endl;
         }
 
-        std::vector<uint8_t> bitstream;
-        bool isKeyframe = false;
-
-        if (encoder.EncodeTexture(scaledTexture, forceKeyframe, bitstream, isKeyframe)) {
-            // O timestamp deve representar a captura real. Com 54 FPS reais,
-            // anunciar uma sequencia artificial de 60 FPS faz o receptor tratar
-            // frames atrasados como descartaveis.
-            const int64_t captureTimestampUs = std::chrono::duration_cast<std::chrono::microseconds>(
-                captureTime.time_since_epoch()).count();
-
-            livekit::EncodedVideoSource::Frame lkFrame;
-            lkFrame.is_keyframe = isKeyframe;
-            lkFrame.width = targetWidth;
-            lkFrame.height = targetHeight;
-            lkFrame.timestamp_us = captureTimestampUs;
-            lkFrame.data = std::move(bitstream);
-
-            if (!encodedSource->captureFrame(lkFrame)) {
-                std::cerr << "[Voxy Native Streamer] LiveKit recusou access unit de "
-                          << lkFrame.data.size() << " bytes" << std::endl;
-                return;
-            }
-
-            frameCount++;
-        }
+        // Retorna imediatamente após a submissão. LockBitstream e LiveKit rodam
+        // em uma única thread de saída, na ordem de submissão.
+        encoder.SubmitTexture(scaledTexture, forceKeyframe, captureTimestampUs);
     });
 
     if (!started) {
@@ -341,6 +381,9 @@ int main(int argc, char* argv[]) {
     captureEngine.StopCapture();
     processAudioCapture.Stop();
     encoder.Shutdown();
+    std::cout << "[Voxy Native Streamer] Frames descartados por backpressure: "
+              << encoder.DroppedFrames() << " | recusados pelo LiveKit: "
+              << livekitRejectedFrames.load() << std::endl;
     scaler.Shutdown();
 
     if (inputThread.joinable()) {
