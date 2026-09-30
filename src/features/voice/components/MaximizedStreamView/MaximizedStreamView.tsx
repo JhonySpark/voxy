@@ -95,6 +95,18 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
           </div>
         )}
 
+        {isFullscreen && (
+          <button
+            type="button"
+            onClick={() => void document.exitFullscreen()}
+            className={styles.exitFullscreenButton}
+            title={t('voice.exitFullscreen', 'Sair da Tela Cheia')}
+          >
+            <Minimize size={18} />
+            <span>Sair da tela cheia</span>
+          </button>
+        )}
+
         <div className={styles.userBadge} style={{ opacity: showControls ? 1 : 0 }}>
           {participant.username}
         </div>

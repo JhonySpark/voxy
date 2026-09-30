@@ -27,6 +27,19 @@ export function DevStreamDiagnostics({
   const [values, setValues] = useState<Values>({});
 
   useEffect(() => {
+    if (!import.meta.env.DEV) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.key !== 'F8' && event.code !== 'F8' && event.keyCode !== 119) || event.repeat) return;
+      event.preventDefault();
+      setOpen((visible) => !visible);
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, []);
+
+  useEffect(() => {
     if (!open || typeof track?.getRTCStatsReport !== 'function') return;
 
     let previous: PreviousSample | undefined;
@@ -99,6 +112,8 @@ export function DevStreamDiagnostics({
     void collect();
     return () => { cancelled = true; clearTimeout(timer); };
   }, [open, track]);
+
+  if (!open) return null;
 
   return <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 50, maxWidth: 'calc(100% - 16px)' }}>
     <button type="button" onClick={() => setOpen(value => !value)} style={{ background: '#111e', color: '#fff', border: '1px solid #ffffff33', borderRadius: 4, padding: '4px 8px', cursor: 'pointer' }}>

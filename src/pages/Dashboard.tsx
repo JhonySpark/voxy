@@ -185,6 +185,10 @@ export default function Dashboard() {
     return sum + count;
   }, 0);
 
+  const isViewingConnectedVoice = Boolean(
+    connectedVoiceChannel && activeChannel?.id === connectedVoiceChannel.channelId,
+  );
+
   if (initialLoading) {
     return (
       <div className={styles.loadingContainer}>
@@ -265,7 +269,8 @@ export default function Dashboard() {
 
       {/* 3. Área Principal */}
       <div className="main-content chat-area">
-        {connectedVoiceChannel && activeChannel?.id === connectedVoiceChannel.channelId ? (
+        {connectedVoiceChannel && (
+          <div style={{ display: isViewingConnectedVoice ? 'contents' : 'none' }}>
           <VoiceRoom
             key={connectedVoiceChannel.channelId}
             channelId={connectedVoiceChannel.channelId}
@@ -287,7 +292,10 @@ export default function Dashboard() {
             onVolumeChange={(id, val) => setUserVolumes((prev) => ({ ...prev, [id]: val }))}
             onSpeakersChange={(speakers) => setActiveSpeakers(new Set(speakers))}
           />
-        ) : activeView === DashboardView.DM && activeFriend ? (
+          </div>
+        )}
+
+        {!isViewingConnectedVoice && (activeView === DashboardView.DM && activeFriend ? (
           <ChatArea
             type="DM"
             target={activeFriend}
@@ -321,7 +329,7 @@ export default function Dashboard() {
             <Users size={48} className={styles.emptyIcon} />
             <p>{t('sidebar.search')}</p>
           </div>
-        )}
+        ))}
       </div>
 
       {/* 4. Modais e Notificações */}

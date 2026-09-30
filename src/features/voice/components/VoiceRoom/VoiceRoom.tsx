@@ -147,6 +147,13 @@ export const VoiceRoom: React.FC<VoiceRoomProps> = (props) => {
     );
   }
 
+  const handleDisconnected = () => {
+    // A transmissão nativa é um processo independente do LiveKitRoom do
+    // renderer; encerra-o antes de limpar o estado da chamada.
+    void ipcRenderer?.invoke('STOP_NATIVE_STREAM').catch(() => undefined);
+    props.onDisconnect();
+  };
+
   return (
     <LiveKitRoom
       token={token}
@@ -155,7 +162,7 @@ export const VoiceRoom: React.FC<VoiceRoomProps> = (props) => {
       audio={props.audioInput ? { deviceId: props.audioInput } : true}
       video={false}
       options={roomOptions}
-      onDisconnected={props.onDisconnect}
+      onDisconnected={handleDisconnected}
       data-lk-theme="default"
       style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
     >
@@ -193,12 +200,34 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
   const [streamRes, setStreamRes] = useState<StreamResolution>(StreamResolution.HD_720);
   const [streamFps, setStreamFps] = useState<StreamFramerate>(StreamFramerate.FPS_30);
   const [shareGameAudio, setShareGameAudio] = useState(true);
+  const [showDevDiagnostics, setShowDevDiagnostics] = useState(false);
   const [streamVolumes, setStreamVolumes] = useState<Record<string, number>>({});
   const [watchingStreams, setWatchingStreams] = useState<Set<string>>(new Set());
   const [maximizedId, setMaximizedId] = useState<string | null>(null);
 
   const prevParticipantsCount = useRef(0);
   const isInitialLoad = useRef(true);
+
+  // Garante que o processo WGC/NVENC não sobreviva à saída da sala, inclusive
+  // quando a desconexão é causada por rede, navegação ou desmontagem do React.
+  useEffect(() => {
+    return () => {
+      void ipcRenderer?.invoke('STOP_NATIVE_STREAM').catch(() => undefined);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.key !== 'F8' && event.code !== 'F8' && event.keyCode !== 119) || event.repeat) return;
+      event.preventDefault();
+      setShowDevDiagnostics((visible) => !visible);
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, []);
 
   // Escuta telemetria do Pipeline Nativo C++ (WGC + NVENC + LiveKit C++)
   useEffect(() => {
@@ -745,7 +774,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
       )}
 
       {/* Floating HUD for Native Streamer */}
-      {import.meta.env.DEV && isNativeStreaming && (
+      {import.meta.env.DEV && showDevDiagnostics && isNativeStreaming && (
         <div style={{
           position: 'absolute',
           top: 12,
