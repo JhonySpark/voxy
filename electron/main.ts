@@ -1,8 +1,8 @@
-import { app, BrowserWindow, ipcMain, desktopCapturer, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, desktopCapturer, dialog, Menu, Tray } from 'electron'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawn, ChildProcess } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { autoUpdater } from 'electron-updater'
 import { getCategorizedSources } from './gameDetector'
 import os from 'node:os'
@@ -46,6 +46,69 @@ app.commandLine.appendSwitch('disable-backgrounding-occluded-windows')
 app.commandLine.appendSwitch('disable-background-timer-throttling')
 
 let win: BrowserWindow | null = null
+let tray: Tray | null = null
+let isQuitting = false
+
+type BackgroundSettings = { keepRunningInBackground: boolean }
+
+const backgroundSettingsPath = () => join(app.getPath('userData'), 'background-settings.json')
+
+function getBackgroundSettings(): BackgroundSettings {
+  try {
+    const settings = JSON.parse(readFileSync(backgroundSettingsPath(), 'utf8'))
+    return { keepRunningInBackground: settings.keepRunningInBackground === true }
+  } catch {
+    return { keepRunningInBackground: false }
+  }
+}
+
+function saveBackgroundSettings(keepRunningInBackground: boolean) {
+  writeFileSync(backgroundSettingsPath(), JSON.stringify({ keepRunningInBackground }), 'utf8')
+  refreshTrayMenu()
+}
+
+function showMainWindow() {
+  if (!win) {
+    void createWindow()
+    return
+  }
+  if (win.isMinimized()) win.restore()
+  win.show()
+  win.focus()
+}
+
+function refreshTrayMenu() {
+  if (!tray) return
+  const settings = getBackgroundSettings()
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: 'Abrir Voxy', click: showMainWindow },
+    {
+      label: 'Manter o Voxy em segundo plano',
+      type: 'checkbox',
+      checked: settings.keepRunningInBackground,
+      click: (item) => saveBackgroundSettings(item.checked),
+    },
+    { type: 'separator' },
+    {
+      label: 'Sair do Voxy',
+      click: () => {
+        isQuitting = true
+        app.quit()
+      },
+    },
+  ]))
+}
+
+function createTray() {
+  if (tray) return
+  const iconPath = process.env.VITE_DEV_SERVER_URL
+    ? join(process.cwd(), 'build/icon.ico')
+    : join(process.resourcesPath, 'app.asar.unpacked/build/icon.ico')
+  tray = new Tray(existsSync(iconPath) ? iconPath : join(app.getAppPath(), 'build/icon.ico'))
+  tray.setToolTip('Voxy')
+  tray.on('click', showMainWindow)
+  refreshTrayMenu()
+}
 
 async function createWindow() {
   win = new BrowserWindow({
@@ -61,6 +124,13 @@ async function createWindow() {
   })
   win.removeMenu()
 
+  win.on('close', (event) => {
+    if (!isQuitting && getBackgroundSettings().keepRunningInBackground) {
+      event.preventDefault()
+      win?.hide()
+    }
+  })
+
   if (process.env.VITE_DEV_SERVER_URL) {
     win.loadURL(process.env.VITE_DEV_SERVER_URL)
     win.webContents.openDevTools()
@@ -70,6 +140,13 @@ async function createWindow() {
 }
 
 app.whenReady().then(() => {
+  createTray()
+
+  ipcMain.handle('GET_BACKGROUND_MODE', () => getBackgroundSettings().keepRunningInBackground)
+  ipcMain.on('SET_BACKGROUND_MODE', (_event, enabled: boolean) => {
+    saveBackgroundSettings(enabled === true)
+  })
+
   // Retorna fontes categorizadas (Jogos detectados, Janelas/Apps e Telas com ícones)
   ipcMain.handle('DESKTOP_CAPTURER_GET_CATEGORIZED_SOURCES', async () => {
     return await getCategorizedSources();
@@ -269,7 +346,11 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   win = null
-  if (process.platform !== 'darwin') app.quit()
+  if (process.platform !== 'darwin' && !getBackgroundSettings().keepRunningInBackground) app.quit()
+})
+
+app.on('before-quit', () => {
+  isQuitting = true
 })
 
 app.on('activate', () => {

@@ -349,6 +349,35 @@ export default function Dashboard() {
             onOpenInviteModal={() => setShowInviteModal(true)}
             onOpenServerSettings={() => setShowServerSettingsModal(true)}
             onViewUserProfile={setViewingUserId}
+            onRenameChannel={async (channel) => {
+              const name = window.prompt('Novo nome do canal:', channel.name)?.trim();
+              if (!name || name === channel.name) return;
+              try {
+                await httpClient.patch(`${ApiRoutes.CHANNELS}/${channel.id}`, { name });
+                await fetchServers();
+                realtimeClient.emit(RealtimeEvents.SERVER_UPDATED, { serverId: activeServer.id });
+                toast.success('Nome do canal atualizado.');
+              } catch (error: any) {
+                toast.error(error.response?.data?.message || 'Não foi possível renomear o canal.');
+              }
+            }}
+            onDeleteChannel={async (channel) => {
+              if (!window.confirm(`Excluir o canal "${channel.name}"? Esta ação também remove as mensagens dele.`)) {
+                return;
+              }
+              try {
+                await httpClient.delete(`${ApiRoutes.CHANNELS}/${channel.id}`);
+                if (activeChannel?.id === channel.id) {
+                  const nextChannel = activeServer.channels.find((item) => item.id !== channel.id) || null;
+                  setActiveChannel(nextChannel);
+                }
+                await fetchServers();
+                realtimeClient.emit(RealtimeEvents.SERVER_UPDATED, { serverId: activeServer.id });
+                toast.success('Canal excluído.');
+              } catch (error: any) {
+                toast.error(error.response?.data?.message || 'Não foi possível excluir o canal.');
+              }
+            }}
           />
         ) : null}
 

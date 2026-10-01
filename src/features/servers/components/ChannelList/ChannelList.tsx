@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styles from './ChannelList.module.css';
-import { Hash, Volume2, Plus, UserPlus, Search, ChevronDown, Mic, MicOff, Settings } from 'lucide-react';
+import { Hash, Volume2, Plus, UserPlus, Search, ChevronDown, Mic, MicOff, Settings, Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import * as Slider from '@radix-ui/react-slider';
@@ -26,7 +26,47 @@ interface ChannelListProps {
   onOpenInviteModal: () => void;
   onOpenServerSettings?: () => void;
   onViewUserProfile?: (userId: string) => void;
+  onDeleteChannel?: (channel: ChannelItem) => void;
+  onRenameChannel?: (channel: ChannelItem) => void;
 }
+
+interface ChannelActionsProps {
+  channel: ChannelItem;
+  isOwner: boolean;
+  onRename?: (channel: ChannelItem) => void;
+  onDelete?: (channel: ChannelItem) => void;
+  children: React.ReactElement;
+}
+
+const ChannelActions: React.FC<ChannelActionsProps> = ({
+  channel,
+  isOwner,
+  onRename,
+  onDelete,
+  children,
+}) => {
+  if (!isOwner) return children;
+
+  return (
+    <ContextMenu.Root>
+      <ContextMenu.Trigger asChild>{children}</ContextMenu.Trigger>
+      <ContextMenu.Portal>
+        <ContextMenu.Content className="context-menu-content" style={{ zIndex: 9999 }}>
+          <ContextMenu.Item className="context-menu-item" onClick={() => onRename?.(channel)}>
+            <Pencil size={14} /> Editar nome
+          </ContextMenu.Item>
+          <ContextMenu.Item
+            className="context-menu-item"
+            style={{ color: '#f87171' }}
+            onClick={() => onDelete?.(channel)}
+          >
+            <Trash2 size={14} /> Excluir canal
+          </ContextMenu.Item>
+        </ContextMenu.Content>
+      </ContextMenu.Portal>
+    </ContextMenu.Root>
+  );
+};
 
 const LiveTimer: React.FC<{ startedAt?: number }> = ({ startedAt }) => {
   const calculateSeconds = () => (startedAt ? Math.max(0, Math.floor((Date.now() - startedAt) / 1000)) : 0);
@@ -70,6 +110,8 @@ export const ChannelList: React.FC<ChannelListProps> = ({
   onOpenInviteModal,
   onOpenServerSettings,
   onViewUserProfile,
+  onDeleteChannel,
+  onRenameChannel,
 }) => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
@@ -152,21 +194,28 @@ export const ChannelList: React.FC<ChannelListProps> = ({
               const unread = unreadChannels[channel.id] || 0;
 
               return (
-                <div
+                <ChannelActions
                   key={channel.id}
-                  className={`${styles.channelItem} ${isActive ? styles.active : ''}`}
-                  onClick={() => onSelectChannel(channel)}
+                  channel={channel}
+                  isOwner={isOwner}
+                  onRename={onRenameChannel}
+                  onDelete={onDeleteChannel}
                 >
-                  <div className={styles.channelContent}>
-                    <Hash size={16} color={isActive ? '#ffffff' : '#64748b'} />
-                    <span className={styles.channelName}>{channel.name}</span>
+                  <div
+                    className={`${styles.channelItem} ${isActive ? styles.active : ''}`}
+                    onClick={() => onSelectChannel(channel)}
+                  >
+                    <div className={styles.channelContent}>
+                      <Hash size={16} color={isActive ? '#ffffff' : '#64748b'} />
+                      <span className={styles.channelName}>{channel.name}</span>
+                    </div>
+                    {isActive ? (
+                      <div className={styles.activeIndicator} />
+                    ) : unread > 0 ? (
+                      <div className={styles.badge}>{unread}</div>
+                    ) : null}
                   </div>
-                  {isActive ? (
-                    <div className={styles.activeIndicator} />
-                  ) : unread > 0 ? (
-                    <div className={styles.badge}>{unread}</div>
-                  ) : null}
-                </div>
+                </ChannelActions>
               );
             })}
           </div>
@@ -186,21 +235,28 @@ export const ChannelList: React.FC<ChannelListProps> = ({
               if (hasUsers) {
                 return (
                   <div key={channel.id} className={styles.voiceCard}>
-                    <div
-                      className={styles.voiceCardHeader}
-                      onClick={() => {
-                        onSelectChannel(channel);
-                        onConnectVoice(channel);
-                      }}
+                    <ChannelActions
+                      channel={channel}
+                      isOwner={isOwner}
+                      onRename={onRenameChannel}
+                      onDelete={onDeleteChannel}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Volume2 size={16} color="var(--text-primary)" />
-                        <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-primary)' }}>
-                          {channel.name}
-                        </span>
+                      <div
+                        className={styles.voiceCardHeader}
+                        onClick={() => {
+                          onSelectChannel(channel);
+                          onConnectVoice(channel);
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Volume2 size={16} color="var(--text-primary)" />
+                          <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-primary)' }}>
+                            {channel.name}
+                          </span>
+                        </div>
+                        <LiveTimer startedAt={channelStartTimes[channel.id]} />
                       </div>
-                      <LiveTimer startedAt={channelStartTimes[channel.id]} />
-                    </div>
+                    </ChannelActions>
 
                     <div className={styles.voiceUsersList}>
                       {usersInChannel.map((p) => {
@@ -311,7 +367,12 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                                   }}
                                 >
                                   {t('voice.mute', 'Silenciar')}{' '}
-                                  <Switch.Root className="switch-root">
+                                  <Switch.Root
+                                    className="switch-root"
+                                    checked={vol <= 0}
+                                    onCheckedChange={(muted) => onVolumeChange?.(p.userId, muted ? 0 : 100)}
+                                    onClick={(event) => event.stopPropagation()}
+                                  >
                                     <Switch.Thumb className="switch-thumb" />
                                   </Switch.Root>
                                 </ContextMenu.Item>
@@ -326,22 +387,29 @@ export const ChannelList: React.FC<ChannelListProps> = ({
               }
 
               return (
-                <div
+                <ChannelActions
                   key={channel.id}
-                  className={styles.emptyChannelRow}
-                  onClick={() => {
-                    onSelectChannel(channel);
-                    onConnectVoice(channel);
-                  }}
+                  channel={channel}
+                  isOwner={isOwner}
+                  onRename={onRenameChannel}
+                  onDelete={onDeleteChannel}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Volume2 size={16} color="var(--text-muted)" />
-                    <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)' }}>
-                      {channel.name}
-                    </span>
+                  <div
+                    className={styles.emptyChannelRow}
+                    onClick={() => {
+                      onSelectChannel(channel);
+                      onConnectVoice(channel);
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Volume2 size={16} color="var(--text-muted)" />
+                      <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)' }}>
+                        {channel.name}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Empty</span>
                   </div>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Empty</span>
-                </div>
+                </ChannelActions>
               );
             })}
           </div>

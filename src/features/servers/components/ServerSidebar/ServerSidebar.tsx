@@ -15,6 +15,7 @@ export interface ServerItem {
   id: string;
   name: string;
   ownerId: string;
+  inviteCode?: string;
   iconUrl?: string | null;
   channels: ChannelItem[];
 }

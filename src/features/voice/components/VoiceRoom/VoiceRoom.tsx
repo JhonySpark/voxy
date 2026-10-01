@@ -5,7 +5,6 @@ import {
   useLocalParticipant,
   useRoomContext,
   useTracks,
-  RoomAudioRenderer,
 } from '@livekit/components-react';
 import {
   Track,
@@ -168,7 +167,6 @@ export const VoiceRoom: React.FC<VoiceRoomProps> = (props) => {
       style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
     >
       <VoiceRoomInner {...props} livekitUrl={livekitUrl} />
-      <RoomAudioRenderer />
     </LiveKitRoom>
   );
 };

@@ -35,6 +35,7 @@ export const StorageKeys = {
   AUTO_GAIN: 'voxy-auto-gain',
   NOTIFY_MESSAGES: 'voxy-notify-messages',
   NOTIFY_SOUNDS: 'voxy-notify-sounds',
+  RUN_IN_BACKGROUND: 'voxy-run-in-background',
   GAME_PRESENCE: 'voxy-game-presence',
   LANGUAGE: 'voxy-language',
 } as const;
@@ -137,6 +138,8 @@ export const IpcChannels = {
   RESTART_AND_INSTALL: 'RESTART_AND_INSTALL',
   DESKTOP_CAPTURER_GET_CATEGORIZED_SOURCES: 'DESKTOP_CAPTURER_GET_CATEGORIZED_SOURCES',
   DESKTOP_CAPTURER_GET_SOURCES: 'DESKTOP_CAPTURER_GET_SOURCES',
+  GET_BACKGROUND_MODE: 'GET_BACKGROUND_MODE',
+  SET_BACKGROUND_MODE: 'SET_BACKGROUND_MODE',
   APP_UPDATE_AVAILABLE: 'app-update-available',
   APP_UPDATE_PROGRESS: 'app-update-progress',
   APP_UPDATE_DOWNLOADED: 'app-update-downloaded',

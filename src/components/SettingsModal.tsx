@@ -143,9 +143,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [notifySounds, setNotifySounds] = useState<boolean>(
     localStorage.getItem(StorageKeys.NOTIFY_SOUNDS) !== 'false'
   );
+  const [runInBackground, setRunInBackground] = useState<boolean>(
+    localStorage.getItem(StorageKeys.RUN_IN_BACKGROUND) === 'true'
+  );
   const [gamePresence, setGamePresence] = useState<boolean>(
     localStorage.getItem(StorageKeys.GAME_PRESENCE) !== 'false'
   );
+
+  useEffect(() => {
+    ipcRenderer?.invoke(IpcChannels.GET_BACKGROUND_MODE)
+      .then((enabled: boolean) => setRunInBackground(enabled === true))
+      .catch(() => undefined);
+  }, []);
 
   // Verificação manual de atualização
   const [checkingUpdate, setCheckingUpdate] = useState<boolean>(false);
@@ -344,7 +353,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     localStorage.setItem(StorageKeys.AUTO_GAIN, autoGainControl.toString());
     localStorage.setItem(StorageKeys.NOTIFY_MESSAGES, notifyMessages.toString());
     localStorage.setItem(StorageKeys.NOTIFY_SOUNDS, notifySounds.toString());
+    localStorage.setItem(StorageKeys.RUN_IN_BACKGROUND, runInBackground.toString());
     localStorage.setItem(StorageKeys.GAME_PRESENCE, gamePresence.toString());
+    ipcRenderer?.send(IpcChannels.SET_BACKGROUND_MODE, runInBackground);
 
     if (onDeviceChange) {
       onDeviceChange(selectedInput, selectedOutput);
@@ -808,6 +819,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="settings-subcard-desc">{t('settings.alertSoundsDesc')}</div>
                   </div>
                   <div className={`settings-checkbox ${notifySounds ? 'checked' : ''}`}>
+                    <Check size={14} strokeWidth={3} />
+                  </div>
+                </div>
+
+                <div
+                  className="settings-subcard"
+                  onClick={() => setRunInBackground(!runInBackground)}
+                >
+                  <div>
+                    <div className="settings-subcard-title">Executar em segundo plano</div>
+                    <div className="settings-subcard-desc">Ao fechar a janela, manter o Voxy no ícone perto do relógio do Windows.</div>
+                  </div>
+                  <div className={`settings-checkbox ${runInBackground ? 'checked' : ''}`}>
                     <Check size={14} strokeWidth={3} />
                   </div>
                 </div>

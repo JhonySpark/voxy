@@ -99,7 +99,9 @@ export const SelectiveAudioRenderer: React.FC<SelectiveAudioRendererProps> = ({
     // Limpeza de participantes que saíram
     const currentIdentities = new Set(participants.map((p) => p.identity));
     audioElementsRef.current.forEach((el, key) => {
-      const pId = key.split('-')[0];
+      const pId = key.endsWith('-mic')
+        ? key.slice(0, -'-mic'.length)
+        : key.slice(0, -'-screen-audio'.length);
       if (!currentIdentities.has(pId)) {
         el.pause();
         el.srcObject = null;

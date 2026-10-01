@@ -22,7 +22,7 @@ export const InviteServerModal: React.FC<InviteServerModalProps> = ({
   if (!isOpen || !server) return null;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(server.id);
+    navigator.clipboard.writeText(server.inviteCode || server.id);
     toast.success(t('server.inviteCopied'));
     onClose();
   };
@@ -40,7 +40,7 @@ export const InviteServerModal: React.FC<InviteServerModalProps> = ({
             type="text"
             className={`${styles.input} ${styles.inviteCodeBox}`}
             readOnly
-            value={server.id}
+            value={server.inviteCode || server.id}
             onClick={handleCopy}
             title={t('server.copyInvite')}
           />

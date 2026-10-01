@@ -92,6 +92,13 @@ export function useChat({
     return a[0].id === b[0].id && a[a.length - 1].id === b[b.length - 1].id;
   };
 
+  const mergeWithPendingMessages = (serverMessages: ChatMessage[], cached?: ChatMessage[]) => {
+    const pendingMessages = (cached || []).filter((message) => message.id.startsWith('temp-'));
+    return [...serverMessages, ...pendingMessages.filter((pending) =>
+      !serverMessages.some((message) => message.content === pending.content && message.senderId === pending.senderId)
+    )];
+  };
+
   const fetchDMMessages = useCallback(async (friendId: string) => {
     const cacheKey = `dm_${friendId}`;
     const cached = messageCacheRef.current.get(cacheKey);
@@ -108,8 +115,9 @@ export function useChat({
 
     try {
       const res = await httpClient.get<ChatMessage[]>(`${ApiRoutes.CHAT}/${friendId}`);
-      const isIdentical = areMessagesEqual(cached, res);
-      messageCacheRef.current.set(cacheKey, res);
+      const mergedMessages = mergeWithPendingMessages(res, cached);
+      const isIdentical = areMessagesEqual(cached, mergedMessages);
+      messageCacheRef.current.set(cacheKey, mergedMessages);
 
       // Só atualiza a tela se o usuário ainda estiver na conversa E se houver novas mensagens
       if (
@@ -117,7 +125,7 @@ export function useChat({
         activeFriendIdRef.current === friendId
       ) {
         if (!isIdentical) {
-          setMessages(res);
+          setMessages(mergedMessages);
         }
         setIsLoadingMessages(false);
       }
@@ -148,8 +156,9 @@ export function useChat({
 
     try {
       const res = await httpClient.get<ChatMessage[]>(`${ApiRoutes.CHANNELS}/${channelId}/messages`);
-      const isIdentical = areMessagesEqual(cached, res);
-      messageCacheRef.current.set(cacheKey, res);
+      const mergedMessages = mergeWithPendingMessages(res, cached);
+      const isIdentical = areMessagesEqual(cached, mergedMessages);
+      messageCacheRef.current.set(cacheKey, mergedMessages);
 
       // Só atualiza a tela se o usuário ainda estiver neste canal E se houver novas mensagens
       if (
@@ -157,7 +166,7 @@ export function useChat({
         activeChannelIdRef.current === channelId
       ) {
         if (!isIdentical) {
-          setMessages(res);
+          setMessages(mergedMessages);
         }
         setIsLoadingMessages(false);
       }

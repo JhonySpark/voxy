@@ -44,6 +44,12 @@ export function useServers() {
     if (servers.length > 0) {
       servers.forEach((server) => {
         realtimeClient.emit(RealtimeEvents.JOIN_SERVER, { serverId: server.id });
+        // Acompanha todos os canais de texto para mostrar badges fora do canal ativo.
+        server.channels
+          .filter((channel) => channel.type === 'TEXT')
+          .forEach((channel) => {
+            realtimeClient.emit(RealtimeEvents.JOIN_CHANNEL, { channelId: channel.id });
+          });
       });
     }
   }, [servers]);
