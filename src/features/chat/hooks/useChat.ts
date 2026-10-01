@@ -7,6 +7,8 @@ import type { ChatMessage } from '../components/ChatArea/ChatArea';
 interface UseChatProps {
   myId: string;
   myUsername: string;
+  myDisplayName?: string | null;
+  myAvatarUrl?: string | null;
   activeView: DashboardView;
   activeFriendId: string | null;
   activeChannelId: string | null;
@@ -15,6 +17,8 @@ interface UseChatProps {
 export function useChat({
   myId,
   myUsername,
+  myDisplayName,
+  myAvatarUrl,
   activeView,
   activeFriendId,
   activeChannelId,
@@ -32,6 +36,16 @@ export function useChat({
   const activeFriendIdRef = useRef(activeFriendId);
   const activeChannelIdRef = useRef(activeChannelId);
   const myIdRef = useRef(myId);
+  const myDisplayNameRef = useRef(myDisplayName);
+  const myAvatarUrlRef = useRef(myAvatarUrl);
+
+  useEffect(() => {
+    myDisplayNameRef.current = myDisplayName;
+  }, [myDisplayName]);
+
+  useEffect(() => {
+    myAvatarUrlRef.current = myAvatarUrl;
+  }, [myAvatarUrl]);
 
   // Rascunho de texto por conversa
   const currentChatKey =
@@ -169,7 +183,13 @@ export function useChat({
         content,
         senderId: myId,
         createdAt: new Date().toISOString(),
-        sender: { id: myId, username: myUsername, email: '' },
+        sender: {
+          id: myId,
+          username: myUsername,
+          displayName: myDisplayNameRef.current || null,
+          avatarUrl: myAvatarUrlRef.current || null,
+          email: '',
+        },
       };
 
       if (activeViewRef.current === DashboardView.DM && activeFriendIdRef.current) {
@@ -280,8 +300,35 @@ export function useChat({
     };
 
     const onNewChannelMessage = (msg: ChatMessage) => {
-      // Evita duplicação da própria mensagem que já foi enviada de forma otimista
-      if (msg.senderId === myIdRef.current) return;
+      // Se for a própria mensagem enviada, reconcilia o tempMsg no estado e no cache
+      if (msg.senderId === myIdRef.current) {
+        if (msg.channelId) {
+          const cacheKey = `channel_${msg.channelId}`;
+          const cached = messageCacheRef.current.get(cacheKey);
+          if (cached) {
+            const filtered = cached.filter(
+              (m) => !(m.id.startsWith('temp-') && m.content === msg.content)
+            );
+            if (!filtered.some((m) => m.id === msg.id)) {
+              messageCacheRef.current.set(cacheKey, [...filtered, msg]);
+            }
+          }
+        }
+
+        if (
+          activeViewRef.current === DashboardView.SERVER &&
+          activeChannelIdRef.current === msg.channelId
+        ) {
+          setMessages((prev) => {
+            const filtered = prev.filter(
+              (m) => !(m.id.startsWith('temp-') && m.content === msg.content)
+            );
+            if (filtered.some((m) => m.id === msg.id)) return filtered;
+            return [...filtered, msg];
+          });
+        }
+        return;
+      }
 
       if (msg.channelId) {
         const cacheKey = `channel_${msg.channelId}`;

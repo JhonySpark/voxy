@@ -9,6 +9,8 @@ import { EmojiPicker } from '../EmojiPicker/EmojiPicker';
 import { StorageUploadService } from '../../services/storageUpload.service';
 import { AudioRecorderService } from '../../services/audioRecorder.service';
 
+import { getMediaUrl } from '../../../../core/utils/media.util';
+
 export interface ChatAttachment {
   id: string;
   fileName: string;
@@ -33,6 +35,8 @@ export interface ChatMessage {
     id: string;
     username: string;
     email: string;
+    avatarUrl?: string | null;
+    displayName?: string | null;
   };
   attachments?: ChatAttachment[];
 }
@@ -47,6 +51,7 @@ interface ChatAreaProps {
   onSendMessage: (e: React.FormEvent) => void;
   onSendAttachment?: (attachmentId: string, customContent?: string) => void;
   isLoading?: boolean;
+  onOpenUserProfile?: (userId: string) => void;
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({
@@ -59,6 +64,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   onSendMessage,
   onSendAttachment,
   isLoading = false,
+  onOpenUserProfile,
 }) => {
   const { t, i18n } = useTranslation();
   const messagesListRef = useRef<HTMLDivElement>(null);
@@ -74,6 +80,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [audioVolume, setAudioVolume] = useState(0);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [failedAvatars, setFailedAvatars] = useState<Record<string, boolean>>({});
   const audioRecorderRef = useRef<AudioRecorderService | null>(null);
   const recordingTimerRef = useRef<any>(null);
 
@@ -273,9 +280,26 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       <header className={styles.header}>
         <div className={styles.headerInfo}>
           {type === 'DM' ? (
-            <div className={styles.avatarWrapper}>
+            <div 
+              className={styles.avatarWrapper}
+              onClick={() => onOpenUserProfile?.(target.id)}
+              style={{ cursor: onOpenUserProfile ? 'pointer' : 'default' }}
+              title={`Ver perfil de ${targetName}`}
+            >
               <div className={styles.avatar}>
-                {targetName.charAt(0).toUpperCase()}
+                {getMediaUrl((target as FriendUser).avatarUrl) ? (
+                  <img
+                    src={getMediaUrl((target as FriendUser).avatarUrl)}
+                    alt={targetName}
+                    className={styles.avatarImg}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                ) : null}
+                <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>
+                  {targetName.charAt(0).toUpperCase()}
+                </span>
               </div>
               <div className={styles.onlineDot} />
             </div>
@@ -284,7 +308,13 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               <Hash size={18} />
             </div>
           )}
-          <h1 className={styles.title}>{targetName}</h1>
+          <h1 
+            className={styles.title}
+            onClick={type === 'DM' && onOpenUserProfile ? () => onOpenUserProfile(target.id) : undefined}
+            style={{ cursor: type === 'DM' && onOpenUserProfile ? 'pointer' : 'default' }}
+          >
+            {targetName}
+          </h1>
         </div>
       </header>
 
@@ -316,7 +346,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               new Date(previousMessage.createdAt)
             );
             const isMe = msg.senderId === myId;
-            const author = isMe ? t('chat.you') : (msg.sender?.username || t('voice.remoteUser'));
+            const author = isMe ? t('chat.you') : (msg.sender?.displayName || msg.sender?.username || t('voice.remoteUser'));
+            const avatarMedia = getMediaUrl(msg.sender?.avatarUrl);
             const time = new Date(msg.createdAt).toLocaleTimeString([], {
               hour: '2-digit',
               minute: '2-digit',
@@ -335,13 +366,43 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   }`}
                 >
                   {!isMe && (
-                    <div className={styles.avatar} style={{ width: 28, height: 28, fontSize: '0.75rem' }}>
-                      {author.charAt(0).toUpperCase()}
+                    <div 
+                      className={styles.avatar} 
+                      style={{ 
+                        width: 28, 
+                        height: 28, 
+                        fontSize: '0.75rem', 
+                        cursor: onOpenUserProfile ? 'pointer' : 'default' 
+                      }}
+                      onClick={() => onOpenUserProfile?.(msg.senderId)}
+                      title={`Ver perfil de ${author}`}
+                    >
+                      {avatarMedia && !failedAvatars[msg.id] ? (
+                        <img 
+                          src={avatarMedia} 
+                          alt={author} 
+                          className={styles.avatarImg}
+                          onError={() => {
+                            setFailedAvatars((prev) => ({ ...prev, [msg.id]: true }));
+                          }}
+                        />
+                      ) : (
+                        <span style={{ fontSize: '0.7rem', fontWeight: 700 }}>
+                          {author.charAt(0).toUpperCase()}
+                        </span>
+                      )}
                     </div>
                   )}
                   <div className={styles.messageBubbleWrapper}>
                     <div className={styles.messageMeta}>
-                      <span className={styles.authorName}>{author}</span>
+                      <span 
+                        className={styles.authorName}
+                        onClick={() => onOpenUserProfile?.(msg.senderId)}
+                        style={{ cursor: onOpenUserProfile ? 'pointer' : 'default' }}
+                        title={`Ver perfil de ${author}`}
+                      >
+                        {author}
+                      </span>
                       <span className={styles.time}>{time}</span>
                     </div>
                     {(() => {

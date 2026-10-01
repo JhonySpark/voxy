@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, Volume2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -31,7 +31,9 @@ import { AddFriendModal } from '../features/friends/components/AddFriendModal/Ad
 import { ChatArea } from '../features/chat/components/ChatArea/ChatArea';
 import { UserProfileBar } from '../features/user/components/UserProfileBar/UserProfileBar';
 import { EditProfileModal } from '../features/user/components/EditProfileModal/EditProfileModal';
+import { UserProfileModal } from '../features/user/components/UserProfileModal/UserProfileModal';
 import type { UserProfileData } from '../features/user/components/UserPopout/UserPopout';
+import { useToast } from '../components/common/Toast/ToastContext';
 
 // Custom Hooks refatorados da Fase 3
 import { useFriends } from '../features/friends/hooks/useFriends';
@@ -42,11 +44,13 @@ import styles from './Dashboard.module.css';
 
 export default function Dashboard() {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const navigate = useNavigate();
 
   // Autenticação e Usuário
   const [myId, setMyId] = useState('');
   const [myUsername, setMyUsername] = useState('');
+  const [currentUserProfile, setCurrentUserProfile] = useState<UserProfileData | null>(null);
 
   // Navegação e Seleção de Visualização
   const [activeView, setActiveView] = useState<DashboardView>(DashboardView.DM);
@@ -86,6 +90,8 @@ export default function Dashboard() {
   } = useChat({
     myId,
     myUsername,
+    myDisplayName: currentUserProfile?.displayName,
+    myAvatarUrl: currentUserProfile?.avatarUrl,
     activeView,
     activeFriendId: activeFriend?.id || null,
     activeChannelId: activeChannel?.id || null,
@@ -107,10 +113,8 @@ export default function Dashboard() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [viewingUserId, setViewingUserId] = useState<string | null>(null);
   const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTabEnum>(SettingsTabEnum.VOICE);
-
-  // Perfil do Usuário
-  const [currentUserProfile, setCurrentUserProfile] = useState<UserProfileData | null>(null);
 
   // Dispositivos de Áudio
   const [selectedAudioInput, setSelectedAudioInput] = useState<string>(
@@ -236,6 +240,43 @@ export default function Dashboard() {
     connectedVoiceChannel && activeChannel?.id === connectedVoiceChannel.channelId,
   );
 
+  const viewingUserInitialData = useMemo(() => {
+    if (!viewingUserId) return undefined;
+    if (viewingUserId === myId && currentUserProfile) {
+      return currentUserProfile;
+    }
+    const friend = friends.find((f) => f.id === viewingUserId);
+    if (friend) {
+      return {
+        username: friend.username,
+        displayName: friend.displayName,
+        avatarUrl: friend.avatarUrl,
+        bannerUrl: friend.bannerUrl,
+        bannerColor: friend.bannerColor,
+        bio: friend.bio,
+      };
+    }
+    for (const participants of Object.values(serverVoiceStates)) {
+      const p = participants.find((u) => u.userId === viewingUserId);
+      if (p) {
+        return {
+          username: p.username,
+          displayName: p.displayName,
+          avatarUrl: p.avatarUrl,
+        };
+      }
+    }
+    const recentMsg = messages.find((m) => m.senderId === viewingUserId);
+    if (recentMsg?.sender) {
+      return {
+        username: recentMsg.sender.username,
+        displayName: recentMsg.sender.displayName,
+        avatarUrl: recentMsg.sender.avatarUrl,
+      };
+    }
+    return undefined;
+  }, [viewingUserId, friends, serverVoiceStates, messages, myId, currentUserProfile]);
+
   if (initialLoading) {
     return (
       <div className={styles.loadingContainer}>
@@ -283,6 +324,7 @@ export default function Dashboard() {
             onOpenAddFriendModal={() => setShowFriendModal(true)}
             onAcceptRequest={handleAcceptRequest}
             onRejectRequest={handleRejectRequest}
+            onViewUserProfile={setViewingUserId}
           />
         ) : activeServer ? (
           <ChannelList
@@ -306,6 +348,7 @@ export default function Dashboard() {
             onOpenCreateChannelModal={() => setShowChannelModal(true)}
             onOpenInviteModal={() => setShowInviteModal(true)}
             onOpenServerSettings={() => setShowServerSettingsModal(true)}
+            onViewUserProfile={setViewingUserId}
           />
         ) : null}
 
@@ -347,6 +390,7 @@ export default function Dashboard() {
             userVolumes={userVolumes}
             onVolumeChange={(id, val) => setUserVolumes((prev) => ({ ...prev, [id]: val }))}
             onSpeakersChange={(speakers) => setActiveSpeakers(new Set(speakers))}
+            onViewUserProfile={setViewingUserId}
           />
           </div>
         )}
@@ -362,6 +406,7 @@ export default function Dashboard() {
             onSendMessage={sendMessage}
             onSendAttachment={sendAttachmentMessage}
             isLoading={isLoadingMessages}
+            onOpenUserProfile={setViewingUserId}
           />
         ) : activeView === DashboardView.SERVER && activeChannel ? (
           activeChannel.type === ChannelTypeEnum.VOICE ? (
@@ -382,6 +427,7 @@ export default function Dashboard() {
               onSendMessage={sendMessage}
               onSendAttachment={sendAttachmentMessage}
               isLoading={isLoadingMessages}
+              onOpenUserProfile={setViewingUserId}
             />
           )
         ) : (
@@ -459,6 +505,74 @@ export default function Dashboard() {
             onServerUpdated={fetchServers}
           />
         </>
+      )}
+
+      {viewingUserId && (
+        <UserProfileModal
+          isOpen={!!viewingUserId}
+          userId={viewingUserId}
+          currentUserId={myId}
+          initialData={viewingUserInitialData}
+          isFriend={friends.some((f) => f.id === viewingUserId)}
+          onClose={() => setViewingUserId(null)}
+          onOpenDirectMessage={async (targetUserId) => {
+            const friend = friends.find((f) => f.id === targetUserId);
+            if (friend) {
+              setActiveView(DashboardView.DM);
+              setActiveServer(null);
+              setActiveChannel(null);
+              setActiveFriend(friend);
+            } else {
+              try {
+                const userData = await httpClient.get<UserProfileData>(`/users/${targetUserId}`);
+                setActiveView(DashboardView.DM);
+                setActiveServer(null);
+                setActiveChannel(null);
+                setActiveFriend({
+                  id: userData.id,
+                  username: userData.username,
+                  displayName: userData.displayName,
+                  avatarUrl: userData.avatarUrl,
+                  bannerUrl: userData.bannerUrl,
+                  bannerColor: userData.bannerColor,
+                  bio: userData.bio,
+                  email: userData.email || '',
+                });
+              } catch (e) {
+                console.error(e);
+                const fallback = viewingUserInitialData || {
+                  id: targetUserId,
+                  username: 'usuario',
+                };
+                setActiveView(DashboardView.DM);
+                setActiveServer(null);
+                setActiveChannel(null);
+                setActiveFriend({
+                  id: targetUserId,
+                  username: fallback.username || 'usuario',
+                  displayName: fallback.displayName,
+                  avatarUrl: fallback.avatarUrl,
+                  email: '',
+                });
+              }
+            }
+            setViewingUserId(null);
+          }}
+          onAddFriend={async (username) => {
+            try {
+              const res = await httpClient.post<{ targetId: string }>(ApiRoutes.FRIEND_REQUEST, { username });
+              realtimeClient.emit(RealtimeEvents.FRIEND_ACTION, { targetId: res.targetId });
+              toast.success(t('friends.requestSent', { username }));
+              fetchFriends();
+            } catch (err: any) {
+              toast.error(err.response?.data?.message || t('friends.userNotFound'));
+            }
+          }}
+          onOpenEditProfile={() => {
+            setViewingUserId(null);
+            setShowEditProfileModal(true);
+          }}
+        />
       )}
     </div>
   );

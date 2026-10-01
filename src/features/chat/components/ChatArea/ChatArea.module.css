@@ -43,6 +43,16 @@
   align-items: center;
   justify-content: center;
   font-size: 0.85rem;
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 .channelIconBox {
@@ -138,6 +148,12 @@
   font-weight: 700;
   font-size: 0.8rem;
   color: #ffffff;
+  transition: color 0.15s ease;
+}
+
+.authorName:hover {
+  color: var(--brand-primary, #34d399);
+  text-decoration: underline;
 }
 
 .time {

@@ -43,6 +43,7 @@ export interface VoiceRoomProps {
   onVolumeChange: (id: string, volume: number) => void;
   onSpeakersChange?: (speakers: string[]) => void;
   livekitUrl?: string;
+  onViewUserProfile?: (userId: string) => void;
 }
 
 // Global hook in RTCPeerConnection to inject high bitrate floor and ceiling in SDP WebRTC
@@ -180,6 +181,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
   onSpeakersChange,
   livekitUrl,
   channelId,
+  onViewUserProfile,
 }) => {
   const { t } = useTranslation();
   const room = useRoomContext();
@@ -695,9 +697,24 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         activeTrack = remoteScreenVideo;
       }
 
+      let avatarUrl: string | null = null;
+      let displayName: string | null = null;
+      try {
+        if (p.metadata) {
+          const meta = JSON.parse(p.metadata);
+          avatarUrl = meta.avatarUrl || null;
+          displayName = meta.displayName || null;
+        }
+      } catch (_) {}
+      if (!avatarUrl && p.identity && !p.identity.endsWith('#screen')) {
+        avatarUrl = `/storage/avatar/${p.identity}`;
+      }
+
       return {
         id: p.identity,
         username: p.isLocal ? t('chat.you') : p.name || p.identity,
+        displayName: displayName || (p.isLocal ? t('chat.you') : p.name || p.identity),
+        avatarUrl,
         isLocal: p.isLocal,
         track: activeTrack,
         isStreaming,
@@ -748,6 +765,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
                   onStreamVolumeChange={(val) =>
                     setStreamVolumes((prev) => ({ ...prev, [p.id]: val }))
                   }
+                  onViewUserProfile={onViewUserProfile}
                 />
               ))}
           </div>
@@ -767,6 +785,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
                 onStreamVolumeChange={(val) =>
                   setStreamVolumes((prev) => ({ ...prev, [p.id]: val }))
                 }
+                onViewUserProfile={onViewUserProfile}
               />
             ))}
           </div>

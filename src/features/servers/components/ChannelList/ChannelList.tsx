@@ -7,12 +7,14 @@ import * as Slider from '@radix-ui/react-slider';
 import * as Switch from '@radix-ui/react-switch';
 import type { ChannelItem, ServerItem } from '../ServerSidebar/ServerSidebar';
 import { ChannelTypeEnum } from '../../../../core/enums';
+import { getMediaUrl } from '../../../../core/utils/media.util';
+import type { VoiceParticipantState } from '../../hooks/useServers';
 
 interface ChannelListProps {
   server: ServerItem;
   myId: string;
   activeChannel: ChannelItem | null;
-  serverVoiceStates: Record<string, { userId: string; username: string; isMuted?: boolean }[]>;
+  serverVoiceStates: Record<string, VoiceParticipantState[]>;
   channelStartTimes?: Record<string, number>;
   userVolumes?: Record<string, number>;
   onVolumeChange?: (userId: string, volume: number) => void;
@@ -23,6 +25,7 @@ interface ChannelListProps {
   onOpenCreateChannelModal: () => void;
   onOpenInviteModal: () => void;
   onOpenServerSettings?: () => void;
+  onViewUserProfile?: (userId: string) => void;
 }
 
 const LiveTimer: React.FC<{ startedAt?: number }> = ({ startedAt }) => {
@@ -66,9 +69,11 @@ export const ChannelList: React.FC<ChannelListProps> = ({
   onOpenCreateChannelModal,
   onOpenInviteModal,
   onOpenServerSettings,
+  onViewUserProfile,
 }) => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
+  const [failedAvatars, setFailedAvatars] = useState<Record<string, boolean>>({});
 
   const isOwner = server.ownerId === myId;
 
@@ -202,19 +207,46 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                         const vol = userVolumes[p.userId] ?? 100;
                         const isMe = p.userId === myId;
                         const isSpeaking = activeSpeakers.has(p.userId);
+                        const avatarMedia = getMediaUrl(p.avatarUrl);
+                        const displayName = p.displayName || p.username;
 
                         const content = (
-                          <div className={styles.voiceUserRow}>
-                            <div
-                              className={`${styles.userAvatar} ${
-                                isSpeaking ? styles.avatarSpeaking : ''
-                              }`}
-                            >
-                              {p.username.charAt(0).toUpperCase()}
+                          <div 
+                            className={styles.voiceUserRow}
+                            onClick={(e) => {
+                              if (onViewUserProfile) {
+                                e.stopPropagation();
+                                onViewUserProfile(p.userId);
+                              }
+                            }}
+                            style={{ cursor: 'pointer' }}
+                            title={`Ver perfil de ${displayName}`}
+                          >
+                            <div className={styles.avatarWrapper}>
+                              <div
+                                className={`${styles.userAvatar} ${
+                                  isSpeaking ? styles.avatarSpeaking : ''
+                                }`}
+                              >
+                                {avatarMedia && !failedAvatars[p.userId] ? (
+                                  <img
+                                    src={avatarMedia}
+                                    alt={displayName}
+                                    className={styles.voiceUserAvatarImg}
+                                    onError={() => {
+                                      setFailedAvatars((prev) => ({ ...prev, [p.userId]: true }));
+                                    }}
+                                  />
+                                ) : (
+                                  <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>
+                                    {displayName.charAt(0).toUpperCase()}
+                                  </span>
+                                )}
+                              </div>
                               <div className={styles.avatarOnlineDot} />
                             </div>
                             <span className={styles.voiceUserName}>
-                              {p.username}
+                              {displayName}
                             </span>
                             {p.isMuted ? (
                               <MicOff size={14} color="var(--text-muted)" />
@@ -231,11 +263,14 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                         ) : (
                           <ContextMenu.Root key={p.userId}>
                             <ContextMenu.Trigger asChild>
-                              <div style={{ cursor: 'pointer' }}>{content}</div>
+                              <div>{content}</div>
                             </ContextMenu.Trigger>
                             <ContextMenu.Portal>
                               <ContextMenu.Content className="context-menu-content" style={{ zIndex: 9999 }}>
-                                <ContextMenu.Item className="context-menu-item">
+                                <ContextMenu.Item 
+                                  className="context-menu-item"
+                                  onClick={() => onViewUserProfile?.(p.userId)}
+                                >
                                   {t('common.profile', 'Perfil')}
                                 </ContextMenu.Item>
                                 <ContextMenu.Item

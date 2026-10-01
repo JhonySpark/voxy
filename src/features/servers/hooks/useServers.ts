@@ -4,12 +4,20 @@ import { realtimeClient } from '../../../infrastructure/adapters/realtime/socket
 import { ApiRoutes, RealtimeEvents } from '../../../core/enums';
 import type { ServerItem, ChannelItem } from '../components/ServerSidebar/ServerSidebar';
 
+export interface VoiceParticipantState {
+  userId: string;
+  username: string;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+  isMuted?: boolean;
+}
+
 export function useServers() {
   const [servers, setServers] = useState<ServerItem[]>([]);
   const [activeServer, setActiveServer] = useState<ServerItem | null>(null);
   const [activeChannel, setActiveChannel] = useState<ChannelItem | null>(null);
   const [serverVoiceStates, setServerVoiceStates] = useState<
-    Record<string, { userId: string; username: string; isMuted?: boolean }[]>
+    Record<string, VoiceParticipantState[]>
   >({});
   const [channelStartTimes, setChannelStartTimes] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
@@ -43,7 +51,7 @@ export function useServers() {
   useEffect(() => {
     const onVoiceUpdate = (data: {
       channelId: string;
-      participants: { userId: string; username: string; isMuted?: boolean }[];
+      participants: VoiceParticipantState[];
       startedAt?: number;
     }) => {
       setServerVoiceStates((prev) => ({

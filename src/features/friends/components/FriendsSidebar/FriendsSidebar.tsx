@@ -24,6 +24,7 @@ interface FriendsSidebarProps {
   onOpenAddFriendModal: () => void;
   onAcceptRequest: (e: React.MouseEvent, friendId: string) => void;
   onRejectRequest: (e: React.MouseEvent, friendId: string) => void;
+  onViewUserProfile?: (userId: string) => void;
 }
 
 export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
@@ -35,6 +36,7 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
   onOpenAddFriendModal,
   onAcceptRequest,
   onRejectRequest,
+  onViewUserProfile,
 }) => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
@@ -130,20 +132,31 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
                   onClick={() => onSelectFriend(friend)}
                 >
                   <div className={styles.userInfo}>
-                    {avatarMedia && !hasFailed ? (
-                      <img
-                        src={avatarMedia}
-                        alt={nameToShow}
-                        className={styles.avatarImg}
-                        onError={() =>
-                          setFailedAvatars((prev) => ({ ...prev, [friend.id]: true }))
+                    <div 
+                      onClick={(e) => {
+                        if (onViewUserProfile) {
+                          e.stopPropagation();
+                          onViewUserProfile(friend.id);
                         }
-                      />
-                    ) : (
-                      <div className={styles.avatar}>
-                        {nameToShow.charAt(0).toUpperCase()}
-                      </div>
-                    )}
+                      }}
+                      style={{ cursor: onViewUserProfile ? 'pointer' : 'default' }}
+                      title={`Ver perfil de ${nameToShow}`}
+                    >
+                      {avatarMedia && !hasFailed ? (
+                        <img
+                          src={avatarMedia}
+                          alt={nameToShow}
+                          className={styles.avatarImg}
+                          onError={() =>
+                            setFailedAvatars((prev) => ({ ...prev, [friend.id]: true }))
+                          }
+                        />
+                      ) : (
+                        <div className={styles.avatar}>
+                          {nameToShow.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
                     <span className={styles.userName}>{nameToShow}</span>
                   </div>
                   {unreadDMs[friend.id] > 0 && activeFriend?.id !== friend.id && (

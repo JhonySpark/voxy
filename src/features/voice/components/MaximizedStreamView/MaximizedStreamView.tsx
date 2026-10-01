@@ -6,6 +6,8 @@ import { VideoRenderer } from "../VideoRenderer/VideoRenderer";
 import { StreamSettingsMenu } from "../StreamSettingsMenu/StreamSettingsMenu";
 import { DevStreamDiagnostics } from "../../../../components/DevStreamDiagnostics";
 
+import { getMediaUrl } from '../../../../core/utils/media.util';
+
 interface MaximizedStreamViewProps {
   participant: {
     id: string;
@@ -15,6 +17,8 @@ interface MaximizedStreamViewProps {
     isStreaming: boolean;
     hasVideo: boolean;
     isMuted: boolean;
+    avatarUrl?: string | null;
+    displayName?: string | null;
     nativeTelemetry?: any;
   };
   isWatching: boolean;
@@ -37,7 +41,13 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const avatarMedia = getMediaUrl(participant.avatarUrl);
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [participant.avatarUrl]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -98,10 +108,21 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
             )}
           </>
         ) : (
-          <div className={styles.avatarPlaceholder}>
-            {participant.username === t("chat.you")
-              ? "ME"
-              : participant.username.charAt(0).toUpperCase()}
+          <div className={styles.avatarPlaceholder} style={{ overflow: 'hidden', position: 'relative' }}>
+            {avatarMedia && !avatarFailed ? (
+              <img
+                src={avatarMedia}
+                alt={participant.username}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                onError={() => setAvatarFailed(true)}
+              />
+            ) : (
+              <span>
+                {participant.username === t("chat.you")
+                  ? "ME"
+                  : participant.username.charAt(0).toUpperCase()}
+              </span>
+            )}
           </div>
         )}
 
@@ -121,7 +142,7 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
           className={styles.userBadge}
           style={{ opacity: showControls ? 1 : 0 }}
         >
-          {participant.username}
+          {participant.displayName || participant.username}
         </div>
 
         <div

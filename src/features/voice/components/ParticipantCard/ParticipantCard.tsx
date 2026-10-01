@@ -6,6 +6,8 @@ import { useIsSpeaking } from '@livekit/components-react';
 import { StreamSettingsMenu } from '../StreamSettingsMenu/StreamSettingsMenu';
 import { DevStreamDiagnostics } from '../../../../components/DevStreamDiagnostics';
 
+import { getMediaUrl } from '../../../../core/utils/media.util';
+
 interface ParticipantCardProps {
   participant: {
     id: string;
@@ -16,6 +18,8 @@ interface ParticipantCardProps {
     hasVideo: boolean;
     isMuted: boolean;
     lkParticipant: any;
+    avatarUrl?: string | null;
+    displayName?: string | null;
     nativeTelemetry?: any;
   };
   isMaximized: boolean;
@@ -25,6 +29,7 @@ interface ParticipantCardProps {
   onToggleMaximize: () => void;
   onToggleWatchStream: () => void;
   onStreamVolumeChange: (vol: number) => void;
+  onViewUserProfile?: (userId: string) => void;
 }
 
 export const ParticipantCard: React.FC<ParticipantCardProps> = ({
@@ -36,11 +41,18 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
   onToggleMaximize,
   onToggleWatchStream,
   onStreamVolumeChange,
+  onViewUserProfile,
 }) => {
   const { t } = useTranslation();
   const isSpeaking = useIsSpeaking(p.lkParticipant);
   const [showSettings, setShowSettings] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const avatarMedia = getMediaUrl(p.avatarUrl);
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [p.avatarUrl]);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -104,8 +116,29 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
       ) : (
         /* Avatar Fallback */
         <div className={styles.avatarFallback}>
-          <div className={styles.avatarCircle}>
-            {p.username === t('chat.you') ? 'ME' : p.username.charAt(0).toUpperCase()}
+          <div 
+            className={styles.avatarCircle}
+            onClick={(e) => {
+              if (onViewUserProfile) {
+                e.stopPropagation();
+                onViewUserProfile(p.id);
+              }
+            }}
+            style={{ cursor: onViewUserProfile ? 'pointer' : 'default', overflow: 'hidden', position: 'relative' }}
+            title={`Ver perfil de ${p.username}`}
+          >
+            {avatarMedia && !avatarFailed ? (
+              <img
+                src={avatarMedia}
+                alt={p.username}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                onError={() => setAvatarFailed(true)}
+              />
+            ) : (
+              <span style={{ fontSize: '1.25rem', fontWeight: 700 }}>
+                {p.username === t('chat.you') ? 'ME' : p.username.charAt(0).toUpperCase()}
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -152,7 +185,19 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
 
       {/* Bottom Name Bar */}
       <div className={styles.bottomBar}>
-        <span className={styles.participantName}>{p.username}</span>
+        <span 
+          className={styles.participantName}
+          onClick={(e) => {
+            if (onViewUserProfile) {
+              e.stopPropagation();
+              onViewUserProfile(p.id);
+            }
+          }}
+          style={{ cursor: onViewUserProfile ? 'pointer' : 'default' }}
+          title={`Ver perfil de ${p.username}`}
+        >
+          {p.displayName || p.username}
+        </span>
       </div>
 
       {/* Menu flutuante de configurações da transmissão */}
