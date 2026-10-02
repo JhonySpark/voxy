@@ -68,14 +68,13 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
   return (
     <div
       className={`${styles.card} ${isSpeaking ? styles.speaking : ''}`}
-      style={
-        isHorizontal
-          ? { minWidth: '280px', maxWidth: '280px' }
-          : undefined
-      }
+      style={{
+        ...(isHorizontal ? { minWidth: '280px', maxWidth: '280px' } : {}),
+        cursor: (p.hasVideo || (p.isStreaming && isWatching)) ? 'pointer' : 'default',
+      }}
       onClick={() => {
-        // Clica para maximizar ou alternar
-        if (!p.isStreaming || isWatching) {
+        // Só maximiza se tiver vídeo ou se estiver assistindo transmissão
+        if (p.hasVideo || (p.isStreaming && isWatching)) {
           onToggleMaximize();
         }
       }}
@@ -193,17 +192,20 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
             </button>
           )}
 
-          <button
-            type="button"
-            className={styles.iconBtn}
-            title={isMaximized ? t('common.close') : t('voice.watchStream')}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleMaximize();
-            }}
-          >
-            {isMaximized ? <Minimize size={14} /> : <Maximize size={14} />}
-          </button>
+          {/* Botão de maximizar apenas quando houver vídeo ou transmissão */}
+          {(p.hasVideo || p.isStreaming || isMaximized) && (
+            <button
+              type="button"
+              className={styles.iconBtn}
+              title={isMaximized ? t('common.close') : t('voice.watchStream')}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleMaximize();
+              }}
+            >
+              {isMaximized ? <Minimize size={14} /> : <Maximize size={14} />}
+            </button>
+          )}
         </div>
       </div>
 

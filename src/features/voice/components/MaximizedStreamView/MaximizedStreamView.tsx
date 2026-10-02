@@ -109,7 +109,7 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
             )}
           </>
         ) : (
-          <div className={styles.avatarPlaceholder} style={{ overflow: 'hidden', position: 'relative' }}>
+          <div className={styles.avatarPlaceholder}>
             {avatarMedia && !avatarFailed ? (
               <img
                 src={avatarMedia}

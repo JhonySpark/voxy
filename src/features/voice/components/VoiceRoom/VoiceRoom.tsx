@@ -833,8 +833,19 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
       };
     });
 
+  // Se o participante maximizado fechar a câmera e a transmissão, volta para o grid automaticamente
+  useEffect(() => {
+    if (!maximizedId) return;
+    const target = allParticipants.find((p) => p.id === maximizedId);
+    if (!target || (!target.hasVideo && !target.isStreaming)) {
+      setMaximizedId(null);
+    }
+  }, [maximizedId, allParticipants]);
+
   const activeMaximizedId = maximizedId;
-  const maximizedParticipant = allParticipants.find((p) => p.id === activeMaximizedId);
+  const maximizedParticipant = allParticipants.find(
+    (p) => p.id === activeMaximizedId && (p.hasVideo || p.isStreaming)
+  );
 
   return (
     <div className={styles.container}>
