@@ -19,7 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { httpClient } from '../../../../infrastructure/adapters/http/http-client.adapter';
 import { realtimeClient } from '../../../../infrastructure/adapters/realtime/socket-realtime.adapter';
 import { RealtimeEvents, UserStatusEnum } from '../../../../core/enums';
-import { getMediaUrl } from '../../../../core/utils/media.util';
+import { getMediaUrl, preloadMedia } from '../../../../core/utils/media.util';
 import { useToast } from '../../../../components/common/Toast/ToastContext';
 import { StatusDot } from '../../../../components/common/StatusDot/StatusDot';
 
@@ -34,7 +34,10 @@ export interface ServerMemberItem {
     username: string;
     displayName?: string | null;
     avatarUrl?: string | null;
+    bannerUrl?: string | null;
+    bannerColor?: string | null;
     bio?: string | null;
+    createdAt?: string;
     status?: string | null;
     customStatus?: string | null;
   };
@@ -46,7 +49,7 @@ interface ServerMembersSidebarProps {
   myId: string;
   userStatuses?: Record<string, { status: UserStatusEnum | string; customStatus?: string }>;
   onClose: () => void;
-  onOpenUserProfile?: (userId: string) => void;
+  onOpenUserProfile?: (userId: string, initialData?: any) => void;
   onOpenDirectMessage?: (userId: string) => void;
   onMembersUpdated?: () => void;
 }
@@ -89,6 +92,10 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
 
       if (membersRes.status === 'fulfilled' && Array.isArray(membersRes.value)) {
         setMembers(membersRes.value);
+        membersRes.value.forEach((m) => {
+          if (m.user?.avatarUrl) preloadMedia(m.user.avatarUrl);
+          if (m.user?.bannerUrl) preloadMedia(m.user.bannerUrl);
+        });
       }
       if (permsRes.status === 'fulfilled' && permsRes.value) {
         setMyPermissions(permsRes.value);
@@ -213,7 +220,18 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
       <div
         key={member.id}
         className={styles.memberItem}
-        onClick={() => onOpenUserProfile?.(member.userId)}
+        onClick={() =>
+          onOpenUserProfile?.(member.userId, {
+            id: member.userId,
+            username: member.user.username,
+            displayName: member.user.displayName,
+            avatarUrl: member.user.avatarUrl,
+            bannerUrl: member.user.bannerUrl,
+            bannerColor: member.user.bannerColor,
+            bio: member.user.bio,
+            createdAt: member.user.createdAt,
+          })
+        }
         title={t('user.clickToViewProfile', 'Clique para ver o perfil')}
       >
         <div className={styles.memberLeft}>

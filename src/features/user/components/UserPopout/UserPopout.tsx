@@ -112,9 +112,18 @@ export const UserPopout: React.FC<UserPopoutProps> = ({
           className={styles.banner}
           style={{
             backgroundColor: user.bannerColor || '#5865F2',
-            backgroundImage: bannerMedia ? `url(${bannerMedia})` : undefined,
           }}
-        />
+        >
+          {bannerMedia && (
+            <img
+              src={bannerMedia}
+              alt="Banner"
+              className={styles.bannerImg}
+              loading="eager"
+              decoding="async"
+            />
+          )}
+        </div>
 
         {/* Avatar e Pensamento / Status */}
         <div className={styles.avatarRow}>

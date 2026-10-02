@@ -18,6 +18,7 @@ import {
   UserStatusEnum,
 } from '../core/enums';
 import { httpClient } from '../infrastructure/adapters/http/http-client.adapter';
+import { preloadMedia } from '../core/utils/media.util';
 
 import { ServerSidebar } from '../features/servers/components/ServerSidebar/ServerSidebar';
 import { ChannelList } from '../features/servers/components/ChannelList/ChannelList';
@@ -136,6 +137,7 @@ export default function Dashboard() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
+  const [viewingUserOverride, setViewingUserOverride] = useState<Partial<UserProfileData> | null>(null);
   const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTabEnum>(SettingsTabEnum.VOICE);
 
   // Dispositivos de Áudio
@@ -190,6 +192,20 @@ export default function Dashboard() {
       realtimeClient.disconnect();
     };
   }, [navigate, fetchFriends, fetchServers]);
+
+  // Pré-carrega mídias do usuário logado e amigos em background para exibição instantânea
+  useEffect(() => {
+    if (currentUserProfile?.bannerUrl) preloadMedia(currentUserProfile.bannerUrl);
+    if (currentUserProfile?.avatarUrl) preloadMedia(currentUserProfile.avatarUrl);
+  }, [currentUserProfile?.bannerUrl, currentUserProfile?.avatarUrl]);
+
+  useEffect(() => {
+    if (!friends || friends.length === 0) return;
+    friends.forEach((f) => {
+      if (f.avatarUrl) preloadMedia(f.avatarUrl);
+      if (f.bannerUrl) preloadMedia(f.bannerUrl);
+    });
+  }, [friends]);
 
   // Sincronizar presença no canal de voz ativo
   useEffect(() => {
@@ -379,6 +395,9 @@ export default function Dashboard() {
 
   const viewingUserInitialData = useMemo(() => {
     if (!viewingUserId) return undefined;
+    if (viewingUserOverride) {
+      return viewingUserOverride;
+    }
     if (viewingUserId === myId && currentUserProfile) {
       return currentUserProfile;
     }
@@ -412,7 +431,7 @@ export default function Dashboard() {
       };
     }
     return undefined;
-  }, [viewingUserId, friends, serverVoiceStates, messages, myId, currentUserProfile]);
+  }, [viewingUserId, viewingUserOverride, friends, serverVoiceStates, messages, myId, currentUserProfile]);
 
   if (initialLoading) {
     return (
@@ -627,7 +646,10 @@ export default function Dashboard() {
                   myId={myId}
                   userStatuses={userStatuses}
                   onClose={() => setIsMembersListOpen(false)}
-                  onOpenUserProfile={setViewingUserId}
+                  onOpenUserProfile={(id, data) => {
+                    setViewingUserId(id);
+                    setViewingUserOverride(data || null);
+                  }}
                   onMembersUpdated={fetchServers}
                 />
               )}
@@ -728,7 +750,10 @@ export default function Dashboard() {
           userActivity={viewingUserId ? userStatuses[viewingUserId]?.customStatus : undefined}
           initialData={viewingUserInitialData}
           isFriend={friends.some((f) => f.id === viewingUserId)}
-          onClose={() => setViewingUserId(null)}
+          onClose={() => {
+            setViewingUserId(null);
+            setViewingUserOverride(null);
+          }}
           onOpenDirectMessage={async (targetUserId) => {
             const friend = friends.find((f) => f.id === targetUserId);
             if (friend) {
@@ -771,6 +796,7 @@ export default function Dashboard() {
               }
             }
             setViewingUserId(null);
+            setViewingUserOverride(null);
           }}
           onAddFriend={async (username) => {
             try {

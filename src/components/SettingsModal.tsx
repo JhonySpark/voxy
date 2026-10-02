@@ -473,9 +473,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     className="account-banner"
                     style={{
                       backgroundColor: currentUser?.bannerColor || '#1e293b',
-                      backgroundImage: getMediaUrl(currentUser?.bannerUrl) ? `url(${getMediaUrl(currentUser?.bannerUrl)})` : undefined,
                     }}
-                  />
+                  >
+                    {getMediaUrl(currentUser?.bannerUrl) && (
+                      <img
+                        src={getMediaUrl(currentUser?.bannerUrl)}
+                        alt="Banner"
+                        className="account-banner-img"
+                        loading="eager"
+                        decoding="async"
+                      />
+                    )}
+                  </div>
                   <div className="account-profile-body">
                     <div className="account-profile-left">
                       <div className="account-avatar-wrapper">

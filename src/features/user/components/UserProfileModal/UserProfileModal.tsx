@@ -60,7 +60,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         bannerUrl: initialData.bannerUrl ?? prev?.bannerUrl ?? null,
         bannerColor: initialData.bannerColor ?? prev?.bannerColor ?? null,
         bio: initialData.bio ?? prev?.bio ?? null,
-      }));
+        createdAt: (initialData as any).createdAt ?? (prev as any)?.createdAt ?? null,
+      } as any));
     }
 
     let isMounted = true;
@@ -127,10 +128,11 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const username = profile?.username || initialData?.username || 'usuario';
   const avatarMedia = getMediaUrl(profile?.avatarUrl || initialData?.avatarUrl);
   const bannerMedia = getMediaUrl(profile?.bannerUrl || initialData?.bannerUrl);
-  const bannerColor = profile?.bannerColor || initialData?.bannerColor || '#3b82f6';
+  const bannerColor = profile?.bannerColor || initialData?.bannerColor || '#182030';
 
-  const memberSince = (profile as any)?.createdAt
-    ? new Date((profile as any).createdAt).toLocaleDateString(undefined, {
+  const rawCreatedAt = (profile as any)?.createdAt || (initialData as any)?.createdAt;
+  const memberSince = rawCreatedAt
+    ? new Date(rawCreatedAt).toLocaleDateString(undefined, {
         month: 'short',
         day: 'numeric',
         year: 'numeric',
@@ -145,9 +147,17 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           className={styles.banner}
           style={{
             backgroundColor: bannerColor,
-            backgroundImage: bannerMedia ? `url(${bannerMedia})` : undefined,
           }}
         >
+          {bannerMedia && (
+            <img
+              src={bannerMedia}
+              alt="Banner"
+              className={styles.bannerImg}
+              loading="eager"
+              decoding="async"
+            />
+          )}
           <div className={styles.bannerOverlay} />
           <button
             type="button"
@@ -216,12 +226,16 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               <span className={styles.bioEmpty}>{t('user.noBio', 'Nenhuma biografia informada.')}</span>
             )}
 
-            {memberSince && (
-              <div className={styles.metaRow}>
-                <Calendar size={14} />
-                <span>{t('user.memberSince', 'Membro desde')} {memberSince}</span>
-              </div>
-            )}
+            <div className={styles.metaRow}>
+              <Calendar size={14} />
+              <span>
+                {memberSince
+                  ? `${t('user.memberSince', 'Membro desde')} ${memberSince}`
+                  : loading
+                  ? `${t('user.memberSince', 'Membro desde')} ...`
+                  : `${t('user.memberSince', 'Membro desde')} recentemente`}
+              </span>
+            </div>
           </div>
 
           {/* Ações Rápidas */}
@@ -265,7 +279,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     disabled={friendRequested}
                   >
                     {friendRequested ? <Check size={16} color="#10b981" /> : <UserPlus size={16} />}
-                    <span>{friendRequested ? t('friends.requestSent', 'Solicitado') : t('friends.addFriend', 'Adicionar Amigo')}</span>
+                    <span>{friendRequested ? t('friends.requestSentShort', 'Pedido Enviado!') : t('friends.addFriend', 'Adicionar Amigo')}</span>
                   </button>
                 )}
               </>
