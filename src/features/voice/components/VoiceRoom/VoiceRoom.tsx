@@ -28,6 +28,44 @@ import { ApiRoutes, IpcChannels, StreamFramerate, StreamResolution } from '../..
 declare const window: any;
 const ipcRenderer = typeof window !== 'undefined' && window.require ? window.require('electron').ipcRenderer : null;
 
+const MAX_STREAM_PREVIEW_BYTES = 24_000;
+
+async function createStreamPreviewThumbnail(source: string | null): Promise<string | null> {
+  if (!source) return null;
+
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => {
+      const width = Math.min(320, image.naturalWidth || 320);
+      const height = Math.max(1, Math.round(width * (image.naturalHeight || 180) / (image.naturalWidth || 320)));
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d');
+      if (!context) return resolve(null);
+
+      context.drawImage(image, 0, 0, width, height);
+      const thumbnail = canvas.toDataURL('image/jpeg', 0.55);
+      resolve(thumbnail.length <= MAX_STREAM_PREVIEW_BYTES ? thumbnail : null);
+    };
+    image.onerror = () => resolve(null);
+    image.src = source;
+  });
+}
+
+function getStreamPreviewThumbnail(metadata?: string): string | null {
+  try {
+    const thumbnail = JSON.parse(metadata || '{}').streamPreviewThumbnail;
+    return typeof thumbnail === 'string'
+      && thumbnail.length <= MAX_STREAM_PREVIEW_BYTES
+      && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(thumbnail)
+      ? thumbnail
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export interface VoiceRoomProps {
   channelId: string;
   serverId: string;
@@ -524,9 +562,9 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         ...categorizedSources.windows,
         ...categorizedSources.screens,
       ].find((source: any) => source.id === sourceId);
-      const selectedThumbnail = typeof selectedSource?.thumbnail === 'string'
-        ? selectedSource.thumbnail
-        : null;
+      const selectedThumbnail = await createStreamPreviewThumbnail(
+        typeof selectedSource?.thumbnail === 'string' ? selectedSource.thumbnail : null,
+      );
       const is1080 = streamRes === StreamResolution.FHD_1080;
       const targetFps = streamFps === StreamFramerate.FPS_60 ? 60 : 30;
       const isWindow = sourceId.startsWith('window:');
@@ -563,6 +601,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
             height: targetHeight,
             fps: targetFps,
             bitrate: targetBitrate,
+            thumbnail: selectedThumbnail || undefined,
             captureProcessAudio: shareAudio,
           });
 
@@ -645,6 +684,17 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
           priority: 'high',
         },
       });
+      if (selectedThumbnail) {
+        try {
+          const existingMetadata = JSON.parse(localParticipant.metadata || '{}');
+          await localParticipant.setMetadata(JSON.stringify({
+            ...existingMetadata,
+            streamPreviewThumbnail: selectedThumbnail,
+          }));
+        } catch (error) {
+          console.warn('[Voxy Stream] Could not publish stream thumbnail metadata:', error);
+        }
+      }
       setScreenTrack(lkTrack);
       setStreamPreviewThumbnail(selectedThumbnail);
 
@@ -762,7 +812,9 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         // encerrar o compartilhamento. A assinatura que pode ser ligada e
         // desligada é a transmissão nativa que volta da SFU.
         canToggleWatch: !p.isLocal || isNativeStreaming,
-        streamPreviewThumbnail: p.isLocal ? streamPreviewThumbnail : null,
+        streamPreviewThumbnail: p.isLocal
+          ? streamPreviewThumbnail
+          : getStreamPreviewThumbnail(screenPart?.metadata || p.metadata),
         hasVideo: !!activeTrack,
         isMuted: p.isLocal ? isMuted : !p.isMicrophoneEnabled,
         lkParticipant: p,
