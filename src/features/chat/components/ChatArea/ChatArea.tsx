@@ -8,7 +8,8 @@ import { AttachmentRenderer } from '../AttachmentRenderer/AttachmentRenderer';
 import { EmojiPicker } from '../EmojiPicker/EmojiPicker';
 import { StorageUploadService } from '../../services/storageUpload.service';
 import { AudioRecorderService } from '../../services/audioRecorder.service';
-
+import { UserStatusEnum } from '../../../../core/enums';
+import { StatusDot } from '../../../../components/common/StatusDot/StatusDot';
 import { getMediaUrl } from '../../../../core/utils/media.util';
 
 export interface ChatAttachment {
@@ -56,6 +57,7 @@ interface ChatAreaProps {
   isMembersListOpen?: boolean;
   canDeleteAnyMessage?: boolean;
   onDeleteMessage?: (messageId: string) => void;
+  targetStatus?: UserStatusEnum | string;
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({
@@ -73,6 +75,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   isMembersListOpen = false,
   canDeleteAnyMessage = false,
   onDeleteMessage,
+  targetStatus,
 }) => {
   const { t, i18n } = useTranslation();
   const messagesListRef = useRef<HTMLDivElement>(null);
@@ -309,7 +312,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   {targetName.charAt(0).toUpperCase()}
                 </span>
               </div>
-              <div className={styles.onlineDot} />
+              <StatusDot status={targetStatus || UserStatusEnum.OFFLINE} size="sm" className={styles.onlineDot} />
             </div>
           ) : (
             <div className={styles.channelIconBox}>

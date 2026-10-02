@@ -134,15 +134,12 @@
 
 .statusBadge {
   position: absolute;
-  bottom: 2px;
-  right: 2px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background-color: #121622;
+  bottom: 0px;
+  right: 0px;
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 2;
 }
 
 .statusDot {
@@ -156,6 +153,23 @@
   display: flex;
   gap: 8px;
   margin-bottom: 8px;
+}
+
+.userStatusSubRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.statusDivider {
+  color: #475569;
+}
+
+.statusLabelText {
+  color: #cbd5e1;
+  font-weight: 500;
 }
 
 .badge {

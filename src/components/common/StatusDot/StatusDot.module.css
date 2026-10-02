@@ -1,0 +1,92 @@
+.statusDot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  position: relative;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  user-select: none;
+}
+
+.absolute {
+  position: absolute !important;
+  bottom: -1px !important;
+  right: -1px !important;
+  z-index: 2 !important;
+}
+
+/* Tamanhos */
+.size-sm {
+  width: 10px;
+  height: 10px;
+  border: 2px solid #0f172a;
+}
+
+.size-md {
+  width: 12px;
+  height: 12px;
+  border: 2.5px solid #0f172a;
+}
+
+.size-lg {
+  width: 16px;
+  height: 16px;
+  border: 3px solid #0f172a;
+}
+
+.size-xl {
+  width: 24px;
+  height: 24px;
+  border: 3.5px solid #11141d;
+}
+
+/* Status: Online */
+.online {
+  background-color: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
+}
+
+/* Status: Ausente (Idle) */
+.idle {
+  background-color: #f59e0b;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.4);
+}
+
+/* Status: Não Perturbe (DND) */
+.dnd {
+  background-color: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
+}
+
+.dndBar {
+  width: 50%;
+  height: 2px;
+  background-color: #ffffff;
+  border-radius: 1px;
+}
+
+/* Status: Jogando (Playing) */
+.playing {
+  background-color: #8b5cf6;
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.55);
+}
+
+.playingIcon {
+  color: #ffffff;
+  transform: scale(0.75);
+}
+
+/* Status: Offline / Invisível */
+.offline {
+  background-color: #64748b;
+  position: relative;
+}
+
+.offlineInner {
+  width: 42%;
+  height: 42%;
+  background-color: #0f172a;
+  border-radius: 50%;
+}

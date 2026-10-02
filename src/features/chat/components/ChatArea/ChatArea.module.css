@@ -71,11 +71,7 @@
   position: absolute;
   bottom: -2px;
   right: -2px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: var(--brand-primary, #34d399);
-  border: 2px solid #0f141f;
+  z-index: 2;
 }
 
 .title {

@@ -168,11 +168,6 @@
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: #22c55e;
-  border: 2px solid #0b0e17;
 }
 
 .memberNames {

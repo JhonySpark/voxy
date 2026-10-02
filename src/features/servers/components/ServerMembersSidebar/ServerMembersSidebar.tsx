@@ -18,9 +18,10 @@ import {
 import { useTranslation } from 'react-i18next';
 import { httpClient } from '../../../../infrastructure/adapters/http/http-client.adapter';
 import { realtimeClient } from '../../../../infrastructure/adapters/realtime/socket-realtime.adapter';
-import { RealtimeEvents } from '../../../../core/enums';
+import { RealtimeEvents, UserStatusEnum } from '../../../../core/enums';
 import { getMediaUrl } from '../../../../core/utils/media.util';
 import { useToast } from '../../../../components/common/Toast/ToastContext';
+import { StatusDot } from '../../../../components/common/StatusDot/StatusDot';
 
 export interface ServerMemberItem {
   id: string;
@@ -34,6 +35,8 @@ export interface ServerMemberItem {
     displayName?: string | null;
     avatarUrl?: string | null;
     bio?: string | null;
+    status?: string | null;
+    customStatus?: string | null;
   };
 }
 
@@ -41,6 +44,7 @@ interface ServerMembersSidebarProps {
   serverId: string;
   serverOwnerId: string;
   myId: string;
+  userStatuses?: Record<string, { status: UserStatusEnum | string; customStatus?: string }>;
   onClose: () => void;
   onOpenUserProfile?: (userId: string) => void;
   onOpenDirectMessage?: (userId: string) => void;
@@ -51,6 +55,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
   serverId,
   serverOwnerId,
   myId,
+  userStatuses,
   onClose,
   onOpenUserProfile,
   onOpenDirectMessage,
@@ -224,7 +229,12 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                 <span>{(member.user?.displayName || member.user?.username || 'U').charAt(0).toUpperCase()}</span>
               )}
             </div>
-            <div className={styles.onlineBadge} />
+            <StatusDot
+              status={userStatuses?.[member.userId]?.status || member.user?.status}
+              activity={userStatuses?.[member.userId]?.customStatus || member.user?.customStatus}
+              size="sm"
+              className={styles.onlineBadge}
+            />
           </div>
 
           <div className={styles.memberNames}>

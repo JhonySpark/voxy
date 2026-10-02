@@ -161,10 +161,37 @@
   display: block;
 }
 
+.avatarWrapper {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.statusDot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+}
+
+.friendDetails {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .userName {
   font-size: 0.875rem;
   font-weight: 500;
   color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activityText {
+  font-size: 0.72rem;
+  color: #a78bfa;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

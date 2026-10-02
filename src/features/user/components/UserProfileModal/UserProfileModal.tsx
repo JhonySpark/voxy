@@ -4,9 +4,10 @@ import { X, MessageSquare, UserPlus, Pencil, Calendar, Check } from 'lucide-reac
 import { useTranslation } from 'react-i18next';
 import { httpClient } from '../../../../infrastructure/adapters/http/http-client.adapter';
 import { realtimeClient } from '../../../../infrastructure/adapters/realtime/socket-realtime.adapter';
-import { RealtimeEvents } from '../../../../core/enums';
+import { RealtimeEvents, UserStatusEnum } from '../../../../core/enums';
 import { getMediaUrl } from '../../../../core/utils/media.util';
 import type { UserProfileData } from '../UserPopout/UserPopout';
+import { StatusDot, getStatusLabel } from '../../../../components/common/StatusDot/StatusDot';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -14,6 +15,8 @@ interface UserProfileModalProps {
   currentUserId: string;
   isFriend?: boolean;
   initialData?: Partial<UserProfileData> | null;
+  userStatus?: UserStatusEnum | string;
+  userActivity?: string | null;
   onClose: () => void;
   onOpenDirectMessage?: (userId: string) => void;
   onAddFriend?: (username: string) => void;
@@ -26,6 +29,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   currentUserId,
   isFriend = false,
   initialData,
+  userStatus,
+  userActivity,
   onClose,
   onOpenDirectMessage,
   onAddFriend,
@@ -173,7 +178,11 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 )}
               </div>
               <div className={styles.statusBadge}>
-                <div className={styles.statusDot} />
+                <StatusDot
+                  status={userStatus || profile?.status}
+                  activity={userActivity || profile?.customStatus}
+                  size="xl"
+                />
               </div>
             </div>
 
@@ -187,7 +196,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           {/* Nome e Tag */}
           <div className={styles.namesBlock}>
             <h2 className={styles.displayName}>{displayName}</h2>
-            <span className={styles.username}>@{username}</span>
+            <div className={styles.userStatusSubRow}>
+              <span className={styles.username}>@{username}</span>
+              <span className={styles.statusDivider}>•</span>
+              <span className={styles.statusLabelText}>
+                {getStatusLabel(userStatus || profile?.status, t, userActivity || profile?.customStatus)}
+              </span>
+            </div>
           </div>
 
           {/* Seção Sobre Mim / Biografia */}

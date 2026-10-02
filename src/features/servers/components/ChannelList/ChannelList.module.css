@@ -314,15 +314,10 @@
 }
 
 .avatarOnlineDot {
-  position: absolute;
-  bottom: -1px;
-  right: -1px;
-  width: 9px;
-  height: 9px;
-  background-color: var(--brand-primary, #34d399);
-  border-radius: 50%;
-  border: 2px solid #1e293b;
-  z-index: 2;
+  position: absolute !important;
+  bottom: -1px !important;
+  right: -1px !important;
+  z-index: 2 !important;
   pointer-events: none;
 }
 

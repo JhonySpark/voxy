@@ -197,7 +197,17 @@ const resources = {
       "update.failedDesc": "Please check your connection and try again.",
       "update.startingDesc": "Starting automatic background download...",
       "update.later": "Later",
-      "update.restartNow": "Restart & Install"
+      "update.restartNow": "Restart & Install",
+
+      // Status
+      "status.online": "Online",
+      "status.idle": "Idle",
+      "status.dnd": "Do Not Disturb",
+      "status.playing": "Playing",
+      "status.offline": "Invisible",
+      "status.offlineTitle": "Offline",
+      "status.playingGame": "Playing {{game}}",
+      "status.setGamePrompt": "What game or activity are you running?"
     }
   },
   pt: {
@@ -394,7 +404,17 @@ const resources = {
       "update.failedDesc": "Verifique sua conexão ou tente mais tarde.",
       "update.startingDesc": "Iniciando download automático...",
       "update.later": "Depois",
-      "update.restartNow": "Reiniciar Agora"
+      "update.restartNow": "Reiniciar Agora",
+
+      // Status
+      "status.online": "Disponível",
+      "status.idle": "Ausente",
+      "status.dnd": "Não perturbe",
+      "status.playing": "Jogando",
+      "status.offline": "Invisível",
+      "status.offlineTitle": "Offline",
+      "status.playingGame": "Jogando {{game}}",
+      "status.setGamePrompt": "O que você está jogando?"
     }
   },
   es: {
@@ -591,7 +611,17 @@ const resources = {
       "update.failedDesc": "Comprueba tu conexión o inténtalo más tarde.",
       "update.startingDesc": "Iniciando descarga automática...",
       "update.later": "Más tarde",
-      "update.restartNow": "Reiniciar e Instalar"
+      "update.restartNow": "Reiniciar e Instalar",
+
+      // Status
+      "status.online": "En línea",
+      "status.idle": "Ausente",
+      "status.dnd": "No molestar",
+      "status.playing": "Jugando",
+      "status.offline": "Invisible",
+      "status.offlineTitle": "Desconectado",
+      "status.playingGame": "Jugando a {{game}}",
+      "status.setGamePrompt": "¿A qué estás jugando?"
     }
   }
 };

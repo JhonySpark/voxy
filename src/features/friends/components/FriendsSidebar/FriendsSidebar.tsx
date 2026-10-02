@@ -3,6 +3,8 @@ import styles from './FriendsSidebar.module.css';
 import { Plus, UserPlus, Search, Check, X, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getMediaUrl } from '../../../../core/utils/media.util';
+import { UserStatusEnum } from '../../../../core/enums';
+import { StatusDot } from '../../../../components/common/StatusDot/StatusDot';
 
 export interface FriendUser {
   id: string;
@@ -13,6 +15,8 @@ export interface FriendUser {
   bannerUrl?: string | null;
   bannerColor?: string | null;
   bio?: string | null;
+  status?: UserStatusEnum | string | null;
+  customStatus?: string | null;
 }
 
 interface FriendsSidebarProps {
@@ -20,6 +24,7 @@ interface FriendsSidebarProps {
   pendingRequests: FriendUser[];
   activeFriend: FriendUser | null;
   unreadDMs: Record<string, number>;
+  userStatuses?: Record<string, { status: UserStatusEnum | string; customStatus?: string }>;
   onSelectFriend: (friend: FriendUser) => void;
   onOpenAddFriendModal: () => void;
   onAcceptRequest: (e: React.MouseEvent, friendId: string) => void;
@@ -32,6 +37,7 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
   pendingRequests,
   activeFriend,
   unreadDMs,
+  userStatuses,
   onSelectFriend,
   onOpenAddFriendModal,
   onAcceptRequest,
@@ -133,6 +139,7 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
                 >
                   <div className={styles.userInfo}>
                     <div 
+                      className={styles.avatarWrapper}
                       onClick={(e) => {
                         if (onViewUserProfile) {
                           e.stopPropagation();
@@ -156,8 +163,23 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
                           {nameToShow.charAt(0).toUpperCase()}
                         </div>
                       )}
+                      <StatusDot
+                        status={userStatuses?.[friend.id]?.status || friend.status}
+                        activity={userStatuses?.[friend.id]?.customStatus || friend.customStatus}
+                        size="sm"
+                        className={styles.statusDot}
+                      />
                     </div>
-                    <span className={styles.userName}>{nameToShow}</span>
+                    <div className={styles.friendDetails}>
+                      <span className={styles.userName}>{nameToShow}</span>
+                      {userStatuses?.[friend.id]?.status === UserStatusEnum.PLAYING && (
+                        <span className={styles.activityText}>
+                          {userStatuses[friend.id].customStatus
+                            ? `Jogando ${userStatuses[friend.id].customStatus}`
+                            : 'Jogando'}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {unreadDMs[friend.id] > 0 && activeFriend?.id !== friend.id && (
                     <div className={styles.badge}>{unreadDMs[friend.id]}</div>

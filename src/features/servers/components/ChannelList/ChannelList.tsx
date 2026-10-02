@@ -6,9 +6,10 @@ import * as ContextMenu from '@radix-ui/react-context-menu';
 import * as Slider from '@radix-ui/react-slider';
 import * as Switch from '@radix-ui/react-switch';
 import type { ChannelItem, ServerItem } from '../ServerSidebar/ServerSidebar';
-import { ChannelTypeEnum } from '../../../../core/enums';
+import { ChannelTypeEnum, UserStatusEnum } from '../../../../core/enums';
 import { getMediaUrl } from '../../../../core/utils/media.util';
 import type { VoiceParticipantState } from '../../hooks/useServers';
+import { StatusDot } from '../../../../components/common/StatusDot/StatusDot';
 
 interface ChannelListProps {
   server: ServerItem;
@@ -20,6 +21,7 @@ interface ChannelListProps {
   onVolumeChange?: (userId: string, volume: number) => void;
   unreadChannels: Record<string, number>;
   activeSpeakers: Set<string>;
+  userStatuses?: Record<string, { status: UserStatusEnum | string; customStatus?: string | null }>;
   onSelectChannel: (channel: ChannelItem) => void;
   onConnectVoice: (channel: ChannelItem) => void;
   onOpenCreateChannelModal: () => void;
@@ -104,6 +106,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
   onVolumeChange,
   unreadChannels,
   activeSpeakers,
+  userStatuses,
   onSelectChannel,
   onConnectVoice,
   onOpenCreateChannelModal,
@@ -300,7 +303,12 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                                   </span>
                                 )}
                               </div>
-                              <div className={styles.avatarOnlineDot} />
+                              <StatusDot
+                                status={userStatuses?.[p.userId]?.status || UserStatusEnum.ONLINE}
+                                size="sm"
+                                absolute
+                                className={styles.avatarOnlineDot}
+                              />
                             </div>
                             <span className={styles.voiceUserName}>
                               {displayName}

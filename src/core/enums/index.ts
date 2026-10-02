@@ -79,10 +79,23 @@ export const RealtimeEvents = {
   FRIEND_ACTION: 'friendAction',
   FRIEND_ACTION_UPDATE: 'friendActionUpdate',
 
-  // User Profile
+  // User Profile & Status
   USER_PROFILE_UPDATED: 'userProfileUpdated',
+  USER_STATUS_UPDATED: 'userStatusUpdate',
+  GET_USER_STATUSES: 'getUserStatuses',
+  ALL_USER_STATUSES: 'allUserStatuses',
+  UPDATE_STATUS: 'updateStatus',
 } as const;
 export type RealtimeEvents = (typeof RealtimeEvents)[keyof typeof RealtimeEvents];
+
+export const UserStatusEnum = {
+  ONLINE: 'ONLINE',
+  IDLE: 'IDLE',
+  DND: 'DND',
+  PLAYING: 'PLAYING',
+  OFFLINE: 'OFFLINE',
+} as const;
+export type UserStatusEnum = (typeof UserStatusEnum)[keyof typeof UserStatusEnum];
 
 export const StreamResolution = {
   HD_720: '720',

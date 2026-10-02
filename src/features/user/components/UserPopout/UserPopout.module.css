@@ -15,7 +15,7 @@
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 16px;
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4);
-  overflow: hidden;
+  overflow: visible;
   z-index: 9999;
   animation: popoutEnter 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -39,6 +39,9 @@
   background-position: center;
   background-repeat: no-repeat;
   position: relative;
+  border-top-left-radius: 15px;
+  border-top-right-radius: 15px;
+  overflow: hidden;
 }
 
 .avatarRow {
@@ -92,10 +95,6 @@
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background-color: #181b24;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -172,7 +171,7 @@
   background-color: #11131c;
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 12px;
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
 }
@@ -194,7 +193,8 @@
   text-align: left;
 }
 
-.menuItem:hover {
+.menuItem:hover,
+.menuItemActive {
   background-color: rgba(255, 255, 255, 0.06);
   color: #ffffff;
 }
@@ -237,4 +237,93 @@
   background-color: rgba(255, 255, 255, 0.06);
   width: calc(100% - 24px);
   margin: 0 auto;
+}
+
+.statusTriggerWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.statusFlyoutBalloon {
+  position: absolute;
+  left: calc(100% + 8px);
+  bottom: -4px;
+  width: 220px;
+  background-color: #11141f;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7), 0 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: 10005;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  pointer-events: auto;
+  animation: flyoutSlide 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.statusFlyoutBalloon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -12px;
+  width: 14px;
+  height: 100%;
+  background: transparent;
+}
+
+@keyframes flyoutSlide {
+  from {
+    opacity: 0;
+    transform: translateX(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.flyoutHeader {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #94a3b8;
+  padding: 4px 8px 6px;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 4px;
+}
+
+.statusFlyoutItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  text-align: left;
+}
+
+.statusFlyoutItem:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.statusFlyoutItemActive {
+  background-color: rgba(52, 211, 153, 0.14);
+  color: #34d399;
+  font-weight: 600;
+}
+
+.statusFlyoutLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }

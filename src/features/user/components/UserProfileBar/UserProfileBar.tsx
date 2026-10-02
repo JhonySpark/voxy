@@ -3,8 +3,9 @@ import { PhoneCall, PhoneOff, Settings, LogOut, Mic, MicOff } from 'lucide-react
 import { useTranslation } from 'react-i18next';
 import styles from './UserProfileBar.module.css';
 import { UserPopout, type UserProfileData } from '../UserPopout/UserPopout';
-import { SettingsTabEnum } from '../../../../core/enums';
+import { SettingsTabEnum, UserStatusEnum } from '../../../../core/enums';
 import { getMediaUrl } from '../../../../core/utils/media.util';
+import { StatusDot } from '../../../../components/common/StatusDot/StatusDot';
 
 export interface ConnectedVoiceChannelInfo {
   channelId: string;
@@ -21,6 +22,9 @@ export interface UserProfileBarProps {
   onOpenSettings: (tab?: SettingsTabEnum) => void;
   onOpenEditProfile: () => void;
   onLogout: () => void;
+  currentStatus?: UserStatusEnum | string;
+  currentActivity?: string | null;
+  onUpdateStatus?: (status: UserStatusEnum, customStatus?: string) => void;
 }
 
 export const UserProfileBar: React.FC<UserProfileBarProps> = ({
@@ -32,6 +36,9 @@ export const UserProfileBar: React.FC<UserProfileBarProps> = ({
   onOpenSettings,
   onOpenEditProfile,
   onLogout,
+  currentStatus,
+  currentActivity,
+  onUpdateStatus,
 }) => {
   const { t } = useTranslation();
   const [isPopoutOpen, setIsPopoutOpen] = useState(false);
@@ -51,6 +58,9 @@ export const UserProfileBar: React.FC<UserProfileBarProps> = ({
         isOpen={isPopoutOpen}
         onClose={() => setIsPopoutOpen(false)}
         user={user}
+        currentStatus={currentStatus}
+        currentActivity={currentActivity}
+        onUpdateStatus={onUpdateStatus}
         onOpenEditProfile={onOpenEditProfile}
         onOpenAccountSettings={() => onOpenSettings(SettingsTabEnum.ACCOUNT)}
       />
@@ -108,7 +118,12 @@ export const UserProfileBar: React.FC<UserProfileBarProps> = ({
                 {displayName.charAt(0).toUpperCase()}
               </div>
             )}
-            <div className={styles.statusDot} />
+            <StatusDot
+              status={currentStatus || user.status || UserStatusEnum.ONLINE}
+              activity={currentActivity || user.customStatus}
+              size="sm"
+              className={styles.statusDot}
+            />
           </div>
           <div className={styles.userInfo}>
             <span className={styles.userName}>{displayName}</span>

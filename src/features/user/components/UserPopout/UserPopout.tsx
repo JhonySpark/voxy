@@ -1,8 +1,10 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import styles from './UserPopout.module.css';
-import { Pencil, ChevronRight, User, Circle } from 'lucide-react';
+import { Pencil, ChevronRight, User, Check, Gamepad2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getMediaUrl } from '../../../../core/utils/media.util';
+import { UserStatusEnum } from '../../../../core/enums';
+import { StatusDot, getStatusLabel } from '../../../../components/common/StatusDot/StatusDot';
 
 export interface UserProfileData {
   id: string;
@@ -13,6 +15,8 @@ export interface UserProfileData {
   avatarUrl?: string | null;
   bannerUrl?: string | null;
   bannerColor?: string | null;
+  status?: UserStatusEnum | string | null;
+  customStatus?: string | null;
 }
 
 interface UserPopoutProps {
@@ -21,6 +25,9 @@ interface UserPopoutProps {
   user: UserProfileData;
   onOpenEditProfile: () => void;
   onOpenAccountSettings: () => void;
+  currentStatus?: UserStatusEnum | string;
+  currentActivity?: string | null;
+  onUpdateStatus?: (status: UserStatusEnum, customStatus?: string) => void;
 }
 
 export const UserPopout: React.FC<UserPopoutProps> = ({
@@ -29,13 +36,23 @@ export const UserPopout: React.FC<UserPopoutProps> = ({
   user,
   onOpenEditProfile,
   onOpenAccountSettings,
+  currentStatus,
+  currentActivity,
+  onUpdateStatus,
 }) => {
   const { t } = useTranslation();
   const popoutRef = useRef<HTMLDivElement>(null);
+  const statusWrapperRef = useRef<HTMLDivElement>(null);
+  const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<UserStatusEnum | null>(null);
+  const [selectedActivity, setSelectedActivity] = useState<string | null | undefined>(undefined);
 
   const avatarMedia = getMediaUrl(user.avatarUrl);
   const bannerMedia = getMediaUrl(user.bannerUrl);
   const [avatarError, setAvatarError] = React.useState(false);
+
+  const activeStatus = (selectedStatus || currentStatus || user.status || UserStatusEnum.ONLINE).toUpperCase() as UserStatusEnum;
+  const activeActivity = selectedActivity !== undefined ? selectedActivity : (currentActivity !== undefined ? currentActivity : user.customStatus);
 
   // Reseta o erro caso a URL do avatar mude
   useEffect(() => {
@@ -64,6 +81,22 @@ export const UserPopout: React.FC<UserPopoutProps> = ({
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onClose]);
+
+  // Fecha o submenu de status ao clicar fora dele
+  useEffect(() => {
+    if (!isStatusMenuOpen) return;
+
+    const handleStatusOutside = (e: MouseEvent) => {
+      if (statusWrapperRef.current && !statusWrapperRef.current.contains(e.target as Node)) {
+        setIsStatusMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleStatusOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleStatusOutside);
+    };
+  }, [isStatusMenuOpen]);
 
   if (!isOpen) return null;
 
@@ -100,8 +133,8 @@ export const UserPopout: React.FC<UserPopoutProps> = ({
                 </div>
               )}
             </div>
-            <div className={styles.statusBadge} title="Online">
-              <div className={styles.statusDot} />
+            <div className={styles.statusBadge}>
+              <StatusDot status={activeStatus} size="xl" activity={activeActivity} />
             </div>
           </div>
 
@@ -141,13 +174,77 @@ export const UserPopout: React.FC<UserPopoutProps> = ({
 
           <div className={styles.divider} />
 
-          {/* Seletor Visual de Status */}
-          <div className={styles.menuItemStatic}>
-            <div className={styles.menuItemLeft}>
-              <Circle size={14} className={styles.onlineStatusIcon} />
-              <span>{t('user.statusOnline', 'Online')}</span>
-            </div>
-            <ChevronRight size={16} className={styles.menuArrow} />
+          {/* Seletor Visual de Status com Balão Flutuante à Direita */}
+          <div
+            ref={statusWrapperRef}
+            className={styles.statusTriggerWrapper}
+          >
+            <button
+              type="button"
+              className={`${styles.menuItem} ${isStatusMenuOpen ? styles.menuItemActive : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsStatusMenuOpen((prev) => !prev);
+              }}
+              title="Alterar status de presença"
+            >
+              <div className={styles.menuItemLeft}>
+                <StatusDot status={activeStatus} size="sm" showTitle={false} />
+                <span>{getStatusLabel(activeStatus, t, activeActivity)}</span>
+              </div>
+              <ChevronRight
+                size={16}
+                className={styles.menuArrow}
+                style={{
+                  color: isStatusMenuOpen ? '#ffffff' : '#64748b',
+                  transform: isStatusMenuOpen ? 'rotate(90deg)' : 'none',
+                  transition: 'transform 0.15s ease, color 0.15s ease',
+                }}
+              />
+            </button>
+
+            {isStatusMenuOpen && (
+              <div
+                className={styles.statusFlyoutBalloon}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={styles.flyoutHeader}>{t('status.chooseStatus', 'Mudar Status')}</div>
+                {[
+                  { key: UserStatusEnum.ONLINE, label: t('status.online') },
+                  { key: UserStatusEnum.IDLE, label: t('status.idle') },
+                  { key: UserStatusEnum.DND, label: t('status.dnd') },
+                  { key: UserStatusEnum.PLAYING, label: t('status.playing') },
+                  { key: UserStatusEnum.OFFLINE, label: t('status.offline') },
+                ].map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    className={`${styles.statusFlyoutItem} ${
+                      activeStatus === opt.key ? styles.statusFlyoutItemActive : ''
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      let custom = activeActivity || '';
+                      if (opt.key === UserStatusEnum.PLAYING) {
+                        const game = window.prompt(t('status.setGamePrompt'), custom || '');
+                        if (game === null) return;
+                        custom = game.trim();
+                      }
+                      setSelectedStatus(opt.key);
+                      setSelectedActivity(custom);
+                      onUpdateStatus?.(opt.key, custom);
+                      setIsStatusMenuOpen(false);
+                    }}
+                  >
+                    <div className={styles.statusFlyoutLeft}>
+                      <StatusDot status={opt.key} size="sm" showTitle={false} />
+                      <span>{opt.label}</span>
+                    </div>
+                    {activeStatus === opt.key && <Check size={14} color="var(--brand-primary, #34d399)" />}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className={styles.divider} />

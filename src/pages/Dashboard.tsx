@@ -15,6 +15,7 @@ import {
   AppRoutes,
   SettingsTabEnum,
   ApiRoutes,
+  UserStatusEnum,
 } from '../core/enums';
 import { httpClient } from '../infrastructure/adapters/http/http-client.adapter';
 
@@ -121,6 +122,11 @@ export default function Dashboard() {
   const [isVoiceMuted, setIsVoiceMuted] = useState(false);
   const [activeSpeakers, setActiveSpeakers] = useState<Set<string>>(new Set());
 
+  // Presença e Status dos Usuários
+  const [userStatuses, setUserStatuses] = useState<
+    Record<string, { status: UserStatusEnum | string; customStatus?: string }>
+  >({});
+
   // Modais
   const [showServerModal, setShowServerModal] = useState(false);
   const [showServerSettingsModal, setShowServerSettingsModal] = useState(false);
@@ -226,6 +232,71 @@ export default function Dashboard() {
       realtimeClient.off(RealtimeEvents.USER_PROFILE_UPDATED, onUserProfileUpdated);
     };
   }, []);
+
+  // Sincronizar status de presença em tempo real
+  useEffect(() => {
+    const onAllStatuses = (statuses: Record<string, { status: string; customStatus?: string }>) => {
+      setUserStatuses((prev) => ({ ...prev, ...statuses }));
+    };
+
+    const onUserStatusUpdated = (data: { userId: string; status: string; customStatus?: string }) => {
+      setUserStatuses((prev) => ({
+        ...prev,
+        [data.userId]: { status: data.status, customStatus: data.customStatus },
+      }));
+
+      // Se for o próprio usuário, atualiza estado local do perfil
+      if (data.userId === myId) {
+        setCurrentUserProfile((prev) =>
+          prev ? { ...prev, status: data.status, customStatus: data.customStatus } : prev,
+        );
+      }
+    };
+
+    // Restaurar preferência de status salva localmente ao conectar
+    const savedStatus = (localStorage.getItem('voxy_user_status') as UserStatusEnum) || UserStatusEnum.ONLINE;
+    const savedCustomStatus = localStorage.getItem('voxy_user_custom_status') || undefined;
+
+    if (savedStatus !== UserStatusEnum.ONLINE || savedCustomStatus) {
+      realtimeClient.emit(RealtimeEvents.UPDATE_STATUS, {
+        status: savedStatus,
+        customStatus: savedCustomStatus,
+      });
+      setUserStatuses((prev) => ({
+        ...prev,
+        [myId]: { status: savedStatus, customStatus: savedCustomStatus },
+      }));
+    }
+
+    realtimeClient.on(RealtimeEvents.ALL_USER_STATUSES, onAllStatuses);
+    realtimeClient.on(RealtimeEvents.USER_STATUS_UPDATED, onUserStatusUpdated);
+    realtimeClient.emit(RealtimeEvents.GET_USER_STATUSES);
+
+    return () => {
+      realtimeClient.off(RealtimeEvents.ALL_USER_STATUSES, onAllStatuses);
+      realtimeClient.off(RealtimeEvents.USER_STATUS_UPDATED, onUserStatusUpdated);
+    };
+  }, [myId]);
+
+  const handleUpdateMyStatus = (newStatus: UserStatusEnum, customStatus?: string) => {
+    localStorage.setItem('voxy_user_status', newStatus);
+    if (customStatus) {
+      localStorage.setItem('voxy_user_custom_status', customStatus);
+    } else {
+      localStorage.removeItem('voxy_user_custom_status');
+    }
+
+    setUserStatuses((prev) => ({
+      ...prev,
+      [myId]: { status: newStatus, customStatus },
+    }));
+    setCurrentUserProfile((prev) => (prev ? { ...prev, status: newStatus, customStatus } : prev));
+
+    realtimeClient.emit(RealtimeEvents.UPDATE_STATUS, {
+      status: newStatus,
+      customStatus,
+    });
+  };
 
   // Mudança de Conversa Ativa
   useEffect(() => {
@@ -386,6 +457,7 @@ export default function Dashboard() {
             pendingRequests={pendingRequests}
             activeFriend={activeFriend}
             unreadDMs={unreadDMs}
+            userStatuses={userStatuses}
             onSelectFriend={(f) => setActiveFriend(f)}
             onOpenAddFriendModal={() => setShowFriendModal(true)}
             onAcceptRequest={handleAcceptRequest}
@@ -403,6 +475,7 @@ export default function Dashboard() {
             onVolumeChange={(id, val) => setUserVolumes((prev) => ({ ...prev, [id]: val }))}
             unreadChannels={unreadChannels}
             activeSpeakers={activeSpeakers}
+            userStatuses={userStatuses}
             onSelectChannel={(ch) => setActiveChannel(ch)}
             onConnectVoice={(ch) => {
               setConnectedVoiceChannel({
@@ -464,6 +537,9 @@ export default function Dashboard() {
           }}
           onOpenEditProfile={() => setShowEditProfileModal(true)}
           onLogout={handleLogout}
+          currentStatus={userStatuses[myId]?.status || currentUserProfile?.status || UserStatusEnum.ONLINE}
+          currentActivity={userStatuses[myId]?.customStatus || currentUserProfile?.customStatus}
+          onUpdateStatus={handleUpdateMyStatus}
         />
       </div>
 
@@ -506,6 +582,7 @@ export default function Dashboard() {
             onSendAttachment={sendAttachmentMessage}
             isLoading={isLoadingMessages}
             onOpenUserProfile={setViewingUserId}
+            targetStatus={activeFriend ? userStatuses[activeFriend.id]?.status : undefined}
           />
         ) : activeView === DashboardView.SERVER && activeChannel ? (
           activeChannel.type === ChannelTypeEnum.VOICE ? (
@@ -548,6 +625,7 @@ export default function Dashboard() {
                   serverId={activeServer.id}
                   serverOwnerId={activeServer.ownerId}
                   myId={myId}
+                  userStatuses={userStatuses}
                   onClose={() => setIsMembersListOpen(false)}
                   onOpenUserProfile={setViewingUserId}
                   onMembersUpdated={fetchServers}
@@ -646,6 +724,8 @@ export default function Dashboard() {
           isOpen={!!viewingUserId}
           userId={viewingUserId}
           currentUserId={myId}
+          userStatus={viewingUserId ? userStatuses[viewingUserId]?.status : undefined}
+          userActivity={viewingUserId ? userStatuses[viewingUserId]?.customStatus : undefined}
           initialData={viewingUserInitialData}
           isFriend={friends.some((f) => f.id === viewingUserId)}
           onClose={() => setViewingUserId(null)}
