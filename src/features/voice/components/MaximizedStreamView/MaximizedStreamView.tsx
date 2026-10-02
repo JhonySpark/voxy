@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import styles from "./MaximizedStreamView.module.css";
-import { Settings, Fullscreen, Minimize } from "lucide-react";
+import { Settings, Fullscreen, Minimize, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { VideoRenderer } from "../VideoRenderer/VideoRenderer";
 import { StreamSettingsMenu } from "../StreamSettingsMenu/StreamSettingsMenu";
@@ -15,6 +15,7 @@ interface MaximizedStreamViewProps {
     isLocal: boolean;
     track: any;
     isStreaming: boolean;
+    canToggleWatch: boolean;
     hasVideo: boolean;
     isMuted: boolean;
     avatarUrl?: string | null;
@@ -152,6 +153,19 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
             pointerEvents: showControls ? "auto" : "none",
           }}
         >
+          {participant.isLocal && participant.isStreaming && participant.canToggleWatch && isWatching && (
+            <button
+              onClick={() => {
+                onToggleWatchStream();
+                onRestoreGrid();
+              }}
+              className={styles.controlButton}
+              title="Fechar prévia"
+            >
+              <X size={20} />
+            </button>
+          )}
+
           {!participant.isLocal && participant.isStreaming && (
             <button
               onClick={() => setShowSettings(!showSettings)}

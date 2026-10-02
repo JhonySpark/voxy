@@ -259,6 +259,23 @@
   color: var(--text-secondary);
 }
 
+.voiceUserMutedByMe .voiceUserName {
+  color: var(--text-muted);
+}
+
+.voiceStatusIcons {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 15px;
+  justify-content: flex-end;
+}
+
+.mutedByMeIcon {
+  color: #f59e0b;
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.35));
+}
+
 .avatarWrapper {
   position: relative;
   width: 28px;

@@ -188,6 +188,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
   const screenTracks = useTracks([Track.Source.ScreenShare]);
   const [screenTrack, setScreenTrack] = useState<LocalVideoTrack | null>(null);
   const [isNativeStreaming, setIsNativeStreaming] = useState(false);
+  const [streamPreviewThumbnail, setStreamPreviewThumbnail] = useState<string | null>(null);
   const [nativeTelemetry, setNativeTelemetry] = useState<{ fps: number; mbps: number; encodeMs: number; totalFrames: number } | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [showSources, setShowSources] = useState(false);
@@ -241,6 +242,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
       console.warn('[Voxy Stream] Stream nativo encerrado:', data);
       setIsNativeStreaming(false);
       setNativeTelemetry(null);
+      setStreamPreviewThumbnail(null);
     };
 
     const handleNativeLog = (_event: any, data: { type: string; text: string }) => {
@@ -309,14 +311,13 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         const screenVideoPub = p.getTrackPublication(Track.Source.ScreenShare) as any;
         const screenAudioPub = p.getTrackPublication(Track.Source.ScreenShareAudio) as any;
         
-        // Verifica se é a própria tela nativa do usuário local
-        const isOwnScreen = localParticipant && p.identity === `${localParticipant.identity}#screen`;
-        
         // Se for um participante de tela (#screen), o ID base é o ID do usuário correspondente
         const baseId = p.identity.endsWith('#screen') ? p.identity.slice(0, -'#screen'.length) : p.identity;
         
-        // Deve subscrever se for a própria tela ou se o usuário estiver assistindo
-        const isWatching = isOwnScreen || watchingStreams.has(baseId) || watchingStreams.has(p.identity);
+        // Não faça loopback automático da transmissão nativa do próprio usuário.
+        // Ela volta da SFU como um participante "#screen" e decodificá-la sem
+        // necessidade consome CPU continuamente. A prévia passa a ser opt-in.
+        const isWatching = watchingStreams.has(baseId) || watchingStreams.has(p.identity);
         
         [screenVideoPub, screenAudioPub].forEach(pub => {
           if (pub) {
@@ -336,7 +337,28 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         });
       }
     });
-  }, [participants, watchingStreams, localParticipant]);
+  }, [participants, watchingStreams]);
+
+  // "Assistir" vale somente para a publicação atual. Se o streamer cair, a
+  // publicação de tela some e removemos a intenção salva; quando o emissor
+  // iniciar outra live, cada espectador deverá clicar novamente para assistir.
+  useEffect(() => {
+    const activeStreamOwners = new Set<string>();
+    participants.forEach((p) => {
+      const screenPublication = p.getTrackPublication(Track.Source.ScreenShare);
+      if (screenPublication) {
+        activeStreamOwners.add(
+          p.identity.endsWith('#screen') ? p.identity.slice(0, -'#screen'.length) : p.identity,
+        );
+      }
+    });
+
+    setWatchingStreams((previous) => {
+      const next = new Set([...previous].filter((id) => activeStreamOwners.has(id)));
+      return next.size === previous.size ? previous : next;
+    });
+    setMaximizedId((current) => current && !activeStreamOwners.has(current) ? null : current);
+  }, [participants]);
 
   const toggleWatchStream = (id: string) => {
     setWatchingStreams((prev) => {
@@ -397,6 +419,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
       }
       setIsNativeStreaming(false);
       setNativeTelemetry(null);
+      setStreamPreviewThumbnail(null);
       return;
     }
 
@@ -494,6 +517,16 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
     console.log('[Voxy Stream] selectSource chamado para fonte:', sourceId, { shareAudio });
 
     try {
+      // Reaproveita a miniatura já gerada pelo seletor como pôster estático.
+      // Isso dá contexto visual sem assinar/decodificar a própria live.
+      const selectedSource = [
+        ...categorizedSources.games,
+        ...categorizedSources.windows,
+        ...categorizedSources.screens,
+      ].find((source: any) => source.id === sourceId);
+      const selectedThumbnail = typeof selectedSource?.thumbnail === 'string'
+        ? selectedSource.thumbnail
+        : null;
       const is1080 = streamRes === StreamResolution.FHD_1080;
       const targetFps = streamFps === StreamFramerate.FPS_60 ? 60 : 30;
       const isWindow = sourceId.startsWith('window:');
@@ -534,6 +567,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
           });
 
           setIsNativeStreaming(true);
+          setStreamPreviewThumbnail(selectedThumbnail);
 
           // O áudio do jogo é publicado pelo WASAPI por processo no streamer
           // nativo. Não inicie o loopback do Chromium: ele inclui a chamada.
@@ -612,6 +646,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         },
       });
       setScreenTrack(lkTrack);
+      setStreamPreviewThumbnail(selectedThumbnail);
 
       if (lkTrack.sender) {
         try {
@@ -681,14 +716,20 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         || screenSharePub?.videoTrack;
 
       const isStreaming = p.isLocal ? (!!screenTrack || isNativeStreaming || !!screenSharePub) : !!screenSharePub;
-      const isWatching = p.isLocal || watchingStreams.has(p.identity);
+      // O fallback WebRTC usa a track local diretamente e pode manter a prévia.
+      // Já o streamer nativo só recebe/decode sua própria tela após o clique.
+      const isWatching = p.isLocal ? !!screenTrack || watchingStreams.has(p.identity) : watchingStreams.has(p.identity);
 
       let activeTrack: any = null;
 
       if (p.isLocal) {
         if (screenTrack) {
           activeTrack = screenTrack;
-        } else if (remoteScreenVideo) {
+        // A track da transmissão nativa pode continuar existindo depois do
+        // unsubscribe, mas já não entrega frames. Só a renderize enquanto a
+        // prévia estiver explicitamente ativa; caso contrário o card volta
+        // imediatamente ao botão "Assistir transmissão".
+        } else if (remoteScreenVideo && isWatching) {
           activeTrack = remoteScreenVideo;
         }
       } else if (remoteScreenVideo && isWatching) {
@@ -716,6 +757,12 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         isLocal: p.isLocal,
         track: activeTrack,
         isStreaming,
+        isWatching,
+        // A prévia do fallback WebRTC é uma track local direta e só para ao
+        // encerrar o compartilhamento. A assinatura que pode ser ligada e
+        // desligada é a transmissão nativa que volta da SFU.
+        canToggleWatch: !p.isLocal || isNativeStreaming,
+        streamPreviewThumbnail: p.isLocal ? streamPreviewThumbnail : null,
         hasVideo: !!activeTrack,
         isMuted: p.isLocal ? isMuted : !p.isMicrophoneEnabled,
         lkParticipant: p,
@@ -738,7 +785,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
           <MaximizedStreamView
             participant={maximizedParticipant}
-            isWatching={maximizedParticipant.isLocal || watchingStreams.has(maximizedParticipant.id)}
+            isWatching={maximizedParticipant.isWatching}
             streamVolume={streamVolumes[maximizedParticipant.id] ?? 100}
             onStreamVolumeChange={(val) =>
               setStreamVolumes((prev) => ({ ...prev, [maximizedParticipant.id]: val }))
@@ -757,7 +804,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
                   isMaximized={false}
                   isHorizontal={true}
                   streamVolume={streamVolumes[p.id] ?? 100}
-                  isWatching={p.isLocal || watchingStreams.has(p.id)}
+                  isWatching={p.isWatching}
                   onToggleMaximize={() => setMaximizedId(p.id)}
                   onToggleWatchStream={() => toggleWatchStream(p.id)}
                   onStreamVolumeChange={(val) =>
@@ -777,7 +824,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
                 participant={p}
                 isMaximized={false}
                 streamVolume={streamVolumes[p.id] ?? 100}
-                isWatching={p.isLocal || watchingStreams.has(p.id)}
+                isWatching={p.isWatching}
                 onToggleMaximize={() => setMaximizedId(p.id)}
                 onToggleWatchStream={() => toggleWatchStream(p.id)}
                 onStreamVolumeChange={(val) =>

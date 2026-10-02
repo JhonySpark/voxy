@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import styles from './ParticipantCard.module.css';
-import { Mic, MicOff, Maximize, Minimize, Settings, MonitorUp, Eye } from 'lucide-react';
+import { Mic, MicOff, Maximize, Minimize, Settings, MonitorUp, Eye, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useIsSpeaking } from '@livekit/components-react';
 import { StreamSettingsMenu } from '../StreamSettingsMenu/StreamSettingsMenu';
@@ -15,6 +15,8 @@ interface ParticipantCardProps {
     isLocal: boolean;
     track: any;
     isStreaming: boolean;
+    canToggleWatch: boolean;
+    streamPreviewThumbnail?: string | null;
     hasVideo: boolean;
     isMuted: boolean;
     lkParticipant: any;
@@ -90,8 +92,8 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
           />
           {import.meta.env.DEV && p.track && <DevStreamDiagnostics track={p.track} nativeTelemetry={p.nativeTelemetry} />}
         </div>
-      ) : p.isStreaming && !p.isLocal ? (
-        /* Stream não assistida ainda */
+      ) : p.isStreaming ? (
+        /* Stream não assistida ainda, inclusive a prévia nativa do próprio usuário */
         <div
           className={styles.streamPlaceholder}
           onClick={(e) => {
@@ -100,7 +102,13 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
           }}
           title={t('voice.watchStream')}
         >
-          <MonitorUp size={36} color="var(--brand-primary, #34d399)" />
+          {p.streamPreviewThumbnail && (
+            <>
+              <img className={styles.streamPreviewImage} src={p.streamPreviewThumbnail} alt="Prévia da transmissão" />
+              <div className={styles.streamPreviewShade} />
+            </>
+          )}
+          <MonitorUp className={styles.streamPlaceholderIcon} size={36} color="var(--brand-primary, #34d399)" />
           <button
             type="button"
             className={styles.watchBtn}
@@ -166,6 +174,22 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
               }}
             >
               <Settings size={14} />
+            </button>
+          )}
+
+          {/* Para o dono, fechar só esconde a prévia local; a transmissão
+              continua ativa. Espectadores usam a engrenagem já existente. */}
+          {p.isLocal && p.isStreaming && p.canToggleWatch && isWatching && (
+            <button
+              type="button"
+              className={styles.iconBtn}
+              title="Fechar prévia"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleWatchStream();
+              }}
+            >
+              <X size={14} />
             </button>
           )}
 

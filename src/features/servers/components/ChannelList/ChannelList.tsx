@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styles from './ChannelList.module.css';
-import { Hash, Volume2, Plus, UserPlus, Search, ChevronDown, Mic, MicOff, Settings, Pencil, Trash2 } from 'lucide-react';
+import { Hash, Volume2, VolumeX, Plus, UserPlus, Search, ChevronDown, Mic, MicOff, Settings, Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import * as Slider from '@radix-ui/react-slider';
@@ -262,13 +262,14 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                       {usersInChannel.map((p) => {
                         const vol = userVolumes[p.userId] ?? 100;
                         const isMe = p.userId === myId;
+                        const isMutedByMe = !isMe && vol <= 0;
                         const isSpeaking = activeSpeakers.has(p.userId);
                         const avatarMedia = getMediaUrl(p.avatarUrl);
                         const displayName = p.displayName || p.username;
 
                         const content = (
                           <div 
-                            className={styles.voiceUserRow}
+                            className={`${styles.voiceUserRow} ${isMutedByMe ? styles.voiceUserMutedByMe : ''}`}
                             onClick={(e) => {
                               if (onViewUserProfile) {
                                 e.stopPropagation();
@@ -304,13 +305,24 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                             <span className={styles.voiceUserName}>
                               {displayName}
                             </span>
-                            {p.isMuted ? (
-                              <MicOff size={14} color="var(--text-muted)" />
-                            ) : isSpeaking ? (
-                              <Volume2 size={14} color="var(--brand-primary)" />
-                            ) : (
-                              <Mic size={14} color="var(--text-muted)" style={{ opacity: 0.3 }} />
-                            )}
+                            <div
+                              className={styles.voiceStatusIcons}
+                              title={isMutedByMe ? 'Silenciado por você' : p.isMuted ? 'Microfone desligado' : isSpeaking ? 'Falando' : 'Microfone ativo'}
+                            >
+                              {p.isMuted ? (
+                                <MicOff size={14} color="var(--text-muted)" />
+                              ) : isSpeaking && !isMutedByMe ? (
+                                <Volume2 size={14} color="var(--brand-primary)" />
+                              ) : !isMutedByMe ? (
+                                <Mic size={14} color="var(--text-muted)" style={{ opacity: 0.3 }} />
+                              ) : null}
+                              {isMutedByMe && (
+                                <VolumeX
+                                  size={15}
+                                  className={styles.mutedByMeIcon}
+                                />
+                              )}
+                            </div>
                           </div>
                         );
 
@@ -366,7 +378,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                                     alignItems: 'center',
                                   }}
                                 >
-                                  {t('voice.mute', 'Silenciar')}{' '}
+                                  {vol <= 0 ? 'Ativar som para mim' : 'Silenciar para mim'}{' '}
                                   <Switch.Root
                                     className="switch-root"
                                     checked={vol <= 0}

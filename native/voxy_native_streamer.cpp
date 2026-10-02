@@ -17,6 +17,21 @@
 
 std::atomic<bool> g_running(true);
 
+// Uma transmissão interrompida não deve retomar sozinha após o SDK reconectar.
+// A UI passa a exigir que o emissor escolha "Transmitir" outra vez, criando uma
+// nova publicação explícita e evitando espectadores reinscritos por engano.
+class StreamLifecycleDelegate final : public livekit::RoomDelegate {
+public:
+    void onReconnecting(livekit::Room&, const livekit::ReconnectingEvent&) override {
+        std::cerr << "[Voxy Native Streamer] Conexão interrompida; encerrando transmissão. Inicie novamente para retomar." << std::endl;
+        g_running = false;
+    }
+
+    void onDisconnected(livekit::Room&, const livekit::DisconnectedEvent&) override {
+        g_running = false;
+    }
+};
+
 BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType) {
     if (dwCtrlType == CTRL_C_EVENT || dwCtrlType == CTRL_CLOSE_EVENT || dwCtrlType == CTRL_BREAK_EVENT) {
         g_running = false;
@@ -111,6 +126,8 @@ int main(int argc, char* argv[]) {
     livekit::initialize(livekit::LogLevel::Warn);
 
     auto room = std::make_shared<livekit::Room>();
+    StreamLifecycleDelegate roomDelegate;
+    room->setDelegate(&roomDelegate);
     livekit::RoomOptions roomOptions;
     roomOptions.auto_subscribe = false;
     roomOptions.dynacast = false;
