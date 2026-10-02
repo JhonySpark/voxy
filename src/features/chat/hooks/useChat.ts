@@ -391,18 +391,54 @@ export function useChat({
       }
     };
 
+    const onChannelMessageDeleted = (data: { channelId: string; messageId: string }) => {
+      const cacheKey = `channel_${data.channelId}`;
+      const cached = messageCacheRef.current.get(cacheKey);
+      if (cached) {
+        messageCacheRef.current.set(
+          cacheKey,
+          cached.filter((m) => m.id !== data.messageId),
+        );
+      }
+      if (
+        activeViewRef.current === DashboardView.SERVER &&
+        activeChannelIdRef.current === data.channelId
+      ) {
+        setMessages((prev) => prev.filter((m) => m.id !== data.messageId));
+      }
+    };
+
     realtimeClient.on(RealtimeEvents.NEW_MESSAGE, onNewMessage);
     realtimeClient.on(RealtimeEvents.MESSAGE_SENT, onMessageSent);
     realtimeClient.on(RealtimeEvents.NEW_CHANNEL_MESSAGE, onNewChannelMessage);
     realtimeClient.on(RealtimeEvents.CHANNEL_MESSAGE_SENT, onChannelMessageSent);
+    realtimeClient.on(RealtimeEvents.CHANNEL_MESSAGE_DELETED, onChannelMessageDeleted);
 
     return () => {
       realtimeClient.off(RealtimeEvents.NEW_MESSAGE, onNewMessage);
       realtimeClient.off(RealtimeEvents.MESSAGE_SENT, onMessageSent);
       realtimeClient.off(RealtimeEvents.NEW_CHANNEL_MESSAGE, onNewChannelMessage);
       realtimeClient.off(RealtimeEvents.CHANNEL_MESSAGE_SENT, onChannelMessageSent);
+      realtimeClient.off(RealtimeEvents.CHANNEL_MESSAGE_DELETED, onChannelMessageDeleted);
     };
   }, []);
+
+  const deleteMessage = useCallback(
+    async (channelId: string, messageId: string) => {
+      await httpClient.delete(`/channels/${channelId}/messages/${messageId}`);
+      realtimeClient.emit(RealtimeEvents.CHANNEL_MESSAGE_DELETED, { channelId, messageId });
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+      const cacheKey = `channel_${channelId}`;
+      const cached = messageCacheRef.current.get(cacheKey);
+      if (cached) {
+        messageCacheRef.current.set(
+          cacheKey,
+          cached.filter((m) => m.id !== messageId),
+        );
+      }
+    },
+    [],
+  );
 
   return {
     messages,
@@ -413,6 +449,7 @@ export function useChat({
     isLoadingMessages,
     sendMessage,
     sendAttachmentMessage,
+    deleteMessage,
     fetchDMMessages,
     fetchChannelMessages,
   };

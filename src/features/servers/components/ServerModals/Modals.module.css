@@ -234,3 +234,516 @@
   color: #64748b;
 }
 
+/* Modal Wide variant */
+.modalContentWide {
+  width: 100%;
+  max-width: 560px;
+  background-color: #111520;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 1.75rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+/* Tabs */
+.tabsContainer {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0.5rem;
+  overflow-x: auto;
+}
+
+.tabBtn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.tabBtn:hover {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tabBtnActive {
+  color: var(--brand-primary, #34d399);
+  background: rgba(52, 211, 153, 0.1);
+}
+
+.tabBtnDanger {
+  color: #f87171;
+}
+
+.tabBtnDanger.tabBtnActive {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+}
+
+/* Friend list in invite modal */
+.friendsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.friendItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.15s ease;
+}
+
+.friendItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.friendItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.friendAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #f8fafc;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.friendAvatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.friendNames {
+  display: flex;
+  flex-direction: column;
+}
+
+.friendDisplayName {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.friendUsername {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.addFriendBtn {
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--brand-primary, #34d399);
+  background: transparent;
+  color: var(--brand-primary, #34d399);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.addFriendBtn:hover {
+  background: var(--brand-primary, #34d399);
+  color: #05140d;
+}
+
+.alreadyMemberBadge {
+  font-size: 0.75rem;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.emptyFriends {
+  text-align: center;
+  padding: 1.5rem;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+/* Moderation / Permissions Table */
+.roleSelector {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.roleBtn {
+  flex: 1;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #0b0e17;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.roleBtn:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.roleBtnActive {
+  background: rgba(52, 211, 153, 0.15);
+  border-color: var(--brand-primary, #34d399);
+  color: var(--brand-primary, #34d399);
+}
+
+.permissionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.permissionItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+}
+
+.permissionInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.permissionTitle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.permissionDesc {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* Ban items */
+.banItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.85rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+}
+
+.unbanBtn {
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: transparent;
+  color: #f87171;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.unbanBtn:hover {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+/* Danger Zone */
+.dangerCard {
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 10px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dangerTitle {
+  color: #ef4444;
+  font-size: 0.95rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dangerDesc {
+  font-size: 0.825rem;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.deleteServerBtn {
+  padding: 0.65rem 1.25rem;
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+  align-self: flex-start;
+}
+
+.deleteServerBtn:hover:not(:disabled) {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+/* Server Settings Modal with Left Sidebar */
+.settingsModalContainer {
+  width: 960px;
+  max-width: 95vw;
+  height: 720px;
+  max-height: 88vh;
+  background-color: #0b0f17;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 30px rgba(16, 185, 129, 0.04);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.settingsHeader {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.settingsHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.settingsHeaderIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #34d399;
+}
+
+.settingsHeaderTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: -0.01em;
+}
+
+.settingsHeaderSubtitle {
+  font-size: 0.76rem;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+.settingsCloseBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.settingsCloseBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+}
+
+.settingsBody {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.settingsSidebar {
+  width: 220px;
+  background: rgba(10, 14, 22, 0.65);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 1.25rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.settingsSidebarNav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.settingsSidebarSection {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  padding: 0 0.65rem 0.5rem 0.65rem;
+}
+
+.settingsTabBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.settingsTabBtn:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #f1f5f9;
+}
+
+.settingsTabBtnActive {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(52, 211, 153, 0.25);
+  color: #34d399;
+  font-weight: 600;
+}
+
+.settingsTabBtnDanger {
+  color: #f87171;
+}
+
+.settingsTabBtnDanger:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+}
+
+.settingsTabBtnDangerActive {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.settingsSidebarFooter {
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.serverInfoPill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+}
+
+.serverInfoLabel {
+  color: #64748b;
+}
+
+.serverInfoValue {
+  color: #94a3b8;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+
+.settingsContent {
+  flex: 1;
+  padding: 1.5rem 2rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-height: 0;
+}
+
+.contentHeader {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.contentHeaderTitle {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0;
+}
+
+.contentHeaderSubtitle {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin: 0.25rem 0 0 0;
+}
+
+

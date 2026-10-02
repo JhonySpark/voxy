@@ -86,15 +86,30 @@ export function useServers() {
       fetchServers();
     };
 
+    const onServerDeleted = (data: { serverId: string }) => {
+      setActiveServer((curr) => {
+        if (curr && curr.id === data.serverId) {
+          setActiveChannel(null);
+          return null;
+        }
+        return curr;
+      });
+      fetchServers();
+    };
+
     realtimeClient.on(RealtimeEvents.VOICE_STATE_UPDATE, onVoiceUpdate);
     realtimeClient.on(RealtimeEvents.CHANNEL_CREATED, onServerRefresh);
     realtimeClient.on(RealtimeEvents.SERVER_UPDATED, onServerRefresh);
+    realtimeClient.on(RealtimeEvents.SERVER_DELETED, onServerDeleted);
+    realtimeClient.on(RealtimeEvents.SERVER_MEMBERSHIP_CHANGED, onServerRefresh);
     realtimeClient.on(RealtimeEvents.USER_PROFILE_UPDATED, onUserProfileUpdated);
 
     return () => {
       realtimeClient.off(RealtimeEvents.VOICE_STATE_UPDATE, onVoiceUpdate);
       realtimeClient.off(RealtimeEvents.CHANNEL_CREATED, onServerRefresh);
       realtimeClient.off(RealtimeEvents.SERVER_UPDATED, onServerRefresh);
+      realtimeClient.off(RealtimeEvents.SERVER_DELETED, onServerDeleted);
+      realtimeClient.off(RealtimeEvents.SERVER_MEMBERSHIP_CHANGED, onServerRefresh);
       realtimeClient.off(RealtimeEvents.USER_PROFILE_UPDATED, onUserProfileUpdated);
     };
   }, [fetchServers]);

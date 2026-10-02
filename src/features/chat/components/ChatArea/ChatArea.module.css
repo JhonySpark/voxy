@@ -484,3 +484,27 @@
   margin: 0;
 }
 
+.deleteMessageBtn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.15s ease;
+  align-self: center;
+}
+
+.messageRow:hover .deleteMessageBtn {
+  opacity: 1;
+}
+
+.deleteMessageBtn:hover {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.15);
+}
+

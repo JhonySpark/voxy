@@ -6,6 +6,8 @@ export type ChannelTypeEnum = (typeof ChannelTypeEnum)[keyof typeof ChannelTypeE
 
 export const ServerRoleEnum = {
   OWNER: 'OWNER',
+  ADMIN: 'ADMIN',
+  MODERATOR: 'MODERATOR',
   MEMBER: 'MEMBER',
 } as const;
 export type ServerRoleEnum = (typeof ServerRoleEnum)[keyof typeof ServerRoleEnum];
@@ -51,6 +53,7 @@ export const RealtimeEvents = {
   NEW_CHANNEL_MESSAGE: 'newChannelMessage',
   CHANNEL_MESSAGE_SENT: 'channelMessageSent',
   SEND_CHANNEL_MESSAGE: 'sendChannelMessage',
+  CHANNEL_MESSAGE_DELETED: 'channelMessageDeleted',
 
   // Channels
   JOIN_CHANNEL: 'joinChannel',
@@ -61,6 +64,9 @@ export const RealtimeEvents = {
   JOIN_SERVER: 'joinServer',
   LEAVE_SERVER: 'leaveServer',
   SERVER_UPDATED: 'serverUpdated',
+  SERVER_DELETED: 'serverDeleted',
+  SERVER_MEMBERS_UPDATED: 'serverMembersUpdated',
+  SERVER_MEMBERSHIP_CHANGED: 'serverMembershipChanged',
 
   // Voice
   JOIN_VOICE: 'joinVoice',

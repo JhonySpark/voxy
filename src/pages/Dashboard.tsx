@@ -18,13 +18,13 @@ import {
 } from '../core/enums';
 import { httpClient } from '../infrastructure/adapters/http/http-client.adapter';
 
-// Subcomponentes refatorados
 import { ServerSidebar } from '../features/servers/components/ServerSidebar/ServerSidebar';
 import { ChannelList } from '../features/servers/components/ChannelList/ChannelList';
 import { CreateServerModal } from '../features/servers/components/ServerModals/CreateServerModal';
 import { CreateChannelModal } from '../features/servers/components/ServerModals/CreateChannelModal';
 import { InviteServerModal } from '../features/servers/components/ServerModals/InviteServerModal';
 import { ServerSettingsModal } from '../features/servers/components/ServerModals/ServerSettingsModal';
+import { ServerMembersSidebar } from '../features/servers/components/ServerMembersSidebar/ServerMembersSidebar';
 import { FriendsSidebar } from '../features/friends/components/FriendsSidebar/FriendsSidebar';
 import type { FriendUser } from '../features/friends/components/FriendsSidebar/FriendsSidebar';
 import { AddFriendModal } from '../features/friends/components/AddFriendModal/AddFriendModal';
@@ -85,6 +85,7 @@ export default function Dashboard() {
     isLoadingMessages,
     sendMessage,
     sendAttachmentMessage,
+    deleteMessage,
     fetchDMMessages,
     fetchChannelMessages,
   } = useChat({
@@ -96,6 +97,20 @@ export default function Dashboard() {
     activeFriendId: activeFriend?.id || null,
     activeChannelId: activeChannel?.id || null,
   });
+
+  // Membros do Servidor & Permissões
+  const [isMembersListOpen, setIsMembersListOpen] = useState(true);
+  const [activeServerPermissions, setActiveServerPermissions] = useState<{
+    isAdmin: boolean;
+    isModerator: boolean;
+    isOwner: boolean;
+    canInvite: boolean;
+    canDeleteMessages: boolean;
+    canKickMembers: boolean;
+    canBanMembers: boolean;
+    canManageChannels: boolean;
+    canManageServer: boolean;
+  } | null>(null);
 
   // Estados de Voz
   const [connectedVoiceChannel, setConnectedVoiceChannel] = useState<{
@@ -225,6 +240,41 @@ export default function Dashboard() {
       };
     }
   }, [activeFriend?.id, activeChannel?.id, activeChannel?.type, activeView, fetchDMMessages, fetchChannelMessages]);
+
+  // Carregar e sincronizar permissões do usuário no servidor ativo
+  useEffect(() => {
+    if (!activeServer) {
+      setActiveServerPermissions(null);
+      return;
+    }
+
+    let isMounted = true;
+    const fetchPerms = () => {
+      httpClient
+        .get<any>(`${ApiRoutes.SERVERS}/${activeServer.id}/my-permissions`)
+        .then((perms) => {
+          if (isMounted) setActiveServerPermissions(perms);
+        })
+        .catch(() => {});
+    };
+
+    fetchPerms();
+
+    const onMembershipChanged = (data: { serverId: string }) => {
+      if (data.serverId === activeServer.id) {
+        fetchPerms();
+      }
+    };
+
+    realtimeClient.on(RealtimeEvents.SERVER_MEMBERSHIP_CHANGED, onMembershipChanged);
+    realtimeClient.on(RealtimeEvents.SERVER_UPDATED, onMembershipChanged);
+
+    return () => {
+      isMounted = false;
+      realtimeClient.off(RealtimeEvents.SERVER_MEMBERSHIP_CHANGED, onMembershipChanged);
+      realtimeClient.off(RealtimeEvents.SERVER_UPDATED, onMembershipChanged);
+    };
+  }, [activeServer?.id]);
 
   const handleLogout = () => {
     localStorage.removeItem(StorageKeys.AUTH_TOKEN);
@@ -446,18 +496,44 @@ export default function Dashboard() {
               </div>
             )
           ) : (
-            <ChatArea
-              type="CHANNEL"
-              target={activeChannel}
-              myId={myId}
-              messages={messages}
-              newMessage={newMessage}
-              onNewMessageChange={setNewMessage}
-              onSendMessage={sendMessage}
-              onSendAttachment={sendAttachmentMessage}
-              isLoading={isLoadingMessages}
-              onOpenUserProfile={setViewingUserId}
-            />
+            <div style={{ display: 'flex', flex: 1, minHeight: 0, minWidth: 0, width: '100%', height: '100%' }}>
+              <ChatArea
+                type="CHANNEL"
+                target={activeChannel}
+                myId={myId}
+                messages={messages}
+                newMessage={newMessage}
+                onNewMessageChange={setNewMessage}
+                onSendMessage={sendMessage}
+                onSendAttachment={sendAttachmentMessage}
+                isLoading={isLoadingMessages}
+                onOpenUserProfile={setViewingUserId}
+                isMembersListOpen={isMembersListOpen}
+                onToggleMembersList={() => setIsMembersListOpen((prev) => !prev)}
+                canDeleteAnyMessage={
+                  Boolean(
+                    (activeServer && activeServer.ownerId === myId) ||
+                    activeServerPermissions?.canDeleteMessages ||
+                    activeServerPermissions?.isAdmin
+                  )
+                }
+                onDeleteMessage={(messageId) => {
+                  if (activeChannel) {
+                    deleteMessage(activeChannel.id, messageId);
+                  }
+                }}
+              />
+              {isMembersListOpen && activeServer && (
+                <ServerMembersSidebar
+                  serverId={activeServer.id}
+                  serverOwnerId={activeServer.ownerId}
+                  myId={myId}
+                  onClose={() => setIsMembersListOpen(false)}
+                  onOpenUserProfile={setViewingUserId}
+                  onMembersUpdated={fetchServers}
+                />
+              )}
+            </div>
           )
         ) : (
           <div className={styles.emptyStateContainer}>
@@ -525,13 +601,22 @@ export default function Dashboard() {
             isOpen={showInviteModal}
             server={activeServer}
             onClose={() => setShowInviteModal(false)}
+            onMembersUpdated={fetchServers}
           />
 
           <ServerSettingsModal
             isOpen={showServerSettingsModal}
             server={activeServer}
+            myId={myId}
             onClose={() => setShowServerSettingsModal(false)}
             onServerUpdated={fetchServers}
+            onServerDeleted={() => {
+              setShowServerSettingsModal(false);
+              setActiveServer(null);
+              setActiveChannel(null);
+              setActiveView(DashboardView.DM);
+              fetchServers();
+            }}
           />
         </>
       )}

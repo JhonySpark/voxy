@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import styles from './ChatArea.module.css';
-import { Hash, Send, Mic, Paperclip, Smile, Trash2, Loader2 } from 'lucide-react';
+import { Hash, Send, Mic, Paperclip, Smile, Trash2, Loader2, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { FriendUser } from '../../../friends/components/FriendsSidebar/FriendsSidebar';
 import type { ChannelItem } from '../../../servers/components/ServerSidebar/ServerSidebar';
@@ -52,6 +52,10 @@ interface ChatAreaProps {
   onSendAttachment?: (attachmentId: string, customContent?: string) => void;
   isLoading?: boolean;
   onOpenUserProfile?: (userId: string) => void;
+  onToggleMembersList?: () => void;
+  isMembersListOpen?: boolean;
+  canDeleteAnyMessage?: boolean;
+  onDeleteMessage?: (messageId: string) => void;
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({
@@ -65,6 +69,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   onSendAttachment,
   isLoading = false,
   onOpenUserProfile,
+  onToggleMembersList,
+  isMembersListOpen = false,
+  canDeleteAnyMessage = false,
+  onDeleteMessage,
 }) => {
   const { t, i18n } = useTranslation();
   const messagesListRef = useRef<HTMLDivElement>(null);
@@ -316,6 +324,32 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             {targetName}
           </h1>
         </div>
+
+        {type === 'CHANNEL' && onToggleMembersList && (
+          <button
+            type="button"
+            onClick={onToggleMembersList}
+            style={{
+              marginLeft: 'auto',
+              background: isMembersListOpen ? 'rgba(52, 211, 153, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+              color: isMembersListOpen ? 'var(--brand-primary, #34d399)' : '#94a3b8',
+              border: isMembersListOpen ? '1px solid rgba(52, 211, 153, 0.3)' : '1px solid rgba(255, 255, 255, 0.08)',
+              cursor: 'pointer',
+              padding: '0.4rem 0.75rem',
+              borderRadius: '8px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              transition: 'all 0.2s',
+            }}
+            title={isMembersListOpen ? 'Ocultar Membros' : 'Exibir Membros do Servidor'}
+          >
+            <Users size={16} />
+            <span>Membros</span>
+          </button>
+        )}
       </header>
 
       {/* Messages */}
@@ -431,6 +465,16 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                       );
                     })()}
                   </div>
+                  {onDeleteMessage && type === 'CHANNEL' && (isMe || canDeleteAnyMessage) && (
+                    <button
+                      type="button"
+                      className={styles.deleteMessageBtn}
+                      onClick={() => onDeleteMessage(msg.id)}
+                      title={t('chat.deleteMessage', 'Excluir mensagem')}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                 </div>
               </React.Fragment>
             );
