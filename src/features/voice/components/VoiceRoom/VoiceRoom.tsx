@@ -71,6 +71,7 @@ export interface VoiceRoomProps {
   serverId: string;
   myId: string;
   myUsername: string;
+  isMuted?: boolean;
   onDisconnect: () => void;
   onParticipantsChange: (participants: { id: string; username: string; isMuted?: boolean }[]) => void;
   onMuteChange?: (isMuted: boolean) => void;
@@ -218,6 +219,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
   livekitUrl,
   channelId,
   onViewUserProfile,
+  isMuted: isMutedProp,
 }) => {
   const { t } = useTranslation();
   const room = useRoomContext();
@@ -228,7 +230,14 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
   const [isNativeStreaming, setIsNativeStreaming] = useState(false);
   const [streamPreviewThumbnail, setStreamPreviewThumbnail] = useState<string | null>(null);
   const [nativeTelemetry, setNativeTelemetry] = useState<{ fps: number; mbps: number; encodeMs: number; totalFrames: number } | null>(null);
-  const [isMuted, setIsMuted] = useState(false);
+  const [internalMuted, setInternalMuted] = useState(false);
+  const isMuted = typeof isMutedProp === 'boolean' ? isMutedProp : internalMuted;
+
+  useEffect(() => {
+    if (typeof isMutedProp === 'boolean' && localParticipant) {
+      localParticipant.setMicrophoneEnabled(!isMutedProp).catch(console.error);
+    }
+  }, [isMutedProp, localParticipant]);
   const [showSources, setShowSources] = useState(false);
   const [categorizedSources, setCategorizedSources] = useState<{ games: any[]; windows: any[]; screens: any[] }>({
     games: [],
@@ -414,13 +423,15 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
   };
 
   const toggleMute = () => {
+    const nextMuted = !isMuted;
+    if (isMutedProp === undefined) {
+      setInternalMuted(nextMuted);
+    }
     if (localParticipant) {
-      const nextMuted = !isMuted;
-      localParticipant.setMicrophoneEnabled(!nextMuted);
-      setIsMuted(nextMuted);
-      if (onMuteChange) {
-        onMuteChange(nextMuted);
-      }
+      localParticipant.setMicrophoneEnabled(!nextMuted).catch(console.error);
+    }
+    if (onMuteChange) {
+      onMuteChange(nextMuted);
     }
   };
 

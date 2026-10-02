@@ -118,6 +118,7 @@ export default function Dashboard() {
     serverId: string;
     name: string;
   } | null>(null);
+  const [isVoiceMuted, setIsVoiceMuted] = useState(false);
   const [activeSpeakers, setActiveSpeakers] = useState<Set<string>>(new Set());
 
   // Modais
@@ -290,6 +291,21 @@ export default function Dashboard() {
     connectedVoiceChannel && activeChannel?.id === connectedVoiceChannel.channelId,
   );
 
+  const handleMuteChange = (muted: boolean) => {
+    setIsVoiceMuted(muted);
+    if (connectedVoiceChannel) {
+      realtimeClient.emit(RealtimeEvents.UPDATE_VOICE_MUTE, {
+        serverId: connectedVoiceChannel.serverId,
+        channelId: connectedVoiceChannel.channelId,
+        isMuted: muted,
+      });
+    }
+  };
+
+  const handleToggleVoiceMute = () => {
+    handleMuteChange(!isVoiceMuted);
+  };
+
   const viewingUserInitialData = useMemo(() => {
     if (!viewingUserId) return undefined;
     if (viewingUserId === myId && currentUserProfile) {
@@ -394,6 +410,7 @@ export default function Dashboard() {
                 serverId: activeServer.id,
                 name: ch.name,
               });
+              setIsVoiceMuted(false);
             }}
             onOpenCreateChannelModal={() => setShowChannelModal(true)}
             onOpenInviteModal={() => setShowInviteModal(true)}
@@ -435,7 +452,12 @@ export default function Dashboard() {
         <UserProfileBar
           user={currentUserProfile || { id: myId, username: myUsername }}
           connectedVoiceChannel={connectedVoiceChannel}
-          onDisconnectVoice={() => setConnectedVoiceChannel(null)}
+          isVoiceMuted={isVoiceMuted}
+          onToggleVoiceMute={handleToggleVoiceMute}
+          onDisconnectVoice={() => {
+            setConnectedVoiceChannel(null);
+            setIsVoiceMuted(false);
+          }}
           onOpenSettings={(tab) => {
             setSettingsInitialTab(tab || SettingsTabEnum.VOICE);
             setShowSettingsModal(true);
@@ -455,15 +477,13 @@ export default function Dashboard() {
             serverId={connectedVoiceChannel.serverId}
             myId={myId}
             myUsername={myUsername}
-            onDisconnect={() => setConnectedVoiceChannel(null)}
-            onParticipantsChange={() => {}}
-            onMuteChange={(isMuted) => {
-              realtimeClient.emit(RealtimeEvents.UPDATE_VOICE_MUTE, {
-                serverId: connectedVoiceChannel.serverId,
-                channelId: connectedVoiceChannel.channelId,
-                isMuted,
-              });
+            isMuted={isVoiceMuted}
+            onDisconnect={() => {
+              setConnectedVoiceChannel(null);
+              setIsVoiceMuted(false);
             }}
+            onParticipantsChange={() => {}}
+            onMuteChange={handleMuteChange}
             audioInput={selectedAudioInput}
             audioOutput={selectedAudioOutput}
             userVolumes={userVolumes}
