@@ -41,9 +41,28 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation();
+  const [activeTab, setActiveTab] = React.useState<'games' | 'windows' | 'screens'>('games');
+
+  React.useEffect(() => {
+    if (isOpen) {
+      if (categorizedSources.games.length > 0) {
+        setActiveTab('games');
+      } else if (categorizedSources.windows.length > 0) {
+        setActiveTab('windows');
+      } else {
+        setActiveTab('screens');
+      }
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  const currentList = categorizedSources.games;
+  const currentList =
+    activeTab === 'games'
+      ? categorizedSources.games
+      : activeTab === 'windows'
+      ? categorizedSources.windows
+      : categorizedSources.screens;
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -52,7 +71,13 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
         <div className={styles.header}>
           <div className={styles.titleArea}>
             <div className={styles.iconBadge}>
-              <Gamepad2 size={24} />
+              {activeTab === 'games' ? (
+                <Gamepad2 size={24} />
+              ) : activeTab === 'windows' ? (
+                <AppWindow size={24} />
+              ) : (
+                <Monitor size={24} />
+              )}
             </div>
             <div>
               <h2 className={styles.title}>{t('voice.shareModalTitle')}</h2>
@@ -98,22 +123,46 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
         )}
 
         <div className={styles.tabs}>
-          <div className={`${styles.tabBtn} ${styles.active}`}>
+          <button
+            type="button"
+            className={`${styles.tabBtn} ${activeTab === 'games' ? styles.active : styles.inactive}`}
+            onClick={() => setActiveTab('games')}
+          >
             <Gamepad2 size={16} />
-            <span>Jogos</span>
+            <span>{t('voice.games', 'Jogos')}</span>
             {categorizedSources.games.length > 0 && (
-              <span style={{ fontSize: '0.7rem', padding: '1px 5px', borderRadius: 6, background: 'rgba(0,0,0,0.2)' }}>
+              <span className={styles.tabCount}>
                 {categorizedSources.games.length}
               </span>
             )}
-          </div>
-          <button type="button" disabled className={`${styles.tabBtn} ${styles.inactive} ${styles.disabledTab}`}>
-            <AppWindow size={16} />
-            <span>{t('voice.applications')} ({categorizedSources.windows.length})</span>
           </button>
-          <button type="button" disabled className={`${styles.tabBtn} ${styles.inactive} ${styles.disabledTab}`}>
+
+          <button
+            type="button"
+            className={`${styles.tabBtn} ${activeTab === 'windows' ? styles.active : styles.inactive}`}
+            onClick={() => setActiveTab('windows')}
+          >
+            <AppWindow size={16} />
+            <span>{t('voice.applications')}</span>
+            {categorizedSources.windows.length > 0 && (
+              <span className={styles.tabCount}>
+                {categorizedSources.windows.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            className={`${styles.tabBtn} ${activeTab === 'screens' ? styles.active : styles.inactive}`}
+            onClick={() => setActiveTab('screens')}
+          >
             <Monitor size={16} />
-            <span>{t('voice.screens')} ({t('voice.disabled', 'Desabilitado')})</span>
+            <span>{t('voice.screens')}</span>
+            {categorizedSources.screens.length > 0 && (
+              <span className={styles.tabCount}>
+                {categorizedSources.screens.length}
+              </span>
+            )}
           </button>
         </div>
 
@@ -121,7 +170,13 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
         <div className={styles.sourceGrid}>
           {currentList.length === 0 ? (
             <div className={styles.emptyState}>
-              <Gamepad2 size={42} style={{ opacity: 0.3 }} />
+              {activeTab === 'games' ? (
+                <Gamepad2 size={42} style={{ opacity: 0.3 }} />
+              ) : activeTab === 'windows' ? (
+                <AppWindow size={42} style={{ opacity: 0.3 }} />
+              ) : (
+                <Monitor size={42} style={{ opacity: 0.3 }} />
+              )}
               <p style={{ margin: 0, fontSize: '0.95rem' }}>
                 {t('voice.noSources')}
               </p>
@@ -142,6 +197,8 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
                     <img src={s.appIcon} alt="" style={{ width: 18, height: 18, borderRadius: 3 }} />
                   ) : s.isGame ? (
                     <Gamepad2 size={16} color="var(--brand-primary, #34d399)" />
+                  ) : activeTab === 'screens' ? (
+                    <Monitor size={16} color="#64748b" />
                   ) : (
                     <AppWindow size={16} color="#64748b" />
                   )}
