@@ -119,6 +119,7 @@ export type DesktopSourceType = (typeof DesktopSourceType)[keyof typeof DesktopS
 export const ApiRoutes = {
   AUTH_LOGIN: '/auth/login',
   AUTH_REGISTER: '/auth/register',
+  AUTH_CHECK_USERNAME: '/auth/check-username',
   FRIENDS: '/friends',
   FRIEND_REQUESTS: '/friends/requests',
   FRIEND_REQUEST: '/friends/request',

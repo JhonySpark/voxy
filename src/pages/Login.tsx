@@ -4,6 +4,7 @@ import api from '../api';
 import { Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ApiRoutes, AppRoutes, StorageKeys } from '../core/enums';
+import { getApiErrorMessage } from '../core/utils/error.util';
 import heroLogo from '../assets/logo.png';
 
 export default function Login() {
@@ -27,7 +28,7 @@ export default function Login() {
       localStorage.setItem(StorageKeys.AUTH_TOKEN, res.data.access_token);
       navigate(AppRoutes.APP);
     } catch (err: any) {
-      setError(err.response?.data?.message || t('auth.login.failed'));
+      setError(getApiErrorMessage(err, t('auth.login.failed')));
     } finally {
       setIsLoading(false);
     }

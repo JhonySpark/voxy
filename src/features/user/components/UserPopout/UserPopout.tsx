@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import styles from './UserPopout.module.css';
-import { Pencil, ChevronRight, User, Check, Gamepad2 } from 'lucide-react';
+import { Pencil, ChevronRight, User, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getMediaUrl } from '../../../../core/utils/media.util';
 import { UserStatusEnum } from '../../../../core/enums';

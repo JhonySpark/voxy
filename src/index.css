@@ -220,8 +220,8 @@ input {
 
 .auth-card {
   width: 100%;
-  max-width: 400px;
-  padding: 2.5rem;
+  max-width: 440px;
+  padding: 2.25rem 2.5rem;
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
@@ -438,6 +438,85 @@ input {
 
 @keyframes btn-spin {
   to { transform: rotate(360deg); }
+}
+
+/* Auth Validation & Password Strength */
+.input-feedback {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  margin-top: 0.25rem;
+  transition: all 0.2s ease;
+}
+
+.input-feedback.success {
+  color: #34d399;
+}
+
+.input-feedback.error {
+  color: #f87171;
+}
+
+.input-feedback.loading {
+  color: var(--text-secondary);
+}
+
+.password-strength-bar {
+  display: flex;
+  gap: 4px;
+  margin-top: 0.35rem;
+  height: 4px;
+  width: 100%;
+}
+
+.password-strength-segment {
+  flex: 1;
+  height: 100%;
+  border-radius: 2px;
+  background-color: rgba(255, 255, 255, 0.1);
+  transition: background-color 0.25s ease;
+}
+
+.password-strength-segment.active-weak {
+  background-color: #f87171;
+}
+
+.password-strength-segment.active-medium {
+  background-color: #fbbf24;
+}
+
+.password-strength-segment.active-strong {
+  background-color: #34d399;
+}
+
+.password-criteria-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  background-color: rgba(0, 0, 0, 0.25);
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.password-criteria-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  transition: color 0.2s ease;
+}
+
+.password-criteria-item.met {
+  color: #34d399;
+  font-weight: 500;
+}
+
+.password-criteria-item.unmet {
+  color: rgba(255, 255, 255, 0.45);
 }
 
 /* Initial Full-Screen Loader */
