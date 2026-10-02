@@ -673,29 +673,29 @@
 
 .account-profile-body {
   position: relative;
-  padding: 0 1.25rem 1.25rem 1.25rem;
+  padding: 0.85rem 1.25rem 1.25rem 1.25rem;
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
 }
 
 .account-profile-left {
   display: flex;
-  align-items: flex-end;
-  gap: 1rem;
-  margin-top: -36px;
+  align-items: center;
+  gap: 1.15rem;
 }
 
 .account-avatar-wrapper {
   position: relative;
-  width: 72px;
-  height: 72px;
+  width: 76px;
+  height: 76px;
   border-radius: 50%;
   border: 4px solid #0b0f17;
   overflow: hidden;
   background: #1e293b;
   flex-shrink: 0;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  margin-top: -46px;
 }
 
 .account-avatar-img {
@@ -717,7 +717,9 @@
 }
 
 .account-names {
-  padding-bottom: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .account-display-name {
