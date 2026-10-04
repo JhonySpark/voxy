@@ -12,14 +12,30 @@ class FrontendLoggerService {
 
   constructor() {
     const token = import.meta.env.VITE_BETTER_STACK_SOURCE_TOKEN;
+    let endpoint = (
+      import.meta.env.VITE_BETTER_STACK_ENDPOINT ||
+      import.meta.env.VITE_BETTER_STACK_INGESTING_HOST ||
+      ''
+    ).trim();
+
+    if (endpoint && !endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
+      endpoint = `https://${endpoint}`;
+    }
+
     if (token && typeof token === 'string' && token.trim().length > 0) {
       try {
-        this.logtail = new Logtail(token.trim());
+        this.logtail = new Logtail(token.trim(), endpoint ? { endpoint } : undefined);
         this.isEnabled = true;
-        console.log('[BetterStack] Frontend telemetry initialized.');
+        console.log(
+          `[BetterStack] Telemetria ATIVADA no Frontend. Destino: ${endpoint || 'https://in.logs.betterstack.com (Padrão US)'}`,
+        );
       } catch (err) {
         console.warn('[BetterStack] Failed to initialize frontend logger:', err);
       }
+    } else {
+      console.warn(
+        '[BetterStack] Telemetria DESATIVADA no Frontend: VITE_BETTER_STACK_SOURCE_TOKEN não configurado no frontend/.env.',
+      );
     }
   }
 
