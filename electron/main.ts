@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, desktopCapturer, dialog, Menu, Tray } from 'electron'
+import { app, BrowserWindow, ipcMain, desktopCapturer, Menu, Tray } from 'electron'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawn, ChildProcess } from 'node:child_process'
@@ -324,8 +324,8 @@ app.whenReady().then(() => {
       })
     })
 
-    autoUpdater.checkForUpdatesAndNotify().catch((err) => {
-      console.error('[AutoUpdater] Erro no checkForUpdatesAndNotify:', err)
+    autoUpdater.checkForUpdates().catch((err) => {
+      console.error('[AutoUpdater] Erro no checkForUpdates:', err)
     })
   }
 })
