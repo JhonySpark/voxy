@@ -203,6 +203,11 @@ export default function Dashboard() {
           httpClient.get<UserProfileData>(ApiRoutes.USERS_ME),
         ]);
         if (meRes.status === 'fulfilled' && meRes.value) {
+          if (meRes.value.ageClassification === 'CHILD') {
+            localStorage.removeItem('token');
+            navigate('/login?error=child_blocked');
+            return;
+          }
           setCurrentUserProfile(meRes.value);
         }
       } catch (err) {
@@ -613,6 +618,7 @@ export default function Dashboard() {
             serverId={connectedVoiceChannel.serverId}
             myId={myId}
             myUsername={myUsername}
+            userAgeClassification={currentUserProfile?.ageClassification}
             isMuted={isVoiceMuted}
             onDisconnect={() => {
               setConnectedVoiceChannel(null);
@@ -726,6 +732,10 @@ export default function Dashboard() {
           setShowSettingsModal(false);
           setShowEditProfileModal(true);
         }}
+        onProfileUpdated={(updated) =>
+          setCurrentUserProfile((prev) => (prev ? { ...prev, ...updated } : prev))
+        }
+        onLogout={handleLogout}
       />
 
       {currentUserProfile && (

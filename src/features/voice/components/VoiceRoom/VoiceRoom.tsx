@@ -71,6 +71,7 @@ export interface VoiceRoomProps {
   serverId: string;
   myId: string;
   myUsername: string;
+  userAgeClassification?: 'UNKNOWN' | 'CHILD' | 'TEEN' | 'ADULT';
   isMuted?: boolean;
   onDisconnect: () => void;
   onParticipantsChange: (participants: { id: string; username: string; isMuted?: boolean }[]) => void;
@@ -218,6 +219,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
   onSpeakersChange,
   livekitUrl,
   channelId,
+  userAgeClassification,
   onViewUserProfile,
   isMuted: isMutedProp,
 }) => {
@@ -561,9 +563,9 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
     }
   };
 
-  const selectSource = async (sourceId: string, shareAudio: boolean = false) => {
+  const selectSource = async (sourceId: string, shareAudio: boolean = false, is18Plus: boolean = false) => {
     setShowSources(false);
-    console.log('[Voxy Stream] selectSource chamado para fonte:', sourceId, { shareAudio });
+    console.log('[Voxy Stream] selectSource chamado para fonte:', sourceId, { shareAudio, is18Plus });
 
     try {
       // Reaproveita a miniatura já gerada pelo seletor como pôster estático.
@@ -618,6 +620,15 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
 
           setIsNativeStreaming(true);
           setStreamPreviewThumbnail(selectedThumbnail);
+
+          try {
+            const existingMetadata = JSON.parse(localParticipant?.metadata || '{}');
+            await localParticipant?.setMetadata(JSON.stringify({
+              ...existingMetadata,
+              is18Plus,
+              streamPreviewThumbnail: selectedThumbnail,
+            }));
+          } catch (_) {}
 
           // O áudio do jogo é publicado pelo WASAPI por processo no streamer
           // nativo. Não inicie o loopback do Chromium: ele inclui a chamada.
@@ -695,11 +706,12 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
           priority: 'high',
         },
       });
-      if (selectedThumbnail) {
+      if (selectedThumbnail || is18Plus) {
         try {
           const existingMetadata = JSON.parse(localParticipant.metadata || '{}');
           await localParticipant.setMetadata(JSON.stringify({
             ...existingMetadata,
+            is18Plus: is18Plus === true,
             streamPreviewThumbnail: selectedThumbnail,
           }));
         } catch (error) {
@@ -810,6 +822,15 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         avatarUrl = `/storage/avatar/${p.identity}`;
       }
 
+      let is18PlusStream = false;
+      try {
+        const metaStr = screenPart?.metadata || p.metadata;
+        if (metaStr) {
+          const parsed = JSON.parse(metaStr);
+          is18PlusStream = parsed.is18Plus === true;
+        }
+      } catch (_) {}
+
       return {
         id: p.identity,
         username: p.isLocal ? t('chat.you') : p.name || p.identity,
@@ -819,6 +840,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         track: activeTrack,
         isStreaming,
         isWatching,
+        is18Plus: is18PlusStream,
         // A prévia do fallback WebRTC é uma track local direta e só para ao
         // encerrar o compartilhamento. A assinatura que pode ser ligada e
         // desligada é a transmissão nativa que volta da SFU.
@@ -879,6 +901,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
                   isHorizontal={true}
                   streamVolume={streamVolumes[p.id] ?? 100}
                   isWatching={p.isWatching}
+                  canAccess18Plus={userAgeClassification === 'ADULT'}
                   onToggleMaximize={() => setMaximizedId(p.id)}
                   onToggleWatchStream={() => toggleWatchStream(p.id)}
                   onStreamVolumeChange={(val) =>
@@ -899,6 +922,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
                 isMaximized={false}
                 streamVolume={streamVolumes[p.id] ?? 100}
                 isWatching={p.isWatching}
+                canAccess18Plus={userAgeClassification === 'ADULT'}
                 onToggleMaximize={() => setMaximizedId(p.id)}
                 onToggleWatchStream={() => toggleWatchStream(p.id)}
                 onStreamVolumeChange={(val) =>
@@ -957,6 +981,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         streamRes={streamRes}
         streamFps={streamFps}
         shareAudio={shareGameAudio}
+        userAgeClassification={userAgeClassification}
         onStreamResChange={setStreamRes}
         onStreamFpsChange={setStreamFps}
         onShareAudioChange={setShareGameAudio}

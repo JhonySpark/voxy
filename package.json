@@ -1,14 +1,14 @@
 {
   "name": "voxy",
   "private": true,
-  "version": "0.5.3",
+  "version": "0.5.4",
   "type": "module",
   "main": "dist-electron/main.js",
   "author": "D4rk Side",
   "description": "Voxy - Plataforma de Comunicação",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node scripts/generate_native_manifest.js && tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "dist": "npm run build && dotenv -e .env -- electron-builder --win",
@@ -37,6 +37,7 @@
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
+      "electron/native_manifest.json",
       "build/icon.ico",
       "package.json"
     ],
@@ -47,6 +48,10 @@
         "filter": [
           "**/*"
         ]
+      },
+      {
+        "from": "electron/native_manifest.json",
+        "to": "native_manifest.json"
       }
     ],
     "asarUnpack": [

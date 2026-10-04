@@ -17,6 +17,7 @@ export interface ServerItem {
   ownerId: string;
   inviteCode?: string;
   iconUrl?: string | null;
+  is18Plus?: boolean;
   channels: ChannelItem[];
 }
 
@@ -108,6 +109,27 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({
             {unreadCount > 0 && (
               <div className={styles.badge}>
                 {unreadCount > 99 ? '99+' : unreadCount}
+              </div>
+            )}
+            {server.is18Plus && (
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: -2,
+                  right: -2,
+                  background: '#ef4444',
+                  color: '#fff',
+                  fontSize: '0.62rem',
+                  fontWeight: 800,
+                  padding: '1px 3px',
+                  borderRadius: '3px',
+                  border: '2px solid #0f172a',
+                  zIndex: 2,
+                  lineHeight: 1,
+                }}
+                title="Servidor +18"
+              >
+                18+
               </div>
             )}
           </div>

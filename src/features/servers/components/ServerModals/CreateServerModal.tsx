@@ -22,6 +22,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
   const { t } = useTranslation();
   const { toast } = useToast();
   const [serverName, setServerName] = useState('');
+  const [is18Plus, setIs18Plus] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
   const [iconFile, setIconFile] = useState<File | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
@@ -55,7 +56,10 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
 
     setIsCreating(true);
     try {
-      const newServer = await httpClient.post<ServerItem>(ApiRoutes.SERVERS, { name: trimmed });
+      const newServer = await httpClient.post<ServerItem>(ApiRoutes.SERVERS, {
+        name: trimmed,
+        is18Plus,
+      });
 
       if (iconFile && newServer?.id) {
         const formData = new FormData();
@@ -143,6 +147,36 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
             autoFocus
             disabled={isCreating || isJoining}
           />
+
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            cursor: 'pointer',
+            fontSize: '0.85rem',
+            color: 'var(--text-secondary)',
+            marginTop: '0.25rem',
+            userSelect: 'none',
+          }}>
+            <input
+              type="checkbox"
+              checked={is18Plus}
+              onChange={(e) => setIs18Plus(e.target.checked)}
+              style={{ accentColor: '#ef4444', width: 16, height: 16, cursor: 'pointer' }}
+            />
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{
+                backgroundColor: is18Plus ? '#ef4444' : '#334155',
+                color: '#fff',
+                padding: '1px 6px',
+                borderRadius: '4px',
+                fontSize: '0.72rem',
+                fontWeight: 700
+              }}>18+</span>
+              <span>Servidor restrito para maiores de 18 anos (+18)</span>
+            </span>
+          </label>
+
           <div className={styles.actions}>
             <button
               type="submit"

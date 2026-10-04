@@ -18,6 +18,14 @@ export interface UserProfileData {
   bannerColor?: string | null;
   status?: UserStatusEnum | string | null;
   customStatus?: string | null;
+  birthDate?: string | null;
+  isEmailVerified?: boolean;
+  ageClassification?: 'UNKNOWN' | 'CHILD' | 'TEEN' | 'ADULT';
+  ageSignalSource?: 'NONE' | 'WINDOWS_OS' | 'DECLARED';
+  canShareScreen?: boolean;
+  canStreamGames?: boolean;
+  canAccess18Plus?: boolean;
+  canUseApp?: boolean;
 }
 
 interface UserPopoutProps {

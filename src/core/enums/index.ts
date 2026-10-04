@@ -128,6 +128,9 @@ export const ApiRoutes = {
   AUTH_LOGIN: '/auth/login',
   AUTH_REGISTER: '/auth/register',
   AUTH_CHECK_USERNAME: '/auth/check-username',
+  AUTH_VERIFY_EMAIL: '/auth/verify-email',
+  AUTH_RESEND_CODE: '/auth/resend-code',
+  AUTH_SYNC_AGE_SIGNAL: '/auth/sync-age-signal',
   FRIENDS: '/friends',
   FRIEND_REQUESTS: '/friends/requests',
   FRIEND_REQUEST: '/friends/request',
@@ -147,6 +150,14 @@ export const ApiRoutes = {
   USERS_CHANGE_PASSWORD: '/users/change-password',
 } as const;
 export type ApiRoutes = (typeof ApiRoutes)[keyof typeof ApiRoutes];
+
+export const AgeClassificationEnum = {
+  UNKNOWN: 'UNKNOWN',
+  CHILD: 'CHILD',
+  TEEN: 'TEEN',
+  ADULT: 'ADULT',
+} as const;
+export type AgeClassificationEnum = (typeof AgeClassificationEnum)[keyof typeof AgeClassificationEnum];
 
 export const ToastTypeEnum = {
   SUCCESS: 'success',
@@ -173,6 +184,7 @@ export const IpcChannels = {
   DESKTOP_CAPTURER_GET_SOURCES: 'DESKTOP_CAPTURER_GET_SOURCES',
   GET_BACKGROUND_MODE: 'GET_BACKGROUND_MODE',
   SET_BACKGROUND_MODE: 'SET_BACKGROUND_MODE',
+  GET_OS_AGE_SIGNAL: 'GET_OS_AGE_SIGNAL',
   APP_UPDATE_AVAILABLE: 'app-update-available',
   APP_UPDATE_PROGRESS: 'app-update-progress',
   APP_UPDATE_DOWNLOADED: 'app-update-downloaded',

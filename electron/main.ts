@@ -1,28 +1,18 @@
-import { app, BrowserWindow, ipcMain, desktopCapturer, Menu, Tray } from 'electron'
+import { app, BrowserWindow, ipcMain, desktopCapturer, Menu, Tray, dialog } from 'electron'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawn, ChildProcess } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { randomBytes } from 'node:crypto'
 import { autoUpdater } from 'electron-updater'
 import { getCategorizedSources } from './gameDetector'
 import os from 'node:os'
 
+import { NATIVE_BINARIES, resolveNativeBinary, performStartupIntegrityCheck } from './nativeBinaries'
+
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
 let nativeStreamProcess: ChildProcess | null = null
-
-function findNativeStreamerBin(): string | null {
-  const candidatePaths = [
-    join(process.resourcesPath, 'bin/voxy_native_streamer.exe'),
-    join(process.resourcesPath, 'app.asar.unpacked/electron/bin/voxy_native_streamer.exe'),
-    join(__dirname, 'bin/voxy_native_streamer.exe'),
-    join(__dirname, '../electron/bin/voxy_native_streamer.exe'),
-    join(app.getAppPath(), 'electron/bin/voxy_native_streamer.exe'),
-    join(process.cwd(), 'electron/bin/voxy_native_streamer.exe'),
-    join(process.cwd(), 'frontend/electron/bin/voxy_native_streamer.exe')
-  ]
-  return candidatePaths.find(p => existsSync(p)) || null
-}
 
 // Eleva a prioridade de agendamento do processo no Windows para que o jogo 3D não congele as threads de captura e WebRTC
 try {
@@ -140,6 +130,22 @@ async function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // 1. Startup Integrity Guard: Verifica presenca e SHA-256 dos binarios essenciais no Windows
+  if (process.platform === 'win32') {
+    const integrity = performStartupIntegrityCheck();
+    if (!integrity.valid) {
+      console.error('[Startup Guard] Integridade do sistema violada:', integrity.errors);
+      dialog.showErrorBox(
+        'Falha de Integridade do Sistema - Voxy',
+        `Arquivos essenciais do aplicativo foram alterados ou estao ausentes:\n\n` +
+        integrity.errors.map(e => `• ${e}`).join('\n') +
+        `\n\nPor questoes de seguranca, reinstale o aplicativo para continuar.`
+      );
+      app.quit();
+      return;
+    }
+  }
+
   createTray()
 
   ipcMain.handle('GET_BACKGROUND_MODE', () => getBackgroundSettings().keepRunningInBackground)
@@ -164,9 +170,50 @@ app.whenReady().then(() => {
 
   createWindow();
 
-  // IPC para o Pipeline Nativo C++ (WGC + NVENC + LiveKit C++ SDK)
+  // IPC para o Pipeline Nativo C++
   ipcMain.handle('IS_NATIVE_STREAM_SUPPORTED', () => {
-    return process.platform === 'win32' && !!findNativeStreamerBin();
+    return process.platform === 'win32' && !!resolveNativeBinary(NATIVE_BINARIES.NATIVE_STREAMER);
+  });
+
+  // IPC para verificação de Faixa Etária Nativa (Windows 11 Age Signals / WinRT com Assinatura Criptográfica HMAC)
+  ipcMain.handle('GET_OS_AGE_SIGNAL', async () => {
+    if (process.platform !== 'win32') {
+      return { available: false, reason: 'Unsupported_Platform' };
+    }
+    const binPath = resolveNativeBinary(NATIVE_BINARIES.AGE_SIGNAL);
+    if (!binPath) {
+      return { available: false, reason: 'Probe_Not_Found' };
+    }
+
+    const nonce = randomBytes(16).toString('hex');
+    const timestamp = Date.now();
+
+    return new Promise((resolve) => {
+      const child = spawn(binPath, [nonce, String(timestamp)], {
+        windowsHide: true,
+        stdio: ['ignore', 'pipe', 'ignore']
+      });
+
+      let stdout = '';
+      child.stdout?.on('data', (d) => { stdout += d.toString(); });
+      child.on('close', (code) => {
+        if (code === 0 && stdout.trim()) {
+          try {
+            const data = JSON.parse(stdout.trim());
+            return resolve(data);
+          } catch (_) {}
+        }
+        resolve({ available: false, reason: 'Execution_Failed' });
+      });
+      child.on('error', () => {
+        resolve({ available: false, reason: 'Process_Error' });
+      });
+
+      setTimeout(() => {
+        try { child.kill(); } catch (_) {}
+        resolve({ available: false, reason: 'Timeout' });
+      }, 4000);
+    });
   });
 
   ipcMain.handle('START_NATIVE_STREAM', async (_event, opts: {
@@ -180,9 +227,9 @@ app.whenReady().then(() => {
     captureProcessAudio?: boolean;
     thumbnail?: string;
   }) => {
-    const binPath = findNativeStreamerBin();
+    const binPath = resolveNativeBinary(NATIVE_BINARIES.NATIVE_STREAMER);
     if (!binPath) {
-      throw new Error('voxy_native_streamer.exe não encontrado');
+      throw new Error('Streaming component not found');
     }
 
     if (nativeStreamProcess) {

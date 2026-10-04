@@ -43,27 +43,18 @@ interface NativeWindowReport {
   };
 }
 
+import { NATIVE_BINARIES, resolveNativeBinary } from './nativeBinaries';
+
 /**
- * Executa o binário nativo em C++ (voxy_game_detector.exe) para inspecionar
+ * Executa o binário nativo para inspecionar
  * diretamente o espaço de memória dos processos e detectar DLLs gráficas 3D reais
  * (DirectX 11, DirectX 12, Vulkan, OpenGL, D3D9 + DXGI).
  */
 async function getNativeGraphicsWindows(): Promise<NativeWindowReport[]> {
   if (process.platform !== 'win32') return [];
 
-  // Caminhos possíveis para o binário compilado em C++
-  const candidatePaths = [
-    join(process.resourcesPath, 'bin/voxy_game_detector.exe'),
-    join(process.resourcesPath, 'app.asar.unpacked/electron/bin/voxy_game_detector.exe'),
-    join(__dirname, 'bin/voxy_game_detector.exe'),
-    join(__dirname, '../electron/bin/voxy_game_detector.exe'),
-    join(app.getAppPath(), 'electron/bin/voxy_game_detector.exe'),
-    join(process.cwd(), 'electron/bin/voxy_game_detector.exe')
-  ];
-
-  const binPath = candidatePaths.find(p => existsSync(p));
+  const binPath = resolveNativeBinary(NATIVE_BINARIES.GAME_DETECTOR);
   if (!binPath) {
-    console.warn('[Voxy Detector] Binário C++ voxy_game_detector.exe não encontrado nos caminhos:', candidatePaths);
     return [];
   }
 
@@ -72,7 +63,7 @@ async function getNativeGraphicsWindows(): Promise<NativeWindowReport[]> {
     const reports: NativeWindowReport[] = JSON.parse(stdout);
     return reports;
   } catch (err) {
-    console.error('[Voxy Detector] Erro ao executar detector nativo C++:', err);
+    console.error('[Voxy Detector] Erro ao executar detector nativo:', err);
     return [];
   }
 }

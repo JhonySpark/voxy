@@ -34,6 +34,8 @@ interface SettingsModalProps {
   initialTab?: SettingsTabEnum;
   currentUser?: UserProfileData | null;
   onOpenEditProfile?: () => void;
+  onProfileUpdated?: (updated: Partial<UserProfileData>) => void;
+  onLogout?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -42,7 +44,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onDeviceChange,
   initialTab,
   currentUser,
-  onOpenEditProfile
+  onOpenEditProfile,
+  onProfileUpdated,
+  onLogout,
 }) => {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<SettingsTabEnum>(initialTab || SettingsTabEnum.VOICE);
@@ -60,6 +64,82 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordFeedback, setPasswordFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [avatarError, setAvatarError] = useState(false);
+
+  // Revalidação de Idade (Age Signals)
+  const [isRevalidatingAge, setIsRevalidatingAge] = useState(false);
+  const [ageFeedback, setAgeFeedback] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+
+  const handleRevalidateAge = async () => {
+    setIsRevalidatingAge(true);
+    setAgeFeedback(null);
+    try {
+      let osSignal = { available: false };
+      if (ipcRenderer) {
+        try {
+          const raw = await ipcRenderer.invoke(IpcChannels.GET_OS_AGE_SIGNAL);
+          if (raw) {
+            osSignal = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          }
+        } catch (ipcErr) {
+          console.warn('[Age Signals] Falha ao coletar sinal nativo:', ipcErr);
+        }
+      }
+
+      const res = await httpClient.post<{
+        success: boolean;
+        user: UserProfileData;
+        changed: boolean;
+      }>(ApiRoutes.AUTH_SYNC_AGE_SIGNAL, { signal: osSignal });
+
+      if (res?.success && res.user) {
+        const updatedUser = res.user;
+        onProfileUpdated?.(updatedUser);
+
+        if (updatedUser.ageClassification === 'CHILD') {
+          setAgeFeedback({
+            type: 'error',
+            message: 'Classificação detectada como Menor de Idade (<13 anos). O uso da plataforma é restrito.',
+          });
+          setTimeout(() => {
+            onClose();
+            onLogout?.();
+          }, 3000);
+          return;
+        }
+
+        const oldClass = currentUser?.ageClassification || 'UNKNOWN';
+        const newClass = updatedUser.ageClassification;
+
+        if (oldClass !== newClass) {
+          setAgeFeedback({
+            type: 'success',
+            message: `Faixa etária atualizada com sucesso para ${
+              newClass === 'ADULT' ? 'Adulto (+18)' : newClass === 'TEEN' ? 'Jovem (13-17 anos)' : newClass
+            }! Suas permissões foram atualizadas.`,
+          });
+        } else {
+          setAgeFeedback({
+            type: 'info',
+            message: `Sua faixa etária já está sincronizada (${
+              newClass === 'ADULT' ? 'Adulto +18' : newClass === 'TEEN' ? 'Jovem 13-17 anos' : 'Padrão'
+            }). Nenhuma alteração foi necessária.`,
+          });
+        }
+      } else {
+        setAgeFeedback({
+          type: 'error',
+          message: 'Não foi possível revalidar a idade no momento.',
+        });
+      }
+    } catch (err: any) {
+      setAgeFeedback({
+        type: 'error',
+        message: err.response?.data?.message || 'Falha ao revalidar sinal de idade.',
+      });
+    } finally {
+      setIsRevalidatingAge(false);
+    }
+  };
 
   useEffect(() => {
     setAvatarError(false);
@@ -540,6 +620,86 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <span className="account-info-label">{t('user.email', 'E-mail')}</span>
                       <span className="account-info-value">{currentUser?.email || '••••••••@••••.com'}</span>
                     </div>
+                  </div>
+                </div>
+
+                {/* Faixa Etária e Proteção (Age Signals) */}
+                <div className="account-section">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span className="account-section-title">
+                      {t('user.ageSignalsTitle', 'Classificação Etária & Proteção Legal')}
+                    </span>
+                    <span className={`account-age-pill ${currentUser?.ageClassification || 'UNKNOWN'}`}>
+                      {currentUser?.ageClassification === 'ADULT'
+                        ? 'Adulto (+18)'
+                        : currentUser?.ageClassification === 'TEEN'
+                        ? 'Jovem (13-17 anos)'
+                        : currentUser?.ageClassification === 'CHILD'
+                        ? 'Menor (<13 anos)'
+                        : 'Padrão / Desconhecido'}
+                    </span>
+                  </div>
+
+                  <div className="account-info-box">
+                    <div className="account-info-row">
+                      <span className="account-info-label">Permissões de Transmissão</span>
+                      <span className="account-info-value">
+                        {currentUser?.ageClassification === 'ADULT'
+                          ? 'Transmissão de Jogos e Compartilhamento de Telas Gerais'
+                          : currentUser?.ageClassification === 'TEEN'
+                          ? 'Apenas Transmissão de Jogos Detectados (Telas e Janelas Gerais Desativadas)'
+                          : 'Acesso Restrito'}
+                      </span>
+                    </div>
+
+                    <div className="account-info-row">
+                      <span className="account-info-label">Servidores e Streams +18</span>
+                      <span className="account-info-value" style={{ color: currentUser?.ageClassification === 'ADULT' ? '#34d399' : '#f87171' }}>
+                        {currentUser?.ageClassification === 'ADULT' ? 'Permitido (+18)' : 'Bloqueado (Restrito a Maiores)'}
+                      </span>
+                    </div>
+
+                    <div className="account-info-row">
+                      <span className="account-info-label">Origem do Sinal</span>
+                      <span className="account-info-value">
+                        {currentUser?.ageSignalSource === 'WINDOWS_OS'
+                          ? 'Windows 11 OS (WinRT Age Signal)'
+                          : currentUser?.ageSignalSource === 'DECLARED'
+                          ? 'Data de Nascimento Declarada'
+                          : 'Padrão / Nenhum'}
+                      </span>
+                    </div>
+
+                    {currentUser?.birthDate && (
+                      <div className="account-info-row">
+                        <span className="account-info-label">Data de Nascimento</span>
+                        <span className="account-info-value">
+                          {new Date(currentUser.birthDate).toLocaleDateString('pt-BR')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {ageFeedback && (
+                    <div className={`account-feedback ${ageFeedback.type === 'info' ? 'success' : ageFeedback.type}`}>
+                      {ageFeedback.type === 'error' ? <AlertCircle size={16} /> : <CheckCircle2 size={16} />}
+                      <span>{ageFeedback.message}</span>
+                    </div>
+                  )}
+
+                  <div className="account-password-actions" style={{ justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+                    <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                      Completou 18 anos ou atualizou sua conta Microsoft? Revalide os sinais.
+                    </span>
+                    <button
+                      type="button"
+                      className="account-revalidate-btn"
+                      onClick={handleRevalidateAge}
+                      disabled={isRevalidatingAge}
+                    >
+                      <RefreshCw size={14} className={isRevalidatingAge ? 'spin-animation' : ''} />
+                      <span>{isRevalidatingAge ? 'Revalidando...' : 'Revalidar idade'}</span>
+                    </button>
                   </div>
                 </div>
 

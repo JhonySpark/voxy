@@ -25,7 +25,30 @@ export default function Login() {
     setError('');
     try {
       const res = await api.post(ApiRoutes.AUTH_LOGIN, { email, password });
+
+      if (res.data?.requireEmailVerification) {
+        navigate(`${AppRoutes.REGISTER}?verify=${encodeURIComponent(email)}`);
+        return;
+      }
+
       localStorage.setItem(StorageKeys.AUTH_TOKEN, res.data.access_token);
+
+      const ipcRenderer = typeof window !== 'undefined' && window.require ? window.require('electron').ipcRenderer : null;
+      if (ipcRenderer) {
+        try {
+          const ageSignal = await ipcRenderer.invoke('GET_OS_AGE_SIGNAL');
+          const syncRes = await api.post(ApiRoutes.AUTH_SYNC_AGE_SIGNAL, ageSignal, {
+            headers: { Authorization: `Bearer ${res.data.access_token}` },
+          });
+
+          if (syncRes.data?.user?.ageClassification === 'CHILD') {
+            localStorage.removeItem(StorageKeys.AUTH_TOKEN);
+            setError('Acesso bloqueado: Esta conta foi classificada pelo sistema operacional como menor de 13 anos (CHILD).');
+            return;
+          }
+        } catch (_) {}
+      }
+
       navigate(AppRoutes.APP);
     } catch (err: any) {
       setError(getApiErrorMessage(err, t('auth.login.failed')));
