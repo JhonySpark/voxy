@@ -182,7 +182,7 @@ export function useChat({
   }, []);
 
   const sendMessage = useCallback(
-    (e?: React.FormEvent) => {
+    (e?: React.FormEvent, options?: { replyToId?: string; replyTo?: ChatMessage | null }) => {
       if (e) e.preventDefault();
       const content = newMessage.trim();
       if (!content) return;
@@ -191,6 +191,8 @@ export function useChat({
         id: `temp-${Date.now()}`,
         content,
         senderId: myId,
+        replyToId: options?.replyToId || null,
+        replyTo: options?.replyTo || null,
         createdAt: new Date().toISOString(),
         sender: {
           id: myId,
@@ -213,6 +215,7 @@ export function useChat({
         realtimeClient.emit(RealtimeEvents.SEND_MESSAGE, {
           receiverId: activeFriendIdRef.current,
           content,
+          replyToId: options?.replyToId,
         });
       } else if (activeViewRef.current === DashboardView.SERVER && activeChannelIdRef.current) {
         tempMsg.channelId = activeChannelIdRef.current;
@@ -226,6 +229,7 @@ export function useChat({
         realtimeClient.emit(RealtimeEvents.SEND_CHANNEL_MESSAGE, {
           channelId: activeChannelIdRef.current,
           content,
+          replyToId: options?.replyToId,
         });
       }
 
@@ -235,18 +239,20 @@ export function useChat({
   );
 
   const sendAttachmentMessage = useCallback(
-    (attachmentId: string, customContent = '') => {
+    (attachmentId: string, customContent = '', replyToId?: string) => {
       if (activeViewRef.current === DashboardView.DM && activeFriendIdRef.current) {
         realtimeClient.emit(RealtimeEvents.SEND_MESSAGE, {
           receiverId: activeFriendIdRef.current,
           content: customContent,
           attachmentId,
+          replyToId,
         });
       } else if (activeViewRef.current === DashboardView.SERVER && activeChannelIdRef.current) {
         realtimeClient.emit(RealtimeEvents.SEND_CHANNEL_MESSAGE, {
           channelId: activeChannelIdRef.current,
           content: customContent,
           attachmentId,
+          replyToId,
         });
       }
     },

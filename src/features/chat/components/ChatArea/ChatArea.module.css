@@ -214,6 +214,62 @@
   border-top-left-radius: 3px;
 }
 
+/* Quoted / Reply Preview inside Bubble */
+.quotedMessage {
+  display: flex;
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+  cursor: pointer;
+  border-left: 3px solid var(--brand-primary, #34d399);
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.quotedMessage:hover {
+  background: rgba(0, 0, 0, 0.45);
+  transform: translateY(-1px);
+}
+
+.quotedContent {
+  padding: 0.35rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.quotedAuthor {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--brand-primary, #34d399);
+}
+
+.quotedSnippet {
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+}
+
+.highlightMessage {
+  animation: messageFlash 2s ease-out;
+}
+
+@keyframes messageFlash {
+  0% {
+    background-color: rgba(52, 211, 153, 0.25);
+    border-radius: 8px;
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
 .audioBubble {
   padding: 0.45rem 0.75rem 0.5rem 0.65rem;
   border-radius: 18px;
@@ -508,33 +564,208 @@
   margin: 0;
 }
 
-.emptyMessagesContainer p {
-  color: #94a3b8;
-  font-size: 0.875rem;
-  margin: 0;
+.messageActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 2px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  align-self: center;
 }
 
-.deleteMessageBtn {
+.messageRow:hover .messageActions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.messageActionBtn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.messageActionBtn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.deleteActionBtn:hover {
+  color: #f87171 !important;
+  background: rgba(239, 68, 68, 0.15) !important;
+}
+
+/* Docked Reply Banner (Above Input) */
+.replyBanner {
+  display: flex;
+  align-items: center;
+  background: rgba(16, 22, 35, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: none;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  padding: 0.5rem 0.85rem;
+  gap: 0.75rem;
+  position: relative;
+  backdrop-filter: blur(16px);
+}
+
+.replyBannerBar {
+  width: 3px;
+  align-self: stretch;
+  background: var(--brand-primary, #34d399);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.replyBannerContent {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.replyBannerHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.replyBannerHeader strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.replyBannerIcon {
+  color: var(--brand-primary, #34d399);
+  flex-shrink: 0;
+}
+
+.replyBannerSnippet {
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.replyBannerCloseBtn {
   background: transparent;
   border: none;
   color: #64748b;
   cursor: pointer;
   padding: 4px;
-  border-radius: 4px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
   transition: all 0.15s ease;
-  align-self: center;
+  flex-shrink: 0;
 }
 
-.messageRow:hover .deleteMessageBtn {
-  opacity: 1;
+.replyBannerCloseBtn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.deleteMessageBtn:hover {
+/* Staged Attachment Banner (Above Input) */
+.stagedAttachmentBanner {
+  display: flex;
+  align-items: center;
+  background: rgba(16, 22, 35, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: none;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  padding: 0.55rem 0.85rem;
+  gap: 0.75rem;
+  backdrop-filter: blur(16px);
+}
+
+.stagedImagePreview {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+.stagedFileIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--brand-primary, #34d399);
+  flex-shrink: 0;
+}
+
+.stagedFileInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.stagedFileName {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stagedFileSize {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.cancelStagedBtn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.cancelStagedBtn:hover {
   color: #f87171;
   background: rgba(239, 68, 68, 0.15);
+}
+
+/* When reply or attachment banner is attached above the input form */
+.inputFormWithBanner {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
 

@@ -1,6 +1,9 @@
 import React, { useRef, useEffect, useState } from 'react';
 import styles from './ChatArea.module.css';
-import { Hash, Send, Mic, Paperclip, Smile, Trash2, Loader2, Users, User, UserMinus, Ban, MoreVertical } from 'lucide-react';
+import { 
+  Hash, Send, Mic, Paperclip, Smile, Trash2, Loader2, Users, User, UserMinus, 
+  Ban, MoreVertical, Reply, X, FileText 
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { FriendUser } from '../../../friends/components/FriendsSidebar/FriendsSidebar';
 import type { ChannelItem } from '../../../servers/components/ServerSidebar/ServerSidebar';
@@ -33,6 +36,20 @@ export interface ChatMessage {
   senderId: string;
   receiverId?: string;
   channelId?: string;
+  replyToId?: string | null;
+  replyTo?: {
+    id: string;
+    content: string;
+    senderId: string;
+    sender?: {
+      id: string;
+      username: string;
+      email?: string;
+      avatarUrl?: string | null;
+      displayName?: string | null;
+    } | null;
+    attachments?: ChatAttachment[];
+  } | null;
   createdAt: string;
   sender?: {
     id: string;
@@ -51,8 +68,8 @@ interface ChatAreaProps {
   messages: ChatMessage[];
   newMessage: string;
   onNewMessageChange: (val: string) => void;
-  onSendMessage: (e: React.FormEvent) => void;
-  onSendAttachment?: (attachmentId: string, customContent?: string) => void;
+  onSendMessage: (e?: React.FormEvent, options?: { replyToId?: string; replyTo?: ChatMessage | null }) => void;
+  onSendAttachment?: (attachmentId: string, customContent?: string, replyToId?: string) => void;
   isLoading?: boolean;
   onOpenUserProfile?: (userId: string) => void;
   onToggleMembersList?: () => void;
@@ -89,6 +106,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const messagesListRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textInputRef = useRef<HTMLInputElement>(null);
 
   // Estados de Upload e Gravação
   const [isUploading, setIsUploading] = useState(false);
@@ -104,6 +122,16 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const audioRecorderRef = useRef<AudioRecorderService | null>(null);
   const recordingTimerRef = useRef<any>(null);
 
+  // Estados de Resposta e Anexo Estagiado
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
+  const [stagedAttachment, setStagedAttachment] = useState<{
+    file: File;
+    previewUrl: string;
+    name: string;
+    size: number;
+    isImage: boolean;
+  } | null>(null);
+
   const handleSelectEmoji = (emoji: string) => {
     onNewMessageChange(newMessage + emoji);
   };
@@ -118,6 +146,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     if (isRecording) {
       handleCancelRecording();
     }
+    if (stagedAttachment?.previewUrl) {
+      URL.revokeObjectURL(stagedAttachment.previewUrl);
+    }
+    setStagedAttachment(null);
+    setReplyingTo(null);
     scrollToBottom('auto');
   }, [target.id]);
 
@@ -169,8 +202,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     }).format(date);
   };
 
-  // Upload e Compressão de Arquivos (Imagens, Vídeos, Documentos)
-  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload e Seleção de Arquivos (Imagens, Vídeos, Documentos)
+  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -185,40 +218,144 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       return;
     }
 
-    try {
-      setIsUploading(true);
-      setUploadProgress(0);
-      setUploadStatusText('Comprimindo arquivo...');
-
-      const channelId = type === 'CHANNEL' ? target.id : undefined;
-      const receiverId = type === 'DM' ? target.id : undefined;
-
-      const result = await StorageUploadService.uploadMedia({
-        file,
-        channelId,
-        receiverId,
-        onCompressProgress: (progress) => {
-          setUploadProgress(Math.round(progress / 2));
-          setUploadStatusText(`Comprimindo (${progress}%)...`);
-        },
-        onUploadProgress: (progress) => {
-          setUploadProgress(50 + Math.round(progress / 2));
-          setUploadStatusText(`Enviando para o R2 (${progress}%)...`);
-        },
-      });
-
-      if (result.attachmentId && onSendAttachment) {
-        onSendAttachment(result.attachmentId, '');
-      }
-    } catch (err: any) {
-      console.error('Falha no upload do anexo:', err);
-      toast.error(err.message || 'Erro ao enviar anexo.');
-    } finally {
-      setIsUploading(false);
-      setUploadProgress(0);
-      setUploadStatusText('');
-      if (fileInputRef.current) fileInputRef.current.value = '';
+    if (stagedAttachment?.previewUrl) {
+      URL.revokeObjectURL(stagedAttachment.previewUrl);
     }
+
+    const isImage = file.type.startsWith('image/');
+    const previewUrl = isImage ? URL.createObjectURL(file) : '';
+
+    setStagedAttachment({
+      file,
+      previewUrl,
+      name: file.name,
+      size: file.size,
+      isImage,
+    });
+
+    setTimeout(() => textInputRef.current?.focus(), 50);
+  };
+
+  // Captura de Imagem da Área de Transferência (CTRL+V)
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.indexOf('image') !== -1) {
+        const file = item.getAsFile();
+        if (!file) continue;
+
+        e.preventDefault();
+
+        const maxFileSizeMb = Number(import.meta.env?.VITE_MAX_FILE_SIZE_MB) || 25;
+        const maxFileSizeBytes = maxFileSizeMb * 1024 * 1024;
+        if (file.size > maxFileSizeBytes) {
+          toast.warning(
+            `A imagem colada tem ${(file.size / (1024 * 1024)).toFixed(1)} MB e ultrapassa o limite máximo permitido de ${maxFileSizeMb} MB.`
+          );
+          return;
+        }
+
+        if (stagedAttachment?.previewUrl) {
+          URL.revokeObjectURL(stagedAttachment.previewUrl);
+        }
+
+        const previewUrl = URL.createObjectURL(file);
+        const fileName = file.name && file.name !== 'image.png' ? file.name : `imagem-${Date.now()}.png`;
+
+        setStagedAttachment({
+          file,
+          previewUrl,
+          name: fileName,
+          size: file.size,
+          isImage: true,
+        });
+
+        setTimeout(() => textInputRef.current?.focus(), 50);
+        break;
+      }
+    }
+  };
+
+  const handleCancelStagedAttachment = () => {
+    if (stagedAttachment?.previewUrl) {
+      URL.revokeObjectURL(stagedAttachment.previewUrl);
+    }
+    setStagedAttachment(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleReplyTo = (msg: ChatMessage) => {
+    setReplyingTo(msg);
+    setTimeout(() => textInputRef.current?.focus(), 50);
+  };
+
+  const scrollToMessage = (messageId: string) => {
+    const el = document.getElementById(`message-${messageId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add(styles.highlightMessage);
+      setTimeout(() => {
+        el.classList.remove(styles.highlightMessage);
+      }, 2000);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isUploading) return;
+
+    if (stagedAttachment) {
+      try {
+        setIsUploading(true);
+        setUploadProgress(0);
+        setUploadStatusText('Enviando anexo...');
+
+        const channelId = type === 'CHANNEL' ? target.id : undefined;
+        const receiverId = type === 'DM' ? target.id : undefined;
+
+        const result = await StorageUploadService.uploadMedia({
+          file: stagedAttachment.file,
+          channelId,
+          receiverId,
+          onCompressProgress: (progress) => {
+            setUploadProgress(Math.round(progress / 2));
+            setUploadStatusText(`Comprimindo (${progress}%)...`);
+          },
+          onUploadProgress: (progress) => {
+            setUploadProgress(50 + Math.round(progress / 2));
+            setUploadStatusText(`Enviando para o R2 (${progress}%)...`);
+          },
+        });
+
+        if (result.attachmentId && onSendAttachment) {
+          onSendAttachment(result.attachmentId, newMessage.trim(), replyingTo?.id);
+        }
+
+        if (stagedAttachment.previewUrl) {
+          URL.revokeObjectURL(stagedAttachment.previewUrl);
+        }
+        setStagedAttachment(null);
+        onNewMessageChange('');
+        setReplyingTo(null);
+      } catch (err: any) {
+        console.error('Falha no upload do anexo:', err);
+        toast.error(err.message || 'Erro ao enviar anexo.');
+      } finally {
+        setIsUploading(false);
+        setUploadProgress(0);
+        setUploadStatusText('');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    if (!newMessage.trim()) return;
+
+    onSendMessage(e, { replyToId: replyingTo?.id, replyTo: replyingTo });
+    setReplyingTo(null);
   };
 
   // Gravação de Áudio de Voz (Opus Mono 32 kbps WhatsApp style)
@@ -276,8 +413,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       });
 
       if (result.attachmentId && onSendAttachment) {
-        onSendAttachment(result.attachmentId, '');
+        onSendAttachment(result.attachmentId, '', replyingTo?.id);
       }
+      setReplyingTo(null);
     } catch (err: any) {
       console.error('Falha ao enviar áudio:', err);
       toast.error(err.message || 'Erro ao enviar áudio de voz.');
@@ -519,6 +657,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   </div>
                 )}
                 <div
+                  id={`message-${msg.id}`}
                   className={`${styles.messageRow} ${
                     isMe ? styles.myMessage : styles.otherMessage
                   }`}
@@ -575,6 +714,26 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                             isMe ? styles.myBubble : styles.otherBubble
                           } ${isOnlyAudio ? styles.audioBubble : ''}`}
                         >
+                          {/* Bloco de Mensagem Respondida (WhatsApp style) */}
+                          {msg.replyTo && (
+                            <div
+                              className={styles.quotedMessage}
+                              onClick={() => scrollToMessage(msg.replyTo!.id)}
+                              title="Clique para ir até a mensagem original"
+                            >
+                              <div className={styles.quotedContent}>
+                                <span className={styles.quotedAuthor}>
+                                  {msg.replyTo.senderId === myId
+                                    ? t('chat.you', 'Você')
+                                    : (msg.replyTo.sender?.displayName || msg.replyTo.sender?.username || t('voice.remoteUser', 'Usuário'))}
+                                </span>
+                                <p className={styles.quotedSnippet}>
+                                  {msg.replyTo.content || (msg.replyTo.attachments && msg.replyTo.attachments.length > 0 ? '📷 Anexo' : 'Mensagem')}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
                           {msg.content && <div>{msg.content}</div>}
 
                           {/* Renderização de Anexos com Thumbnails Leves */}
@@ -589,16 +748,28 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                       );
                     })()}
                   </div>
-                  {onDeleteMessage && type === 'CHANNEL' && (isMe || canDeleteAnyMessage) && (
+
+                  {/* Ações da Mensagem: Responder e Excluir */}
+                  <div className={styles.messageActions}>
                     <button
                       type="button"
-                      className={styles.deleteMessageBtn}
-                      onClick={() => onDeleteMessage(msg.id)}
-                      title={t('chat.deleteMessage', 'Excluir mensagem')}
+                      className={styles.messageActionBtn}
+                      onClick={() => handleReplyTo(msg)}
+                      title="Responder"
                     >
-                      <Trash2 size={14} />
+                      <Reply size={14} />
                     </button>
-                  )}
+                    {onDeleteMessage && type === 'CHANNEL' && (isMe || canDeleteAnyMessage) && (
+                      <button
+                        type="button"
+                        className={`${styles.messageActionBtn} ${styles.deleteActionBtn}`}
+                        onClick={() => onDeleteMessage(msg.id)}
+                        title={t('chat.deleteMessage', 'Excluir mensagem')}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </React.Fragment>
             );
@@ -608,7 +779,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       </div>
 
       {/* Input Form & Action Bar */}
-      <div className={styles.inputArea}>
+      <div className={styles.inputArea} onPaste={handlePaste}>
         {/* Emoji Picker Popover */}
         {showEmojiPicker && (
           <EmojiPicker
@@ -629,6 +800,68 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               />
             </div>
             <span>{uploadProgress}%</span>
+          </div>
+        )}
+
+        {/* Docked Reply Banner (WhatsApp Style) */}
+        {replyingTo && (
+          <div className={styles.replyBanner}>
+            <div className={styles.replyBannerBar} />
+            <div className={styles.replyBannerContent}>
+              <div className={styles.replyBannerHeader}>
+                <Reply size={13} className={styles.replyBannerIcon} />
+                <span>
+                  Respondendo a{' '}
+                  <strong>
+                    {replyingTo.senderId === myId
+                      ? t('chat.you', 'Você')
+                      : (replyingTo.sender?.displayName || replyingTo.sender?.username || t('voice.remoteUser', 'Usuário'))}
+                  </strong>
+                </span>
+              </div>
+              <p className={styles.replyBannerSnippet}>
+                {replyingTo.content || (replyingTo.attachments && replyingTo.attachments.length > 0 ? '📷 Anexo' : 'Mensagem')}
+              </p>
+            </div>
+            <button
+              type="button"
+              className={styles.replyBannerCloseBtn}
+              onClick={() => setReplyingTo(null)}
+              title="Cancelar resposta"
+            >
+              <X size={15} />
+            </button>
+          </div>
+        )}
+
+        {/* Staged Attachment Banner (Image / File staged with optional caption) */}
+        {stagedAttachment && (
+          <div className={styles.stagedAttachmentBanner}>
+            {stagedAttachment.isImage ? (
+              <img
+                src={stagedAttachment.previewUrl}
+                alt={stagedAttachment.name}
+                className={styles.stagedImagePreview}
+              />
+            ) : (
+              <div className={styles.stagedFileIcon}>
+                <FileText size={22} />
+              </div>
+            )}
+            <div className={styles.stagedFileInfo}>
+              <span className={styles.stagedFileName}>{stagedAttachment.name}</span>
+              <span className={styles.stagedFileSize}>
+                {(stagedAttachment.size / (1024 * 1024)).toFixed(2)} MB
+              </span>
+            </div>
+            <button
+              type="button"
+              className={styles.cancelStagedBtn}
+              onClick={handleCancelStagedAttachment}
+              title="Remover anexo"
+            >
+              <X size={16} />
+            </button>
           </div>
         )}
 
@@ -680,7 +913,12 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             </button>
           </div>
         ) : (
-          <form onSubmit={onSendMessage} className={styles.inputForm}>
+          <form
+            onSubmit={handleSubmit}
+            className={`${styles.inputForm} ${
+              replyingTo || stagedAttachment ? styles.inputFormWithBanner : ''
+            }`}
+          >
             <button
               type="button"
               className={styles.actionButton}
@@ -692,17 +930,31 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
             <div className={styles.textInputWrapper}>
               <input
+                ref={textInputRef}
                 type="text"
                 className={styles.textInputField}
-                placeholder={placeholder}
+                placeholder={
+                  stagedAttachment
+                    ? 'Adicionar legenda ao anexo (opcional)...'
+                    : placeholder
+                }
                 value={newMessage}
                 onChange={(e) => onNewMessageChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    if (replyingTo) {
+                      setReplyingTo(null);
+                    } else if (stagedAttachment) {
+                      handleCancelStagedAttachment();
+                    }
+                  }
+                }}
               />
             </div>
 
             <button
               type="button"
-              className={styles.actionButton}
+              className={`${styles.actionButton} ${stagedAttachment ? styles.activeActionButton : ''}`}
               title="Anexar arquivo"
               onClick={() => fileInputRef.current?.click()}
             >
@@ -721,7 +973,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             <button
               type="submit"
               className={styles.sendButton}
-              disabled={!newMessage.trim() || isUploading}
+              disabled={(!newMessage.trim() && !stagedAttachment) || isUploading}
+              title="Enviar"
             >
               <Send size={16} />
             </button>
