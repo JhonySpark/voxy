@@ -657,14 +657,17 @@
   z-index: 15;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background: #141b26;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  justify-content: center;
+  gap: 5px;
+  background-color: var(--bg-primary, #0c0f17);
+  border: none !important;
+  outline: none !important;
   border-radius: 9999px;
-  padding: 2px 7px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  padding: 3px 8px;
+  min-height: 22px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
   cursor: pointer;
-  transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  transition: transform 0.15s ease, background-color 0.15s ease;
   user-select: none;
 }
 
@@ -677,32 +680,38 @@
 }
 
 .reactionsBadge:hover {
-  transform: scale(1.06);
-  background: #1e2736;
-  border-color: rgba(255, 255, 255, 0.28);
+  transform: scale(1.08);
+  background-color: #161c28;
+  border: none !important;
+  outline: none !important;
 }
 
 .reactionsBadgeActive {
-  border-color: rgba(52, 211, 153, 0.45);
-  background: rgba(18, 32, 38, 0.98);
+  background-color: var(--bg-primary, #0c0f17);
+  border: none !important;
+  outline: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
 }
 
 .reactionsBadgeEmojis {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
 }
 
 .badgeEmoji {
-  font-size: 0.95rem;
+  font-size: 0.825rem;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .badgeCount {
   font-size: 0.72rem;
   font-weight: 700;
   color: #94a3b8;
-  margin-left: 1px;
+  line-height: 1;
 }
 
 .reactionsBadgeActive .badgeCount {
