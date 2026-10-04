@@ -28,6 +28,40 @@
   gap: 0.75rem;
 }
 
+.dmHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.headerActionBtn {
+  background: none;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.headerActionBtn:hover,
+.headerActionBtnActive {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.headerBlockBtn:hover {
+  color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+
 .avatarWrapper {
   position: relative;
 }

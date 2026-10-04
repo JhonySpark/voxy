@@ -1,6 +1,19 @@
 import React, { useState } from 'react';
 import styles from './FriendsSidebar.module.css';
-import { Plus, UserPlus, Search, Check, X, ChevronDown } from 'lucide-react';
+import {
+  Plus,
+  UserPlus,
+  Search,
+  Check,
+  X,
+  ChevronDown,
+  UserMinus,
+  Ban,
+  ShieldCheck,
+  MoreVertical,
+  User,
+  MessageSquare,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getMediaUrl } from '../../../../core/utils/media.util';
 import { UserStatusEnum } from '../../../../core/enums';
@@ -22,6 +35,7 @@ export interface FriendUser {
 interface FriendsSidebarProps {
   friends: FriendUser[];
   pendingRequests: FriendUser[];
+  blockedUsers?: FriendUser[];
   activeFriend: FriendUser | null;
   unreadDMs: Record<string, number>;
   userStatuses?: Record<string, { status: UserStatusEnum | string; customStatus?: string }>;
@@ -29,12 +43,16 @@ interface FriendsSidebarProps {
   onOpenAddFriendModal: () => void;
   onAcceptRequest: (e: React.MouseEvent, friendId: string) => void;
   onRejectRequest: (e: React.MouseEvent, friendId: string) => void;
+  onRemoveFriend?: (friendId: string) => void;
+  onBlockUser?: (userId: string) => void;
+  onUnblockUser?: (userId: string) => void;
   onViewUserProfile?: (userId: string) => void;
 }
 
 export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
   friends,
   pendingRequests,
+  blockedUsers = [],
   activeFriend,
   unreadDMs,
   userStatuses,
@@ -42,11 +60,17 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
   onOpenAddFriendModal,
   onAcceptRequest,
   onRejectRequest,
+  onRemoveFriend,
+  onBlockUser,
+  onUnblockUser,
   onViewUserProfile,
 }) => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
+  const [showBlocked, setShowBlocked] = useState(false);
   const [failedAvatars, setFailedAvatars] = useState<Record<string, boolean>>({});
+  const [activeMenuFriendId, setActiveMenuFriendId] = useState<string | null>(null);
+  const [activeMenuBlockedId, setActiveMenuBlockedId] = useState<string | null>(null);
 
   const filteredFriends = friends.filter((f) =>
     (f.displayName || f.username).toLowerCase().includes(searchTerm.toLowerCase())
@@ -181,14 +205,223 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
                       )}
                     </div>
                   </div>
+
                   {unreadDMs[friend.id] > 0 && activeFriend?.id !== friend.id && (
                     <div className={styles.badge}>{unreadDMs[friend.id]}</div>
                   )}
+
+                  {/* Ações Rápidas via Menu de 3 Pontinhos */}
+                  <div className={styles.friendHoverActions} style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      className={`${styles.moreBtn} ${activeMenuFriendId === friend.id ? styles.moreBtnActive : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveMenuFriendId((curr) => (curr === friend.id ? null : friend.id));
+                      }}
+                      title={t('friends.moreOptions', 'Mais opções')}
+                    >
+                      <MoreVertical size={14} />
+                    </button>
+
+                    {activeMenuFriendId === friend.id && (
+                      <>
+                        <div
+                          style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveMenuFriendId(null);
+                          }}
+                        />
+                        <div
+                          className="context-menu-content"
+                          style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: '100%',
+                            marginTop: '4px',
+                            zIndex: 9999,
+                            minWidth: 190,
+                            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {onViewUserProfile && (
+                            <div
+                              className="context-menu-item"
+                              style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}
+                              onClick={() => {
+                                setActiveMenuFriendId(null);
+                                onViewUserProfile(friend.id);
+                              }}
+                            >
+                              <User size={14} />
+                              <span>{t('user.viewProfile', 'Ver Perfil')}</span>
+                            </div>
+                          )}
+
+                          <div
+                            className="context-menu-item"
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}
+                            onClick={() => {
+                              setActiveMenuFriendId(null);
+                              onSelectFriend(friend);
+                            }}
+                          >
+                            <MessageSquare size={14} />
+                            <span>{t('friends.openDm', 'Mensagem Direta')}</span>
+                          </div>
+
+                          {(onRemoveFriend || onBlockUser) && (
+                            <div className="context-menu-separator" />
+                          )}
+
+                          {onRemoveFriend && (
+                            <div
+                              className="context-menu-item"
+                              style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}
+                              onClick={() => {
+                                setActiveMenuFriendId(null);
+                                if (window.confirm(t('friends.removeFriendConfirm', { name: nameToShow }))) {
+                                  onRemoveFriend(friend.id);
+                                }
+                              }}
+                            >
+                              <UserMinus size={14} />
+                              <span>{t('friends.removeFriend', 'Desfazer Amizade')}</span>
+                            </div>
+                          )}
+
+                          {onBlockUser && (
+                            <div
+                              className="context-menu-item context-menu-item-danger"
+                              style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}
+                              onClick={() => {
+                                setActiveMenuFriendId(null);
+                                if (window.confirm(t('friends.blockUserConfirm', { name: nameToShow }))) {
+                                  onBlockUser(friend.id);
+                                }
+                              }}
+                            >
+                              <Ban size={14} />
+                              <span>{t('friends.blockUser', 'Bloquear Usuário')}</span>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               );
             })}
           </div>
         </div>
+
+        {/* Seção de Usuários Bloqueados */}
+        {blockedUsers && blockedUsers.length > 0 && (
+          <div>
+            <div
+              className={styles.sectionTitleWrapper}
+              onClick={() => setShowBlocked((prev) => !prev)}
+              style={{ cursor: 'pointer' }}
+            >
+              <span>{t('friends.blockedUsers', 'BLOQUEADOS').toUpperCase()} ({blockedUsers.length})</span>
+              <ChevronDown
+                size={14}
+                style={{
+                  transform: showBlocked ? 'rotate(0deg)' : 'rotate(-90deg)',
+                  transition: 'transform 0.2s ease',
+                }}
+              />
+            </div>
+            {showBlocked && (
+              <div>
+                {blockedUsers.map((b) => (
+                  <div key={b.id} className={styles.friendItem}>
+                    <div className={styles.userInfo}>
+                      <div className={styles.avatar}>
+                        {b.username.charAt(0).toUpperCase()}
+                      </div>
+                      <div className={styles.friendDetails}>
+                        <span className={styles.userName}>{b.displayName || b.username}</span>
+                        <span className={styles.activityText} style={{ color: '#ef4444' }}>
+                          {t('friends.tabBlocked', 'Bloqueado')}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Ações de Usuário Bloqueado */}
+                    <div className={styles.friendHoverActions} style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className={`${styles.moreBtn} ${activeMenuBlockedId === b.id ? styles.moreBtnActive : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMenuBlockedId((curr) => (curr === b.id ? null : b.id));
+                        }}
+                        title={t('friends.moreOptions', 'Mais opções')}
+                      >
+                        <MoreVertical size={14} />
+                      </button>
+
+                      {activeMenuBlockedId === b.id && (
+                        <>
+                          <div
+                            style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuBlockedId(null);
+                            }}
+                          />
+                          <div
+                            className="context-menu-content"
+                            style={{
+                              position: 'absolute',
+                              right: 0,
+                              top: '100%',
+                              marginTop: '4px',
+                              zIndex: 9999,
+                              minWidth: 180,
+                              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {onViewUserProfile && (
+                              <div
+                                className="context-menu-item"
+                                style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}
+                                onClick={() => {
+                                  setActiveMenuBlockedId(null);
+                                  onViewUserProfile(b.id);
+                                }}
+                              >
+                                <User size={14} />
+                                <span>{t('user.viewProfile', 'Ver Perfil')}</span>
+                              </div>
+                            )}
+
+                            {onUnblockUser && (
+                              <div
+                                className="context-menu-item"
+                                style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#10b981' }}
+                                onClick={() => {
+                                  setActiveMenuBlockedId(null);
+                                  onUnblockUser(b.id);
+                                }}
+                              >
+                                <ShieldCheck size={14} />
+                                <span>{t('friends.unblockUser', 'Desbloquear')}</span>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

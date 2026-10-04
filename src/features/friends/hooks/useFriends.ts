@@ -11,17 +11,20 @@ export function useFriends() {
   const { toast } = useToast();
   const [friends, setFriends] = useState<FriendUser[]>([]);
   const [pendingRequests, setPendingRequests] = useState<FriendUser[]>([]);
+  const [blockedUsers, setBlockedUsers] = useState<FriendUser[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchFriends = useCallback(async () => {
     try {
       setLoading(true);
-      const [friendsRes, requestsRes] = await Promise.all([
+      const [friendsRes, requestsRes, blockedRes] = await Promise.all([
         httpClient.get<FriendUser[]>(ApiRoutes.FRIENDS),
         httpClient.get<FriendUser[]>(ApiRoutes.FRIEND_REQUESTS),
+        httpClient.get<FriendUser[]>(ApiRoutes.FRIEND_BLOCKED).catch(() => []),
       ]);
       setFriends(friendsRes);
       setPendingRequests(requestsRes);
+      setBlockedUsers(blockedRes || []);
     } catch (err) {
       console.error('Error fetching friends', err);
     } finally {
@@ -54,6 +57,54 @@ export function useFriends() {
         realtimeClient.emit(RealtimeEvents.FRIEND_ACTION, { targetId: res.targetId });
       } catch (err) {
         toast.error(t('friends.userNotFound'));
+      }
+    },
+    [fetchFriends, t, toast]
+  );
+
+  const handleRemoveFriend = useCallback(
+    async (friendId: string) => {
+      try {
+        const res = await httpClient.post<{ targetId: string }>(`${ApiRoutes.FRIEND_REMOVE}/${friendId}`);
+        toast.success(t('friends.removedSuccess'));
+        await fetchFriends();
+        realtimeClient.emit(RealtimeEvents.FRIEND_ACTION, { targetId: res.targetId });
+        return true;
+      } catch (err: any) {
+        toast.error(err?.response?.data?.message || err?.message || 'Erro ao remover amizade');
+        return false;
+      }
+    },
+    [fetchFriends, t, toast]
+  );
+
+  const handleBlockUser = useCallback(
+    async (targetId: string) => {
+      try {
+        const res = await httpClient.post<{ targetId: string }>(`${ApiRoutes.FRIEND_BLOCK}/${targetId}`);
+        toast.success(t('friends.blockedSuccess'));
+        await fetchFriends();
+        realtimeClient.emit(RealtimeEvents.FRIEND_ACTION, { targetId: res.targetId });
+        return true;
+      } catch (err: any) {
+        toast.error(err?.response?.data?.message || err?.message || 'Erro ao bloquear usuário');
+        return false;
+      }
+    },
+    [fetchFriends, t, toast]
+  );
+
+  const handleUnblockUser = useCallback(
+    async (targetId: string) => {
+      try {
+        const res = await httpClient.post<{ targetId: string }>(`${ApiRoutes.FRIEND_UNBLOCK}/${targetId}`);
+        toast.success(t('friends.unblockedSuccess'));
+        await fetchFriends();
+        realtimeClient.emit(RealtimeEvents.FRIEND_ACTION, { targetId: res.targetId });
+        return true;
+      } catch (err: any) {
+        toast.error(err?.response?.data?.message || err?.message || 'Erro ao desbloquear usuário');
+        return false;
       }
     },
     [fetchFriends, t, toast]
@@ -102,9 +153,13 @@ export function useFriends() {
   return {
     friends,
     pendingRequests,
+    blockedUsers,
     loading,
     fetchFriends,
     handleAcceptRequest,
     handleRejectRequest,
+    handleRemoveFriend,
+    handleBlockUser,
+    handleUnblockUser,
   };
 }

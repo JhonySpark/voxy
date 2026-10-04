@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import styles from './ChatArea.module.css';
-import { Hash, Send, Mic, Paperclip, Smile, Trash2, Loader2, Users } from 'lucide-react';
+import { Hash, Send, Mic, Paperclip, Smile, Trash2, Loader2, Users, User, UserMinus, Ban, MoreVertical } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { FriendUser } from '../../../friends/components/FriendsSidebar/FriendsSidebar';
 import type { ChannelItem } from '../../../servers/components/ServerSidebar/ServerSidebar';
@@ -58,6 +58,8 @@ interface ChatAreaProps {
   canDeleteAnyMessage?: boolean;
   onDeleteMessage?: (messageId: string) => void;
   targetStatus?: UserStatusEnum | string;
+  onRemoveFriend?: (userId: string) => void;
+  onBlockUser?: (userId: string) => void;
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({
@@ -76,6 +78,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   canDeleteAnyMessage = false,
   onDeleteMessage,
   targetStatus,
+  onRemoveFriend,
+  onBlockUser,
 }) => {
   const { t, i18n } = useTranslation();
   const messagesListRef = useRef<HTMLDivElement>(null);
@@ -91,6 +95,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [audioVolume, setAudioVolume] = useState(0);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showDmMenu, setShowDmMenu] = useState(false);
   const [failedAvatars, setFailedAvatars] = useState<Record<string, boolean>>({});
   const audioRecorderRef = useRef<AudioRecorderService | null>(null);
   const recordingTimerRef = useRef<any>(null);
@@ -327,6 +332,106 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             {targetName}
           </h1>
         </div>
+
+        {type === 'DM' && (
+          <div className={styles.dmHeaderActions} style={{ position: 'relative' }}>
+            {onOpenUserProfile && (
+              <button
+                type="button"
+                className={styles.headerActionBtn}
+                onClick={() => onOpenUserProfile(target.id)}
+                title={t('user.viewProfile', 'Ver Perfil')}
+              >
+                <User size={18} />
+              </button>
+            )}
+
+            {(onRemoveFriend || onBlockUser) && (
+              <>
+                <button
+                  type="button"
+                  className={`${styles.headerActionBtn} ${showDmMenu ? styles.headerActionBtnActive : ''}`}
+                  onClick={() => setShowDmMenu((prev) => !prev)}
+                  title={t('friends.moreOptions', 'Mais opções')}
+                >
+                  <MoreVertical size={18} />
+                </button>
+
+                {showDmMenu && (
+                  <>
+                    <div
+                      style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
+                      onClick={() => setShowDmMenu(false)}
+                    />
+                    <div
+                      className="context-menu-content"
+                      style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: '100%',
+                        marginTop: '8px',
+                        zIndex: 9999,
+                        minWidth: 190,
+                        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {onOpenUserProfile && (
+                        <div
+                          className="context-menu-item"
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}
+                          onClick={() => {
+                            setShowDmMenu(false);
+                            onOpenUserProfile(target.id);
+                          }}
+                        >
+                          <User size={14} />
+                          <span>{t('user.viewProfile', 'Ver Perfil')}</span>
+                        </div>
+                      )}
+
+                      {onOpenUserProfile && (onRemoveFriend || onBlockUser) && (
+                        <div className="context-menu-separator" />
+                      )}
+
+                      {onRemoveFriend && (
+                        <div
+                          className="context-menu-item"
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}
+                          onClick={() => {
+                            setShowDmMenu(false);
+                            if (window.confirm(t('friends.removeFriendConfirm', { name: targetName }))) {
+                              onRemoveFriend(target.id);
+                            }
+                          }}
+                        >
+                          <UserMinus size={14} />
+                          <span>{t('friends.removeFriend', 'Desfazer Amizade')}</span>
+                        </div>
+                      )}
+
+                      {onBlockUser && (
+                        <div
+                          className="context-menu-item context-menu-item-danger"
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}
+                          onClick={() => {
+                            setShowDmMenu(false);
+                            if (window.confirm(t('friends.blockUserConfirm', { name: targetName }))) {
+                              onBlockUser(target.id);
+                            }
+                          }}
+                        >
+                          <Ban size={14} />
+                          <span>{t('friends.blockUser', 'Bloquear Usuário')}</span>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        )}
 
         {type === 'CHANNEL' && onToggleMembersList && (
           <button

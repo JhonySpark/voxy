@@ -245,3 +245,60 @@
 .rejectBtn:hover {
   background-color: rgba(239, 68, 68, 0.2);
 }
+
+.friendHoverActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.moreBtn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.friendItem:hover .moreBtn,
+.moreBtnActive {
+  opacity: 1;
+}
+
+.moreBtn:hover,
+.moreBtnActive {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.miniActionBtn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.miniActionBtn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.miniBlockBtn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+

@@ -62,10 +62,32 @@ export default function Dashboard() {
   const {
     friends,
     pendingRequests,
+    blockedUsers,
     fetchFriends,
     handleAcceptRequest,
     handleRejectRequest,
+    handleRemoveFriend,
+    handleBlockUser,
+    handleUnblockUser,
   } = useFriends();
+
+  const onRemoveFriendAction = async (friendId: string) => {
+    const success = await handleRemoveFriend(friendId);
+    if (success && activeFriend?.id === friendId) {
+      setActiveFriend(null);
+    }
+  };
+
+  const onBlockUserAction = async (targetId: string) => {
+    const success = await handleBlockUser(targetId);
+    if (success && activeFriend?.id === targetId) {
+      setActiveFriend(null);
+    }
+  };
+
+  const onUnblockUserAction = async (targetId: string) => {
+    await handleUnblockUser(targetId);
+  };
 
   const {
     servers,
@@ -474,6 +496,7 @@ export default function Dashboard() {
           <FriendsSidebar
             friends={friends}
             pendingRequests={pendingRequests}
+            blockedUsers={blockedUsers}
             activeFriend={activeFriend}
             unreadDMs={unreadDMs}
             userStatuses={userStatuses}
@@ -481,6 +504,9 @@ export default function Dashboard() {
             onOpenAddFriendModal={() => setShowFriendModal(true)}
             onAcceptRequest={handleAcceptRequest}
             onRejectRequest={handleRejectRequest}
+            onRemoveFriend={onRemoveFriendAction}
+            onBlockUser={onBlockUserAction}
+            onUnblockUser={onUnblockUserAction}
             onViewUserProfile={setViewingUserId}
           />
         ) : activeServer ? (
@@ -602,6 +628,8 @@ export default function Dashboard() {
             isLoading={isLoadingMessages}
             onOpenUserProfile={setViewingUserId}
             targetStatus={activeFriend ? userStatuses[activeFriend.id]?.status : undefined}
+            onRemoveFriend={onRemoveFriendAction}
+            onBlockUser={onBlockUserAction}
           />
         ) : activeView === DashboardView.SERVER && activeChannel ? (
           activeChannel.type === ChannelTypeEnum.VOICE ? (
@@ -808,6 +836,9 @@ export default function Dashboard() {
               toast.error(err.response?.data?.message || t('friends.userNotFound'));
             }
           }}
+          onRemoveFriend={onRemoveFriendAction}
+          onBlockUser={onBlockUserAction}
+          onUnblockUser={onUnblockUserAction}
           onOpenEditProfile={() => {
             setViewingUserId(null);
             setShowEditProfileModal(true);
