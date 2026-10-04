@@ -1,50 +1,61 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import api from '../api';
-import { Eye, EyeOff } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { ApiRoutes, AppRoutes, StorageKeys } from '../core/enums';
-import { getApiErrorMessage } from '../core/utils/error.util';
-import heroLogo from '../assets/logo.png';
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import api from "../api";
+import { Eye, EyeOff } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { ApiRoutes, AppRoutes, StorageKeys } from "../core/enums";
+import { getApiErrorMessage } from "../core/utils/error.util";
+import heroLogo from "../assets/logo.png";
 
 export default function Login() {
   const { t } = useTranslation();
-  
+
   const isDev = import.meta.env.DEV;
-  const [email, setEmail] = useState(isDev ? 'jhonyspark@gmail.com' : '');
-  const [password, setPassword] = useState(isDev ? 'Jhony@123' : '');
+  const [email, setEmail] = useState(isDev ? "jhonymanson13@hotmail.com" : "");
+  const [password, setPassword] = useState(isDev ? "Jhony@123" : "");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
+    setError("");
     try {
       const res = await api.post(ApiRoutes.AUTH_LOGIN, { email, password });
 
       if (res.data?.requireEmailVerification) {
         const destEmail = res.data.email || email;
-        navigate(`${AppRoutes.REGISTER}?verify=${encodeURIComponent(destEmail)}&from=login`);
+        navigate(
+          `${AppRoutes.REGISTER}?verify=${encodeURIComponent(destEmail)}&from=login`,
+        );
         return;
       }
 
       localStorage.setItem(StorageKeys.AUTH_TOKEN, res.data.access_token);
 
-      const ipcRenderer = typeof window !== 'undefined' && window.require ? window.require('electron').ipcRenderer : null;
+      const ipcRenderer =
+        typeof window !== "undefined" && window.require
+          ? window.require("electron").ipcRenderer
+          : null;
       if (ipcRenderer) {
         try {
-          const ageSignal = await ipcRenderer.invoke('GET_OS_AGE_SIGNAL');
-          const syncRes = await api.post(ApiRoutes.AUTH_SYNC_AGE_SIGNAL, ageSignal, {
-            headers: { Authorization: `Bearer ${res.data.access_token}` },
-          });
+          const ageSignal = await ipcRenderer.invoke("GET_OS_AGE_SIGNAL");
+          const syncRes = await api.post(
+            ApiRoutes.AUTH_SYNC_AGE_SIGNAL,
+            ageSignal,
+            {
+              headers: { Authorization: `Bearer ${res.data.access_token}` },
+            },
+          );
 
-          if (syncRes.data?.user?.ageClassification === 'CHILD') {
+          if (syncRes.data?.user?.ageClassification === "CHILD") {
             localStorage.removeItem(StorageKeys.AUTH_TOKEN);
-            setError('Acesso bloqueado: Esta conta foi classificada pelo sistema operacional como menor de 13 anos (CHILD).');
+            setError(
+              "Acesso bloqueado: Esta conta foi classificada pelo sistema operacional como menor de 13 anos (CHILD).",
+            );
             return;
           }
         } catch (_) {}
@@ -52,7 +63,7 @@ export default function Login() {
 
       navigate(AppRoutes.APP);
     } catch (err: any) {
-      setError(getApiErrorMessage(err, t('auth.login.failed')));
+      setError(getApiErrorMessage(err, t("auth.login.failed")));
     } finally {
       setIsLoading(false);
     }
@@ -61,43 +72,80 @@ export default function Login() {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '0.25rem' }}>
-          <img src={heroLogo} alt="Voxy Logo" style={{ width: '110px', marginTop: '-1.5rem', marginBottom: '0.25rem', filter: 'drop-shadow(0 0 12px rgba(52, 211, 153, 0.2))' }} />
-          <h1 className="auth-title" style={{ marginTop: '-0.25rem' }}>{t('auth.login.title')}</h1>
-          <p className="auth-subtitle">{t('auth.login.subtitle')}</p>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            marginBottom: "0.25rem",
+          }}
+        >
+          <img
+            src={heroLogo}
+            alt="Voxy Logo"
+            style={{
+              width: "110px",
+              marginTop: "-1.5rem",
+              marginBottom: "0.25rem",
+              filter: "drop-shadow(0 0 12px rgba(52, 211, 153, 0.2))",
+            }}
+          />
+          <h1 className="auth-title" style={{ marginTop: "-0.25rem" }}>
+            {t("auth.login.title")}
+          </h1>
+          <p className="auth-subtitle">{t("auth.login.subtitle")}</p>
         </div>
-        
-        {error && <div style={{ color: 'var(--danger)', fontSize: '0.9rem', textAlign: 'center' }}>{error}</div>}
 
-        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {error && (
+          <div
+            style={{
+              color: "var(--danger)",
+              fontSize: "0.9rem",
+              textAlign: "center",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <form
+          onSubmit={handleLogin}
+          style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+        >
           <div className="input-group">
-            <label className="input-label">{t('auth.login.email')}</label>
-            <input 
-              type="email" 
-              className="text-input" 
-              placeholder={t('auth.login.emailPlaceholder')}
+            <label className="input-label">{t("auth.login.email")}</label>
+            <input
+              type="email"
+              className="text-input"
+              placeholder={t("auth.login.emailPlaceholder")}
               value={email}
-              onChange={e => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
-          
+
           <div className="input-group">
             <div className="input-header">
-              <label className="input-label">{t('auth.login.password')}</label>
-              <a href="#" className="forgot-password" onClick={(e) => e.preventDefault()}>{t('auth.login.forgotPassword')}</a>
+              <label className="input-label">{t("auth.login.password")}</label>
+              <a
+                href="#"
+                className="forgot-password"
+                onClick={(e) => e.preventDefault()}
+              >
+                {t("auth.login.forgotPassword")}
+              </a>
             </div>
             <div className="password-input-wrapper">
-              <input 
-                type={showPassword ? "text" : "password"} 
-                className="text-input" 
+              <input
+                type={showPassword ? "text" : "password"}
+                className="text-input"
                 placeholder="............"
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target.value)}
                 required
               />
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="password-toggle"
                 onClick={() => setShowPassword(!showPassword)}
                 tabIndex={-1}
@@ -108,22 +156,49 @@ export default function Login() {
           </div>
 
           <label className="remember-me">
-            <input 
-              type="checkbox" 
-              className="custom-checkbox" 
+            <input
+              type="checkbox"
+              className="custom-checkbox"
               checked={rememberMe}
-              onChange={e => setRememberMe(e.target.checked)}
+              onChange={(e) => setRememberMe(e.target.checked)}
             />
-            {t('auth.login.rememberMe')}
+            {t("auth.login.rememberMe")}
           </label>
 
-          <button type="submit" className="btn-primary" disabled={isLoading} style={{ marginTop: '0.5rem', padding: '0.85rem' }}>
-            {isLoading ? <span className="btn-spinner" /> : t('auth.login.button')}
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={isLoading}
+            style={{ marginTop: "0.5rem", padding: "0.85rem" }}
+          >
+            {isLoading ? (
+              <span className="btn-spinner" />
+            ) : (
+              t("auth.login.button")
+            )}
           </button>
         </form>
-        
-        <div className="auth-footer" style={{ textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '1.5rem' }}>
-          {t('auth.login.noAccount')} <Link to={AppRoutes.REGISTER} style={{ color: 'var(--brand-primary)', fontWeight: 600, textDecoration: 'none' }}>{t('auth.login.register')}</Link>
+
+        <div
+          className="auth-footer"
+          style={{
+            textAlign: "center",
+            fontSize: "0.9rem",
+            color: "var(--text-secondary)",
+            marginTop: "1.5rem",
+          }}
+        >
+          {t("auth.login.noAccount")}{" "}
+          <Link
+            to={AppRoutes.REGISTER}
+            style={{
+              color: "var(--brand-primary)",
+              fontWeight: 600,
+              textDecoration: "none",
+            }}
+          >
+            {t("auth.login.register")}
+          </Link>
         </div>
       </div>
     </div>
