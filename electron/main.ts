@@ -315,22 +315,6 @@ app.whenReady().then(() => {
       win?.webContents.send('app-update-downloaded', {
         version: info.version
       })
-
-      if (win) {
-        dialog.showMessageBox(win, {
-          type: 'info',
-          title: 'Atualização Disponível',
-          message: `Uma nova versão do Voxy (${info.version}) foi baixada.`,
-          detail: 'Deseja reiniciar a aplicação agora para concluir a atualização?',
-          buttons: ['Reiniciar Agora', 'Depois'],
-          defaultId: 0,
-          cancelId: 1
-        }).then((result) => {
-          if (result.response === 0) {
-            autoUpdater.quitAndInstall()
-          }
-        })
-      }
     })
 
     autoUpdater.on('error', (err) => {

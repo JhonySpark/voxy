@@ -11,6 +11,8 @@ import { AudioRecorderService } from '../../services/audioRecorder.service';
 import { UserStatusEnum } from '../../../../core/enums';
 import { StatusDot } from '../../../../components/common/StatusDot/StatusDot';
 import { getMediaUrl } from '../../../../core/utils/media.util';
+import { useToast } from '../../../../components/common/Toast/ToastContext';
+import { useDialog } from '../../../../components/common/Dialog/DialogContext';
 
 export interface ChatAttachment {
   id: string;
@@ -82,6 +84,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   onBlockUser,
 }) => {
   const { t, i18n } = useTranslation();
+  const { toast } = useToast();
+  const { confirm } = useDialog();
   const messagesListRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -174,7 +178,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     const maxFileSizeMb = Number(import.meta.env?.VITE_MAX_FILE_SIZE_MB) || 25;
     const maxFileSizeBytes = maxFileSizeMb * 1024 * 1024;
     if (file.size > maxFileSizeBytes) {
-      alert(
+      toast.warning(
         `O arquivo "${file.name}" tem ${(file.size / (1024 * 1024)).toFixed(1)} MB e ultrapassa o limite máximo permitido de ${maxFileSizeMb} MB.`,
       );
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -208,7 +212,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       }
     } catch (err: any) {
       console.error('Falha no upload do anexo:', err);
-      alert(err.message || 'Erro ao enviar anexo.');
+      toast.error(err.message || 'Erro ao enviar anexo.');
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -235,7 +239,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       }, 1000);
     } catch (err) {
       console.error('Erro ao acessar microfone para gravação:', err);
-      alert('Não foi possível acessar o microfone.');
+      toast.error('Não foi possível acessar o microfone.');
     }
   };
 
@@ -276,7 +280,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       }
     } catch (err: any) {
       console.error('Falha ao enviar áudio:', err);
-      alert(err.message || 'Erro ao enviar áudio de voz.');
+      toast.error(err.message || 'Erro ao enviar áudio de voz.');
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -398,9 +402,15 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                         <div
                           className="context-menu-item"
                           style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}
-                          onClick={() => {
+                          onClick={async () => {
                             setShowDmMenu(false);
-                            if (window.confirm(t('friends.removeFriendConfirm', { name: targetName }))) {
+                            const ok = await confirm({
+                              title: t('friends.removeFriend', 'Desfazer Amizade'),
+                              message: t('friends.removeFriendConfirm', { name: targetName }),
+                              confirmText: t('friends.removeFriend', 'Desfazer Amizade'),
+                              variant: 'danger',
+                            });
+                            if (ok) {
                               onRemoveFriend(target.id);
                             }
                           }}
@@ -414,9 +424,15 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                         <div
                           className="context-menu-item context-menu-item-danger"
                           style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}
-                          onClick={() => {
+                          onClick={async () => {
                             setShowDmMenu(false);
-                            if (window.confirm(t('friends.blockUserConfirm', { name: targetName }))) {
+                            const ok = await confirm({
+                              title: t('friends.blockUser', 'Bloquear Usuário'),
+                              message: t('friends.blockUserConfirm', { name: targetName }),
+                              confirmText: t('friends.blockUser', 'Bloquear Usuário'),
+                              variant: 'danger',
+                            });
+                            if (ok) {
                               onBlockUser(target.id);
                             }
                           }}

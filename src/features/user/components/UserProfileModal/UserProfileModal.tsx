@@ -8,6 +8,7 @@ import { RealtimeEvents, UserStatusEnum } from '../../../../core/enums';
 import { getMediaUrl } from '../../../../core/utils/media.util';
 import type { UserProfileData } from '../UserPopout/UserPopout';
 import { StatusDot, getStatusLabel } from '../../../../components/common/StatusDot/StatusDot';
+import { useDialog } from '../../../../components/common/Dialog/DialogContext';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -43,6 +44,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   onOpenEditProfile,
 }) => {
   const { t } = useTranslation();
+  const { confirm } = useDialog();
   const [profile, setProfile] = useState<UserProfileData | null>(null);
   const [relationship, setRelationship] = useState<{
     isFriend: boolean;
@@ -306,7 +308,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       type="button"
                       className={styles.dangerActionBtn}
                       onClick={async () => {
-                        if (window.confirm(t('friends.removeFriendConfirm', { name: displayName }))) {
+                        const ok = await confirm({
+                          title: t('friends.removeFriend', 'Desfazer Amizade'),
+                          message: t('friends.removeFriendConfirm', { name: displayName }),
+                          confirmText: t('friends.removeFriend', 'Desfazer Amizade'),
+                          variant: 'danger',
+                        });
+                        if (ok) {
                           await onRemoveFriend(userId);
                           setRelationship((prev) => prev ? { ...prev, isFriend: false } : null);
                         }
@@ -347,7 +355,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     type="button"
                     className={styles.dangerActionBtn}
                     onClick={async () => {
-                      if (window.confirm(t('friends.blockUserConfirm', { name: displayName }))) {
+                      const ok = await confirm({
+                        title: t('friends.blockUser', 'Bloquear Usuário'),
+                        message: t('friends.blockUserConfirm', { name: displayName }),
+                        confirmText: t('friends.blockUser', 'Bloquear Usuário'),
+                        variant: 'danger',
+                      });
+                      if (ok) {
                         await onBlockUser(userId);
                         setRelationship((prev) => prev ? { ...prev, isFriend: false, isBlocked: true, hasBlocked: true } : null);
                       }

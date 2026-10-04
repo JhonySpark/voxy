@@ -36,6 +36,7 @@ import { EditProfileModal } from '../features/user/components/EditProfileModal/E
 import { UserProfileModal } from '../features/user/components/UserProfileModal/UserProfileModal';
 import type { UserProfileData } from '../features/user/components/UserPopout/UserPopout';
 import { useToast } from '../components/common/Toast/ToastContext';
+import { useDialog } from '../components/common/Dialog/DialogContext';
 
 // Custom Hooks refatorados da Fase 3
 import { useFriends } from '../features/friends/hooks/useFriends';
@@ -47,6 +48,7 @@ import styles from './Dashboard.module.css';
 export default function Dashboard() {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const { confirm, prompt } = useDialog();
   const navigate = useNavigate();
 
   // Autenticação e Usuário
@@ -535,7 +537,14 @@ export default function Dashboard() {
             onOpenServerSettings={() => setShowServerSettingsModal(true)}
             onViewUserProfile={setViewingUserId}
             onRenameChannel={async (channel) => {
-              const name = window.prompt('Novo nome do canal:', channel.name)?.trim();
+              const rawName = await prompt({
+                title: t('channel.renameTitle', 'Renomear Canal'),
+                message: t('channel.renamePrompt', 'Digite o novo nome para o canal:'),
+                defaultValue: channel.name,
+                placeholder: 'ex: geral',
+                confirmText: t('common.save', 'Salvar'),
+              });
+              const name = rawName?.trim();
               if (!name || name === channel.name) return;
               try {
                 await httpClient.patch(`${ApiRoutes.CHANNELS}/${channel.id}`, { name });
@@ -547,9 +556,13 @@ export default function Dashboard() {
               }
             }}
             onDeleteChannel={async (channel) => {
-              if (!window.confirm(`Excluir o canal "${channel.name}"? Esta ação também remove as mensagens dele.`)) {
-                return;
-              }
+              const ok = await confirm({
+                title: t('channel.deleteTitle', 'Excluir Canal'),
+                message: `Excluir o canal "${channel.name}"? Esta ação também remove as mensagens dele.`,
+                confirmText: t('common.delete', 'Excluir Canal'),
+                variant: 'danger',
+              });
+              if (!ok) return;
               try {
                 await httpClient.delete(`${ApiRoutes.CHANNELS}/${channel.id}`);
                 if (activeChannel?.id === channel.id) {

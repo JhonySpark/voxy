@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { getMediaUrl } from '../../../../core/utils/media.util';
 import { UserStatusEnum } from '../../../../core/enums';
 import { StatusDot } from '../../../../components/common/StatusDot/StatusDot';
+import { useDialog } from '../../../../components/common/Dialog/DialogContext';
 
 export interface FriendUser {
   id: string;
@@ -66,6 +67,7 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
   onViewUserProfile,
 }) => {
   const { t } = useTranslation();
+  const { confirm } = useDialog();
   const [searchTerm, setSearchTerm] = useState('');
   const [showBlocked, setShowBlocked] = useState(false);
   const [failedAvatars, setFailedAvatars] = useState<Record<string, boolean>>({});
@@ -198,7 +200,7 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
                       <span className={styles.userName}>{nameToShow}</span>
                       {userStatuses?.[friend.id]?.status === UserStatusEnum.PLAYING && (
                         <span className={styles.activityText}>
-                          {userStatuses[friend.id].customStatus
+                          {userStatuses?.[friend.id]?.customStatus
                             ? `Jogando ${userStatuses[friend.id].customStatus}`
                             : 'Jogando'}
                         </span>
@@ -280,9 +282,15 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
                             <div
                               className="context-menu-item"
                               style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}
-                              onClick={() => {
+                              onClick={async () => {
                                 setActiveMenuFriendId(null);
-                                if (window.confirm(t('friends.removeFriendConfirm', { name: nameToShow }))) {
+                                const ok = await confirm({
+                                  title: t('friends.removeFriend', 'Desfazer Amizade'),
+                                  message: t('friends.removeFriendConfirm', { name: nameToShow }),
+                                  confirmText: t('friends.removeFriend', 'Desfazer Amizade'),
+                                  variant: 'danger',
+                                });
+                                if (ok) {
                                   onRemoveFriend(friend.id);
                                 }
                               }}
@@ -296,9 +304,15 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
                             <div
                               className="context-menu-item context-menu-item-danger"
                               style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}
-                              onClick={() => {
+                              onClick={async () => {
                                 setActiveMenuFriendId(null);
-                                if (window.confirm(t('friends.blockUserConfirm', { name: nameToShow }))) {
+                                const ok = await confirm({
+                                  title: t('friends.blockUser', 'Bloquear Usuário'),
+                                  message: t('friends.blockUserConfirm', { name: nameToShow }),
+                                  confirmText: t('friends.blockUser', 'Bloquear Usuário'),
+                                  variant: 'danger',
+                                });
+                                if (ok) {
                                   onBlockUser(friend.id);
                                 }
                               }}

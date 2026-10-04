@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { getMediaUrl } from '../../../../core/utils/media.util';
 import { UserStatusEnum } from '../../../../core/enums';
 import { StatusDot, getStatusLabel } from '../../../../components/common/StatusDot/StatusDot';
+import { useDialog } from '../../../../components/common/Dialog/DialogContext';
 
 export interface UserProfileData {
   id: string;
@@ -41,6 +42,7 @@ export const UserPopout: React.FC<UserPopoutProps> = ({
   onUpdateStatus,
 }) => {
   const { t } = useTranslation();
+  const { prompt } = useDialog();
   const popoutRef = useRef<HTMLDivElement>(null);
   const statusWrapperRef = useRef<HTMLDivElement>(null);
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
@@ -231,11 +233,16 @@ export const UserPopout: React.FC<UserPopoutProps> = ({
                     className={`${styles.statusFlyoutItem} ${
                       activeStatus === opt.key ? styles.statusFlyoutItemActive : ''
                     }`}
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
                       let custom = activeActivity || '';
                       if (opt.key === UserStatusEnum.PLAYING) {
-                        const game = window.prompt(t('status.setGamePrompt'), custom || '');
+                        const game = await prompt({
+                          title: t('status.playing', 'Jogando'),
+                          message: t('status.setGamePrompt', 'Qual jogo ou atividade você está executando?'),
+                          defaultValue: custom || '',
+                          placeholder: 'ex: Counter-Strike 2',
+                        });
                         if (game === null) return;
                         custom = game.trim();
                       }
