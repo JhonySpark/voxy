@@ -13,19 +13,34 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+import { logger } from './core/services/logger.service';
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Apenas 401 significa que a credencial deixou de ser aceita. Erros de rede,
-    // servidor ou permissÃ£o em um recurso especÃ­fico nÃ£o devem encerrar a sessÃ£o.
-    const isUnauthorized = error.response?.status === 401;
+    const status = error.response?.status;
     const requestUrl = error.config?.url ?? '';
+    const method = error.config?.method?.toUpperCase() ?? 'GET';
+
+    // Loga erros de servidor (>= 500) ou falha total de rede para Better Stack
+    if (!status || status >= 500) {
+      logger.error(`API Error: ${method} ${requestUrl} [${status || 'NETWORK_ERROR'}]`, error, {
+        url: requestUrl,
+        method,
+        status: status || 0,
+        responseData: error.response?.data,
+      });
+    }
+
+    // Apenas 401 significa que a credencial deixou de ser aceita. Erros de rede,
+    // servidor ou permissão em um recurso específico não devem encerrar a sessão.
+    const isUnauthorized = status === 401;
     const isAuthenticationRequest = requestUrl.startsWith('/auth/login') || requestUrl.startsWith('/auth/register');
 
     if (isUnauthorized && !isAuthenticationRequest) {
       localStorage.removeItem(StorageKeys.AUTH_TOKEN);
 
-      // O HashRouter reage Ã  alteraÃ§Ã£o do hash sem recarregar a janela do Electron.
+      // O HashRouter reage à alteração do hash sem recarregar a janela do Electron.
       if (window.location.hash !== `#${AppRoutes.LOGIN}`) {
         window.location.hash = AppRoutes.LOGIN;
       }

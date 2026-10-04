@@ -1,5 +1,6 @@
 import { Room, RoomEvent } from 'livekit-client';
 import type { IVoiceClientPort, VoiceRoomEventHandlers } from '../../../core/ports/voice-engine.port';
+import { logger } from '../../../core/services/logger.service';
 
 export class LivekitVoiceClientAdapter implements IVoiceClientPort {
   private room: Room | null = null;
@@ -44,8 +45,14 @@ export class LivekitVoiceClientAdapter implements IVoiceClientPort {
       }
     }
 
-    await this.room.connect(url, token);
-    return this.room;
+    try {
+      await this.room.connect(url, token);
+      logger.logEvent('VOICE_ROOM_CONNECTED', { url });
+      return this.room;
+    } catch (err) {
+      logger.error('Failed to connect to LiveKit voice room', err, { url });
+      throw err;
+    }
   }
 
   async disconnect(): Promise<void> {
