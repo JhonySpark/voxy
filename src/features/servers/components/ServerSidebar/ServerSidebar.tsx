@@ -3,7 +3,7 @@ import styles from './ServerSidebar.module.css';
 import heroLogo from '../../../../assets/logo.png';
 import { Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { getMediaUrl } from '../../../../core/utils/media.util';
+import { getMediaUrl, handleMediaError } from '../../../../core/utils/media.util';
 
 export interface ChannelItem {
   id: string;
@@ -99,8 +99,10 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({
                 src={iconUrl}
                 alt={server.name}
                 className={styles.serverImg}
-                onError={() =>
-                  setFailedIcons((prev) => ({ ...prev, [server.id]: true }))
+                onError={(e) =>
+                  handleMediaError(e, () =>
+                    setFailedIcons((prev) => ({ ...prev, [server.id]: true }))
+                  )
                 }
               />
             ) : (

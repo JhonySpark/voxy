@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import styles from './UserProfileBar.module.css';
 import { UserPopout, type UserProfileData } from '../UserPopout/UserPopout';
 import { SettingsTabEnum, UserStatusEnum } from '../../../../core/enums';
-import { getMediaUrl } from '../../../../core/utils/media.util';
+import { getMediaUrl, handleMediaError } from '../../../../core/utils/media.util';
 import { StatusDot } from '../../../../components/common/StatusDot/StatusDot';
 
 export interface ConnectedVoiceChannelInfo {
@@ -111,7 +111,7 @@ export const UserProfileBar: React.FC<UserProfileBarProps> = ({
                 src={avatarMedia}
                 alt={displayName}
                 className={styles.avatarImg}
-                onError={() => setAvatarError(true)}
+                onError={(e) => handleMediaError(e, () => setAvatarError(true))}
               />
             ) : (
               <div className={styles.avatar}>
