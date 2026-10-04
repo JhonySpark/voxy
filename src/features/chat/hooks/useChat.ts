@@ -414,20 +414,109 @@ export function useChat({
       }
     };
 
+    const onMessageUpdated = (msg: ChatMessage) => {
+      const otherUserId = msg.senderId === myIdRef.current ? msg.receiverId : msg.senderId;
+      if (otherUserId) {
+        const cacheKey = `dm_${otherUserId}`;
+        const cached = messageCacheRef.current.get(cacheKey);
+        if (cached) {
+          messageCacheRef.current.set(
+            cacheKey,
+            cached.map((m) => (m.id === msg.id ? { ...m, ...msg } : m)),
+          );
+        }
+      }
+
+      if (
+        activeViewRef.current === DashboardView.DM &&
+        (activeFriendIdRef.current === msg.senderId || activeFriendIdRef.current === msg.receiverId)
+      ) {
+        setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, ...msg } : m)));
+      }
+    };
+
+    const onChannelMessageUpdated = (msg: ChatMessage) => {
+      if (msg.channelId) {
+        const cacheKey = `channel_${msg.channelId}`;
+        const cached = messageCacheRef.current.get(cacheKey);
+        if (cached) {
+          messageCacheRef.current.set(
+            cacheKey,
+            cached.map((m) => (m.id === msg.id ? { ...m, ...msg } : m)),
+          );
+        }
+      }
+
+      if (
+        activeViewRef.current === DashboardView.SERVER &&
+        activeChannelIdRef.current === msg.channelId
+      ) {
+        setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, ...msg } : m)));
+      }
+    };
+
     realtimeClient.on(RealtimeEvents.NEW_MESSAGE, onNewMessage);
     realtimeClient.on(RealtimeEvents.MESSAGE_SENT, onMessageSent);
+    realtimeClient.on(RealtimeEvents.MESSAGE_UPDATED, onMessageUpdated);
     realtimeClient.on(RealtimeEvents.NEW_CHANNEL_MESSAGE, onNewChannelMessage);
     realtimeClient.on(RealtimeEvents.CHANNEL_MESSAGE_SENT, onChannelMessageSent);
     realtimeClient.on(RealtimeEvents.CHANNEL_MESSAGE_DELETED, onChannelMessageDeleted);
+    realtimeClient.on(RealtimeEvents.CHANNEL_MESSAGE_UPDATED, onChannelMessageUpdated);
 
     return () => {
       realtimeClient.off(RealtimeEvents.NEW_MESSAGE, onNewMessage);
       realtimeClient.off(RealtimeEvents.MESSAGE_SENT, onMessageSent);
+      realtimeClient.off(RealtimeEvents.MESSAGE_UPDATED, onMessageUpdated);
       realtimeClient.off(RealtimeEvents.NEW_CHANNEL_MESSAGE, onNewChannelMessage);
       realtimeClient.off(RealtimeEvents.CHANNEL_MESSAGE_SENT, onChannelMessageSent);
       realtimeClient.off(RealtimeEvents.CHANNEL_MESSAGE_DELETED, onChannelMessageDeleted);
+      realtimeClient.off(RealtimeEvents.CHANNEL_MESSAGE_UPDATED, onChannelMessageUpdated);
     };
   }, []);
+
+  const editMessage = useCallback(
+    async (messageId: string, newContent: string) => {
+      const trimmed = newContent.trim();
+      if (!trimmed) return;
+
+      // Atualização otimista imediata na UI
+      setMessages((prev) =>
+        prev.map((m) => (m.id === messageId ? { ...m, content: trimmed, isEdited: true } : m)),
+      );
+
+      if (activeViewRef.current === DashboardView.DM && activeFriendIdRef.current) {
+        const cacheKey = `dm_${activeFriendIdRef.current}`;
+        const cached = messageCacheRef.current.get(cacheKey);
+        if (cached) {
+          messageCacheRef.current.set(
+            cacheKey,
+            cached.map((m) => (m.id === messageId ? { ...m, content: trimmed, isEdited: true } : m)),
+          );
+        }
+
+        realtimeClient.emit(RealtimeEvents.EDIT_MESSAGE, {
+          messageId,
+          content: trimmed,
+        });
+      } else if (activeViewRef.current === DashboardView.SERVER && activeChannelIdRef.current) {
+        const cacheKey = `channel_${activeChannelIdRef.current}`;
+        const cached = messageCacheRef.current.get(cacheKey);
+        if (cached) {
+          messageCacheRef.current.set(
+            cacheKey,
+            cached.map((m) => (m.id === messageId ? { ...m, content: trimmed, isEdited: true } : m)),
+          );
+        }
+
+        realtimeClient.emit(RealtimeEvents.EDIT_CHANNEL_MESSAGE, {
+          channelId: activeChannelIdRef.current,
+          messageId,
+          content: trimmed,
+        });
+      }
+    },
+    [],
+  );
 
   const deleteMessage = useCallback(
     async (channelId: string, messageId: string) => {
@@ -455,6 +544,7 @@ export function useChat({
     isLoadingMessages,
     sendMessage,
     sendAttachmentMessage,
+    editMessage,
     deleteMessage,
     fetchDMMessages,
     fetchChannelMessages,

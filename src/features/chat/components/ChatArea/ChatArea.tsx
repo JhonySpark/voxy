@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import styles from './ChatArea.module.css';
 import { 
   Hash, Send, Mic, Paperclip, Smile, Trash2, Loader2, Users, User, UserMinus, 
-  Ban, MoreVertical, Reply, X, FileText 
+  Ban, MoreVertical, Reply, X, FileText, Pencil 
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { FriendUser } from '../../../friends/components/FriendsSidebar/FriendsSidebar';
@@ -51,6 +51,8 @@ export interface ChatMessage {
     attachments?: ChatAttachment[];
   } | null;
   createdAt: string;
+  updatedAt?: string;
+  isEdited?: boolean;
   sender?: {
     id: string;
     username: string;
@@ -70,6 +72,7 @@ interface ChatAreaProps {
   onNewMessageChange: (val: string) => void;
   onSendMessage: (e?: React.FormEvent, options?: { replyToId?: string; replyTo?: ChatMessage | null }) => void;
   onSendAttachment?: (attachmentId: string, customContent?: string, replyToId?: string) => void;
+  onEditMessage?: (messageId: string, newContent: string) => void | Promise<void>;
   isLoading?: boolean;
   onOpenUserProfile?: (userId: string) => void;
   onToggleMembersList?: () => void;
@@ -90,6 +93,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   onNewMessageChange,
   onSendMessage,
   onSendAttachment,
+  onEditMessage,
   isLoading = false,
   onOpenUserProfile,
   onToggleMembersList,
@@ -107,6 +111,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   // Estados de Upload e Gravação
   const [isUploading, setIsUploading] = useState(false);
@@ -132,6 +137,32 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     isImage: boolean;
   } | null>(null);
 
+  // Estados de Edição de Mensagem
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState<string>('');
+
+  // Menu de Ações da Mensagem (Dropdown)
+  const [activeMenuMessageId, setActiveMenuMessageId] = useState<string | null>(null);
+
+  const handleStartEditing = (msg: ChatMessage) => {
+    setEditingMessageId(msg.id);
+    setEditingContent(msg.content);
+    setTimeout(() => editInputRef.current?.focus(), 50);
+  };
+
+  const handleCancelEditing = () => {
+    setEditingMessageId(null);
+    setEditingContent('');
+  };
+
+  const handleSaveEditing = async (messageId: string) => {
+    const trimmed = editingContent.trim();
+    if (!trimmed || !onEditMessage) return;
+    await onEditMessage(messageId, trimmed);
+    setEditingMessageId(null);
+    setEditingContent('');
+  };
+
   const handleSelectEmoji = (emoji: string) => {
     onNewMessageChange(newMessage + emoji);
   };
@@ -151,6 +182,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     }
     setStagedAttachment(null);
     setReplyingTo(null);
+    handleCancelEditing();
+    setActiveMenuMessageId(null);
     scrollToBottom('auto');
   }, [target.id]);
 
@@ -660,7 +693,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   id={`message-${msg.id}`}
                   className={`${styles.messageRow} ${
                     isMe ? styles.myMessage : styles.otherMessage
-                  }`}
+                  } ${activeMenuMessageId === msg.id ? styles.activeMenuRow : ''}`}
                 >
                   {!isMe && (
                     <div 
@@ -734,7 +767,55 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                             </div>
                           )}
 
-                          {msg.content && <div>{msg.content}</div>}
+                          {editingMessageId === msg.id ? (
+                            <div className={styles.editContainer}>
+                              <input
+                                ref={editInputRef}
+                                type="text"
+                                className={styles.editInput}
+                                value={editingContent}
+                                onChange={(e) => setEditingContent(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleSaveEditing(msg.id);
+                                  } else if (e.key === 'Escape') {
+                                    e.preventDefault();
+                                    handleCancelEditing();
+                                  }
+                                }}
+                              />
+                              <div className={styles.editActions}>
+                                <span className={styles.editHint}>
+                                  escape para <button type="button" onClick={handleCancelEditing} className={styles.editHintLink}>cancelar</button> • enter para <button type="button" onClick={() => handleSaveEditing(msg.id)} className={styles.editHintLink}>salvar</button>
+                                </span>
+                                <div className={styles.editButtons}>
+                                  <button
+                                    type="button"
+                                    className={styles.cancelEditBtn}
+                                    onClick={handleCancelEditing}
+                                  >
+                                    Cancelar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={styles.saveEditBtn}
+                                    onClick={() => handleSaveEditing(msg.id)}
+                                    disabled={!editingContent.trim()}
+                                  >
+                                    Salvar
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            msg.content && (
+                              <div>
+                                <span>{msg.content}</span>
+                                {msg.isEdited && <span className={styles.editedTag}>(editada)</span>}
+                              </div>
+                            )
+                          )}
 
                           {/* Renderização de Anexos com Thumbnails Leves */}
                           {msg.attachments && msg.attachments.length > 0 && (
@@ -744,31 +825,87 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                               ))}
                             </div>
                           )}
+
+                          {/* Botão de Ação Overlay e Dropdown de Opções */}
+                          {editingMessageId !== msg.id && (
+                            <div className={styles.bubbleActionWrapper}>
+                              <button
+                                type="button"
+                                className={`${styles.messageTriggerBtn} ${activeMenuMessageId === msg.id ? styles.messageTriggerBtnActive : ''}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveMenuMessageId((prev) => (prev === msg.id ? null : msg.id));
+                                }}
+                                title="Opções da mensagem"
+                              >
+                                <MoreVertical size={13} />
+                              </button>
+
+                              {activeMenuMessageId === msg.id && (
+                                <>
+                                  <div
+                                    className={styles.menuBackdrop}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveMenuMessageId(null);
+                                    }}
+                                  />
+                                  <div
+                                    className={`${styles.messageDropdown} ${
+                                      isMe ? styles.messageDropdownMe : styles.messageDropdownOther
+                                    }`}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <button
+                                      type="button"
+                                      className={styles.messageDropdownItem}
+                                      onClick={() => {
+                                        setActiveMenuMessageId(null);
+                                        handleReplyTo(msg);
+                                      }}
+                                    >
+                                      <Reply size={13} />
+                                      <span>Responder</span>
+                                    </button>
+
+                                    {isMe && onEditMessage && (
+                                      <button
+                                        type="button"
+                                        className={styles.messageDropdownItem}
+                                        onClick={() => {
+                                          setActiveMenuMessageId(null);
+                                          handleStartEditing(msg);
+                                        }}
+                                      >
+                                        <Pencil size={13} />
+                                        <span>Editar</span>
+                                      </button>
+                                    )}
+
+                                    {onDeleteMessage && type === 'CHANNEL' && (isMe || canDeleteAnyMessage) && (
+                                      <>
+                                        <div className={styles.dropdownSeparator} />
+                                        <button
+                                          type="button"
+                                          className={`${styles.messageDropdownItem} ${styles.dangerDropdownItem}`}
+                                          onClick={() => {
+                                            setActiveMenuMessageId(null);
+                                            onDeleteMessage(msg.id);
+                                          }}
+                                        >
+                                          <Trash2 size={13} />
+                                          <span>Excluir</span>
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })()}
-                  </div>
-
-                  {/* Ações da Mensagem: Responder e Excluir */}
-                  <div className={styles.messageActions}>
-                    <button
-                      type="button"
-                      className={styles.messageActionBtn}
-                      onClick={() => handleReplyTo(msg)}
-                      title="Responder"
-                    >
-                      <Reply size={14} />
-                    </button>
-                    {onDeleteMessage && type === 'CHANNEL' && (isMe || canDeleteAnyMessage) && (
-                      <button
-                        type="button"
-                        className={`${styles.messageActionBtn} ${styles.deleteActionBtn}`}
-                        onClick={() => onDeleteMessage(msg.id)}
-                        title={t('chat.deleteMessage', 'Excluir mensagem')}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
                   </div>
                 </div>
               </React.Fragment>

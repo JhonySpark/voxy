@@ -158,6 +158,7 @@
 }
 
 .messageBubbleWrapper {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
@@ -193,7 +194,9 @@
 }
 
 .bubble {
-  padding: 0.75rem 1rem;
+  position: relative;
+  min-width: 68px;
+  padding: 0.75rem 1.6rem 0.75rem 1rem;
   border-radius: 14px;
   font-size: 0.875rem;
   line-height: 1.5;
@@ -564,48 +567,136 @@
   margin: 0;
 }
 
-.messageActions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 2px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(8px);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  align-self: center;
+.activeMenuRow {
+  position: relative;
+  z-index: 50;
 }
 
-.messageRow:hover .messageActions {
-  opacity: 1;
-  pointer-events: auto;
+/* Botão de Ação Flutuante Overlay no Canto Superior Direito da Mensagem */
+.bubbleActionWrapper {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 20;
 }
 
-.messageActionBtn {
-  background: transparent;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 5px;
+.messageTriggerBtn {
+  width: 22px;
+  height: 22px;
   border-radius: 6px;
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s ease;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+  transform: translateY(2px);
 }
 
-.messageActionBtn:hover {
+.messageRow:hover .messageTriggerBtn,
+.bubble:hover .messageTriggerBtn,
+.messageTriggerBtnActive {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateY(0) !important;
+}
+
+.messageTriggerBtn:hover {
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(30, 41, 59, 1);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
-.deleteActionBtn:hover {
-  color: #f87171 !important;
+.menuBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+}
+
+.messageDropdown {
+  min-width: 140px;
+  background: rgba(15, 20, 32, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 4px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: fadeInMenu 0.12s ease-out;
+  z-index: 9999;
+}
+
+.messageDropdownMe {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: auto;
+  transform-origin: top right;
+}
+
+.messageDropdownOther {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: auto;
+  transform-origin: top left;
+}
+
+@keyframes fadeInMenu {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.messageDropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: all 0.12s ease;
+  user-select: none;
+}
+
+.messageDropdownItem:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.dangerDropdownItem {
+  color: #f87171;
+}
+
+.dangerDropdownItem:hover {
   background: rgba(239, 68, 68, 0.15) !important;
+  color: #ef4444 !important;
+}
+
+.dropdownSeparator {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 3px 0;
 }
 
 /* Docked Reply Banner (Above Input) */
@@ -768,4 +859,106 @@
   border-top-right-radius: 0 !important;
   border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
+
+/* Edição de Mensagens */
+.editedTag {
+  font-size: 0.68rem;
+  color: #64748b;
+  margin-left: 5px;
+  user-select: none;
+  font-style: italic;
+}
+
+.editContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: 100%;
+  min-width: 260px;
+}
+
+.editInput {
+  width: 100%;
+  background: rgba(10, 14, 24, 0.9);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  border-radius: 8px;
+  color: #ffffff;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.875rem;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.editInput:focus {
+  border-color: var(--brand-primary, #34d399);
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.2);
+}
+
+.editActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.editHint {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.editHintLink {
+  background: none;
+  border: none;
+  color: var(--brand-primary, #34d399);
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: inherit;
+}
+
+.editButtons {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.cancelEditBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cancelEditBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.saveEditBtn {
+  background: var(--brand-primary, #34d399);
+  border: none;
+  color: #0c0f17;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.saveEditBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.saveEditBtn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
 

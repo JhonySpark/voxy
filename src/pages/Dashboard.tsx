@@ -111,6 +111,7 @@ export default function Dashboard() {
     isLoadingMessages,
     sendMessage,
     sendAttachmentMessage,
+    editMessage,
     deleteMessage,
     fetchDMMessages,
     fetchChannelMessages,
@@ -638,6 +639,7 @@ export default function Dashboard() {
             onNewMessageChange={setNewMessage}
             onSendMessage={sendMessage}
             onSendAttachment={sendAttachmentMessage}
+            onEditMessage={editMessage}
             isLoading={isLoadingMessages}
             onOpenUserProfile={setViewingUserId}
             targetStatus={activeFriend ? userStatuses[activeFriend.id]?.status : undefined}
@@ -663,6 +665,7 @@ export default function Dashboard() {
                 onNewMessageChange={setNewMessage}
                 onSendMessage={sendMessage}
                 onSendAttachment={sendAttachmentMessage}
+                onEditMessage={editMessage}
                 isLoading={isLoadingMessages}
                 onOpenUserProfile={setViewingUserId}
                 isMembersListOpen={isMembersListOpen}

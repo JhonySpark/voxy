@@ -48,12 +48,16 @@ export const RealtimeEvents = {
   NEW_MESSAGE: 'newMessage',
   MESSAGE_SENT: 'messageSent',
   SEND_MESSAGE: 'sendMessage',
+  MESSAGE_UPDATED: 'messageUpdated',
+  EDIT_MESSAGE: 'editMessage',
 
   // Channel Messages
   NEW_CHANNEL_MESSAGE: 'newChannelMessage',
   CHANNEL_MESSAGE_SENT: 'channelMessageSent',
   SEND_CHANNEL_MESSAGE: 'sendChannelMessage',
   CHANNEL_MESSAGE_DELETED: 'channelMessageDeleted',
+  CHANNEL_MESSAGE_UPDATED: 'channelMessageUpdated',
+  EDIT_CHANNEL_MESSAGE: 'editChannelMessage',
 
   // Channels
   JOIN_CHANNEL: 'joinChannel',
