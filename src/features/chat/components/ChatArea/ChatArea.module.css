@@ -196,7 +196,7 @@
 .bubble {
   position: relative;
   min-width: 68px;
-  padding: 0.75rem 1.6rem 0.75rem 1rem;
+  padding: 0.75rem 1rem;
   border-radius: 14px;
   font-size: 0.875rem;
   line-height: 1.5;
@@ -572,45 +572,146 @@
   z-index: 50;
 }
 
-/* Botão de Ação Flutuante Overlay no Canto Superior Direito da Mensagem */
-.bubbleActionWrapper {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  z-index: 20;
+/* Container do Balão e Ações Externas */
+.bubbleContainer {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
 }
 
+.bubbleActions {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 20;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+/* Mensagens Enviadas: Ações à esquerda (ICO EMOJI | Icon Actions | Mensagem) */
+.bubbleActionsMe {
+  right: calc(100% + 6px);
+  flex-direction: row;
+}
+
+/* Mensagens Recebidas: Ações à direita (Mensagem | Icon Actions | ICO EMOJI) */
+.bubbleActionsOther {
+  left: calc(100% + 6px);
+  flex-direction: row;
+}
+
+.messageRow:hover .bubbleActions,
+.bubbleContainer:hover .bubbleActions,
+.bubbleActionsActive {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.reactionTriggerContainer,
+.menuTriggerContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.reactionTriggerBtn,
 .messageTriggerBtn {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: rgba(15, 23, 42, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(18, 24, 38, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   color: #94a3b8;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(8px);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
-  transform: translateY(2px);
+  transition: transform 0.15s ease, color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.messageRow:hover .messageTriggerBtn,
-.bubble:hover .messageTriggerBtn,
-.messageTriggerBtnActive {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  transform: translateY(0) !important;
-}
-
+.reactionTriggerBtn:hover,
 .messageTriggerBtn:hover {
   color: #ffffff;
   background: rgba(30, 41, 59, 1);
-  border-color: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.28);
+  transform: scale(1.08);
+}
+
+.reactionTriggerBtnActive,
+.messageTriggerBtnActive {
+  color: #ffffff;
+  background: rgba(30, 41, 59, 1);
+  border-color: rgba(52, 211, 153, 0.4);
+}
+
+/* Balão de Reações Sobreposto na Base da Mensagem */
+.reactionsBadge {
+  position: absolute;
+  bottom: -11px;
+  z-index: 15;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #141b26;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 9999px;
+  padding: 2px 7px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  user-select: none;
+}
+
+.reactionsBadgeMe {
+  right: 10px;
+}
+
+.reactionsBadgeOther {
+  left: 10px;
+}
+
+.reactionsBadge:hover {
+  transform: scale(1.06);
+  background: #1e2736;
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.reactionsBadgeActive {
+  border-color: rgba(52, 211, 153, 0.45);
+  background: rgba(18, 32, 38, 0.98);
+}
+
+.reactionsBadgeEmojis {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.badgeEmoji {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.badgeCount {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #94a3b8;
+  margin-left: 1px;
+}
+
+.reactionsBadgeActive .badgeCount {
+  color: var(--brand-primary, #34d399);
+}
+
+/* Espaçamento inferior quando a mensagem tiver reações para não colidir com a de baixo */
+.hasReactions {
+  margin-bottom: 0.85rem !important;
 }
 
 .menuBackdrop {

@@ -458,19 +458,23 @@ export function useChat({
     realtimeClient.on(RealtimeEvents.NEW_MESSAGE, onNewMessage);
     realtimeClient.on(RealtimeEvents.MESSAGE_SENT, onMessageSent);
     realtimeClient.on(RealtimeEvents.MESSAGE_UPDATED, onMessageUpdated);
+    realtimeClient.on(RealtimeEvents.MESSAGE_REACTION_UPDATED, onMessageUpdated);
     realtimeClient.on(RealtimeEvents.NEW_CHANNEL_MESSAGE, onNewChannelMessage);
     realtimeClient.on(RealtimeEvents.CHANNEL_MESSAGE_SENT, onChannelMessageSent);
     realtimeClient.on(RealtimeEvents.CHANNEL_MESSAGE_DELETED, onChannelMessageDeleted);
     realtimeClient.on(RealtimeEvents.CHANNEL_MESSAGE_UPDATED, onChannelMessageUpdated);
+    realtimeClient.on(RealtimeEvents.CHANNEL_MESSAGE_REACTION_UPDATED, onChannelMessageUpdated);
 
     return () => {
       realtimeClient.off(RealtimeEvents.NEW_MESSAGE, onNewMessage);
       realtimeClient.off(RealtimeEvents.MESSAGE_SENT, onMessageSent);
       realtimeClient.off(RealtimeEvents.MESSAGE_UPDATED, onMessageUpdated);
+      realtimeClient.off(RealtimeEvents.MESSAGE_REACTION_UPDATED, onMessageUpdated);
       realtimeClient.off(RealtimeEvents.NEW_CHANNEL_MESSAGE, onNewChannelMessage);
       realtimeClient.off(RealtimeEvents.CHANNEL_MESSAGE_SENT, onChannelMessageSent);
       realtimeClient.off(RealtimeEvents.CHANNEL_MESSAGE_DELETED, onChannelMessageDeleted);
       realtimeClient.off(RealtimeEvents.CHANNEL_MESSAGE_UPDATED, onChannelMessageUpdated);
+      realtimeClient.off(RealtimeEvents.CHANNEL_MESSAGE_REACTION_UPDATED, onChannelMessageUpdated);
     };
   }, []);
 
@@ -518,6 +522,62 @@ export function useChat({
     [],
   );
 
+  const toggleReaction = useCallback(
+    (messageId: string, emoji: string) => {
+      const trimmedEmoji = emoji.trim();
+      if (!trimmedEmoji) return;
+
+      // Atualização otimista
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (m.id !== messageId) return m;
+          const currentReactions = m.reactions || [];
+          const existing = currentReactions.find((r) => r.userId === myIdRef.current);
+          let updatedReactions: typeof currentReactions;
+          if (existing) {
+            if (existing.emoji === trimmedEmoji) {
+              updatedReactions = currentReactions.filter((r) => r.id !== existing.id);
+            } else {
+              updatedReactions = currentReactions.map((r) =>
+                r.id === existing.id ? { ...r, emoji: trimmedEmoji } : r
+              );
+            }
+          } else {
+            updatedReactions = [
+              ...currentReactions,
+              {
+                id: `temp-${Date.now()}`,
+                emoji: trimmedEmoji,
+                userId: myIdRef.current,
+                user: {
+                  id: myIdRef.current,
+                  username: myUsername,
+                  displayName: myDisplayNameRef.current || null,
+                  avatarUrl: myAvatarUrlRef.current || null,
+                },
+              },
+            ];
+          }
+          return { ...m, reactions: updatedReactions };
+        })
+      );
+
+      if (activeViewRef.current === DashboardView.DM && activeFriendIdRef.current) {
+        realtimeClient.emit(RealtimeEvents.TOGGLE_MESSAGE_REACTION, {
+          messageId,
+          emoji: trimmedEmoji,
+        });
+      } else if (activeViewRef.current === DashboardView.SERVER && activeChannelIdRef.current) {
+        realtimeClient.emit(RealtimeEvents.TOGGLE_CHANNEL_MESSAGE_REACTION, {
+          channelId: activeChannelIdRef.current,
+          messageId,
+          emoji: trimmedEmoji,
+        });
+      }
+    },
+    [myUsername],
+  );
+
   const deleteMessage = useCallback(
     async (channelId: string, messageId: string) => {
       await httpClient.delete(`/channels/${channelId}/messages/${messageId}`);
@@ -546,6 +606,7 @@ export function useChat({
     sendAttachmentMessage,
     editMessage,
     deleteMessage,
+    toggleReaction,
     fetchDMMessages,
     fetchChannelMessages,
   };

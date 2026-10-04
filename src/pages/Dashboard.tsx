@@ -113,6 +113,7 @@ export default function Dashboard() {
     sendAttachmentMessage,
     editMessage,
     deleteMessage,
+    toggleReaction,
     fetchDMMessages,
     fetchChannelMessages,
   } = useChat({
@@ -640,6 +641,7 @@ export default function Dashboard() {
             onSendMessage={sendMessage}
             onSendAttachment={sendAttachmentMessage}
             onEditMessage={editMessage}
+            onToggleReaction={toggleReaction}
             isLoading={isLoadingMessages}
             onOpenUserProfile={setViewingUserId}
             targetStatus={activeFriend ? userStatuses[activeFriend.id]?.status : undefined}
@@ -666,6 +668,7 @@ export default function Dashboard() {
                 onSendMessage={sendMessage}
                 onSendAttachment={sendAttachmentMessage}
                 onEditMessage={editMessage}
+                onToggleReaction={toggleReaction}
                 isLoading={isLoadingMessages}
                 onOpenUserProfile={setViewingUserId}
                 isMembersListOpen={isMembersListOpen}

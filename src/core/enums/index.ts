@@ -50,6 +50,8 @@ export const RealtimeEvents = {
   SEND_MESSAGE: 'sendMessage',
   MESSAGE_UPDATED: 'messageUpdated',
   EDIT_MESSAGE: 'editMessage',
+  MESSAGE_REACTION_UPDATED: 'messageReactionUpdated',
+  TOGGLE_MESSAGE_REACTION: 'toggleMessageReaction',
 
   // Channel Messages
   NEW_CHANNEL_MESSAGE: 'newChannelMessage',
@@ -58,6 +60,8 @@ export const RealtimeEvents = {
   CHANNEL_MESSAGE_DELETED: 'channelMessageDeleted',
   CHANNEL_MESSAGE_UPDATED: 'channelMessageUpdated',
   EDIT_CHANNEL_MESSAGE: 'editChannelMessage',
+  CHANNEL_MESSAGE_REACTION_UPDATED: 'channelMessageReactionUpdated',
+  TOGGLE_CHANNEL_MESSAGE_REACTION: 'toggleChannelMessageReaction',
 
   // Channels
   JOIN_CHANNEL: 'joinChannel',

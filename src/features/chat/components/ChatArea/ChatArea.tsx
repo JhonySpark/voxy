@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './ChatArea.module.css';
 import { 
   Hash, Send, Mic, Paperclip, Smile, Trash2, Loader2, Users, User, UserMinus, 
@@ -9,6 +10,8 @@ import type { FriendUser } from '../../../friends/components/FriendsSidebar/Frie
 import type { ChannelItem } from '../../../servers/components/ServerSidebar/ServerSidebar';
 import { AttachmentRenderer } from '../AttachmentRenderer/AttachmentRenderer';
 import { EmojiPicker } from '../EmojiPicker/EmojiPicker';
+import { QuickReactionPicker } from '../QuickReactionPicker/QuickReactionPicker';
+import { MessageReactionsModal } from '../MessageReactionsModal/MessageReactionsModal';
 import { StorageUploadService } from '../../services/storageUpload.service';
 import { AudioRecorderService } from '../../services/audioRecorder.service';
 import { UserStatusEnum } from '../../../../core/enums';
@@ -28,6 +31,19 @@ export interface ChatAttachment {
   url?: string;
   downloadUrl?: string;
   thumbnailUrl?: string;
+}
+
+export interface ChatReaction {
+  id: string;
+  emoji: string;
+  userId: string;
+  createdAt?: string;
+  user?: {
+    id: string;
+    username: string;
+    displayName?: string | null;
+    avatarUrl?: string | null;
+  };
 }
 
 export interface ChatMessage {
@@ -61,6 +77,7 @@ export interface ChatMessage {
     displayName?: string | null;
   };
   attachments?: ChatAttachment[];
+  reactions?: ChatReaction[];
 }
 
 interface ChatAreaProps {
@@ -73,6 +90,7 @@ interface ChatAreaProps {
   onSendMessage: (e?: React.FormEvent, options?: { replyToId?: string; replyTo?: ChatMessage | null }) => void;
   onSendAttachment?: (attachmentId: string, customContent?: string, replyToId?: string) => void;
   onEditMessage?: (messageId: string, newContent: string) => void | Promise<void>;
+  onToggleReaction?: (messageId: string, emoji: string) => void;
   isLoading?: boolean;
   onOpenUserProfile?: (userId: string) => void;
   onToggleMembersList?: () => void;
@@ -94,6 +112,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   onSendMessage,
   onSendAttachment,
   onEditMessage,
+  onToggleReaction,
   isLoading = false,
   onOpenUserProfile,
   onToggleMembersList,
@@ -143,6 +162,39 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
   // Menu de Ações da Mensagem (Dropdown)
   const [activeMenuMessageId, setActiveMenuMessageId] = useState<string | null>(null);
+
+  // Estados de Reações com Emoji
+  const [activeQuickReactionMsgId, setActiveQuickReactionMsgId] = useState<string | null>(null);
+  const [activeFullReactionMsgId, setActiveFullReactionMsgId] = useState<string | null>(null);
+  const [reactionAnchorRect, setReactionAnchorRect] = useState<DOMRect | null>(null);
+  const [viewingReactionsMsg, setViewingReactionsMsg] = useState<ChatMessage | null>(null);
+
+  const getFullPickerStyle = (rect: DOMRect): React.CSSProperties => {
+    const pickerWidth = 320;
+    const pickerHeight = 400;
+    const PADDING = 12;
+
+    let left = rect.left + rect.width / 2 - pickerWidth / 2;
+    if (left < PADDING) left = PADDING;
+    if (left + pickerWidth > window.innerWidth - PADDING) {
+      left = window.innerWidth - pickerWidth - PADDING;
+    }
+
+    let top = rect.top - pickerHeight - 8;
+    if (top < PADDING) {
+      top = rect.bottom + 8;
+      if (top + pickerHeight > window.innerHeight - PADDING) {
+        top = window.innerHeight - pickerHeight - PADDING;
+      }
+    }
+
+    return {
+      position: 'fixed',
+      top: `${top}px`,
+      left: `${left}px`,
+      zIndex: 99999,
+    };
+  };
 
   const handleStartEditing = (msg: ChatMessage) => {
     setEditingMessageId(msg.id);
@@ -693,7 +745,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   id={`message-${msg.id}`}
                   className={`${styles.messageRow} ${
                     isMe ? styles.myMessage : styles.otherMessage
-                  } ${activeMenuMessageId === msg.id ? styles.activeMenuRow : ''}`}
+                  } ${
+                    activeMenuMessageId === msg.id || activeQuickReactionMsgId === msg.id || activeFullReactionMsgId === msg.id
+                      ? styles.activeMenuRow
+                      : ''
+                  } ${msg.reactions && msg.reactions.length > 0 ? styles.hasReactions : ''}`}
                 >
                   {!isMe && (
                     <div 
@@ -741,168 +797,297 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                         msg.attachments?.length === 1 &&
                         msg.attachments[0].fileType === 'AUDIO';
 
-                      return (
-                        <div
-                          className={`${styles.bubble} ${
-                            isMe ? styles.myBubble : styles.otherBubble
-                          } ${isOnlyAudio ? styles.audioBubble : ''}`}
-                        >
-                          {/* Bloco de Mensagem Respondida (WhatsApp style) */}
-                          {msg.replyTo && (
-                            <div
-                              className={styles.quotedMessage}
-                              onClick={() => scrollToMessage(msg.replyTo!.id)}
-                              title="Clique para ir até a mensagem original"
-                            >
-                              <div className={styles.quotedContent}>
-                                <span className={styles.quotedAuthor}>
-                                  {msg.replyTo.senderId === myId
-                                    ? t('chat.you', 'Você')
-                                    : (msg.replyTo.sender?.displayName || msg.replyTo.sender?.username || t('voice.remoteUser', 'Usuário'))}
-                                </span>
-                                <p className={styles.quotedSnippet}>
-                                  {msg.replyTo.content || (msg.replyTo.attachments && msg.replyTo.attachments.length > 0 ? '📷 Anexo' : 'Mensagem')}
-                                </p>
-                              </div>
-                            </div>
+                      const isReactionActive = activeQuickReactionMsgId === msg.id || activeFullReactionMsgId === msg.id;
+                      const isMenuActive = activeMenuMessageId === msg.id;
+
+                      const emojiTriggerButton = onToggleReaction && (
+                        <div className={styles.reactionTriggerContainer}>
+                          <button
+                            type="button"
+                            className={`${styles.reactionTriggerBtn} ${isReactionActive ? styles.reactionTriggerBtnActive : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setReactionAnchorRect(rect);
+                              setActiveMenuMessageId(null);
+                              setActiveFullReactionMsgId(null);
+                              setActiveQuickReactionMsgId((prev) => (prev === msg.id ? null : msg.id));
+                            }}
+                            title="Adicionar reação"
+                          >
+                            <Smile size={15} />
+                          </button>
+
+                          {activeQuickReactionMsgId === msg.id && (
+                            <QuickReactionPicker
+                              anchorRect={reactionAnchorRect}
+                              currentReaction={msg.reactions?.find((r) => r.userId === myId)?.emoji}
+                              onSelectEmoji={(emoji) => {
+                                onToggleReaction(msg.id, emoji);
+                                setActiveQuickReactionMsgId(null);
+                              }}
+                              onOpenFullPicker={() => {
+                                setActiveQuickReactionMsgId(null);
+                                setActiveFullReactionMsgId(msg.id);
+                              }}
+                              onClose={() => setActiveQuickReactionMsgId(null)}
+                            />
                           )}
 
-                          {editingMessageId === msg.id ? (
-                            <div className={styles.editContainer}>
-                              <input
-                                ref={editInputRef}
-                                type="text"
-                                className={styles.editInput}
-                                value={editingContent}
-                                onChange={(e) => setEditingContent(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    handleSaveEditing(msg.id);
-                                  } else if (e.key === 'Escape') {
-                                    e.preventDefault();
-                                    handleCancelEditing();
-                                  }
-                                }}
-                              />
-                              <div className={styles.editActions}>
-                                <span className={styles.editHint}>
-                                  escape para <button type="button" onClick={handleCancelEditing} className={styles.editHintLink}>cancelar</button> • enter para <button type="button" onClick={() => handleSaveEditing(msg.id)} className={styles.editHintLink}>salvar</button>
-                                </span>
-                                <div className={styles.editButtons}>
-                                  <button
-                                    type="button"
-                                    className={styles.cancelEditBtn}
-                                    onClick={handleCancelEditing}
-                                  >
-                                    Cancelar
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className={styles.saveEditBtn}
-                                    onClick={() => handleSaveEditing(msg.id)}
-                                    disabled={!editingContent.trim()}
-                                  >
-                                    Salvar
-                                  </button>
+                          {activeFullReactionMsgId === msg.id && reactionAnchorRect && (
+                            createPortal(
+                              <>
+                                <div
+                                  className={styles.menuBackdrop}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveFullReactionMsgId(null);
+                                  }}
+                                />
+                                <div
+                                  style={getFullPickerStyle(reactionAnchorRect)}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <EmojiPicker
+                                    onSelectEmoji={(emoji) => {
+                                      onToggleReaction(msg.id, emoji);
+                                      setActiveFullReactionMsgId(null);
+                                    }}
+                                    onClose={() => setActiveFullReactionMsgId(null)}
+                                  />
                                 </div>
-                              </div>
-                            </div>
-                          ) : (
-                            msg.content && (
-                              <div>
-                                <span>{msg.content}</span>
-                                {msg.isEdited && <span className={styles.editedTag}>(editada)</span>}
-                              </div>
+                              </>,
+                              document.body
                             )
                           )}
+                        </div>
+                      );
 
-                          {/* Renderização de Anexos com Thumbnails Leves */}
-                          {msg.attachments && msg.attachments.length > 0 && (
-                            <div className={isOnlyAudio ? styles.attachmentOnly : ''}>
-                              {msg.attachments.map((att) => (
-                                <AttachmentRenderer key={att.id} attachment={att} />
-                              ))}
-                            </div>
-                          )}
+                      const menuTriggerButton = (
+                        <div className={styles.menuTriggerContainer}>
+                          <button
+                            type="button"
+                            className={`${styles.messageTriggerBtn} ${isMenuActive ? styles.messageTriggerBtnActive : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveQuickReactionMsgId(null);
+                              setActiveFullReactionMsgId(null);
+                              setActiveMenuMessageId((prev) => (prev === msg.id ? null : msg.id));
+                            }}
+                            title="Opções da mensagem"
+                          >
+                            <MoreVertical size={15} />
+                          </button>
 
-                          {/* Botão de Ação Overlay e Dropdown de Opções */}
-                          {editingMessageId !== msg.id && (
-                            <div className={styles.bubbleActionWrapper}>
-                              <button
-                                type="button"
-                                className={`${styles.messageTriggerBtn} ${activeMenuMessageId === msg.id ? styles.messageTriggerBtnActive : ''}`}
+                          {isMenuActive && (
+                            <>
+                              <div
+                                className={styles.menuBackdrop}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setActiveMenuMessageId((prev) => (prev === msg.id ? null : msg.id));
+                                  setActiveMenuMessageId(null);
                                 }}
-                                title="Opções da mensagem"
+                              />
+                              <div
+                                className={`${styles.messageDropdown} ${
+                                  isMe ? styles.messageDropdownMe : styles.messageDropdownOther
+                                }`}
+                                onClick={(e) => e.stopPropagation()}
                               >
-                                <MoreVertical size={13} />
-                              </button>
+                                <button
+                                  type="button"
+                                  className={styles.messageDropdownItem}
+                                  onClick={() => {
+                                    setActiveMenuMessageId(null);
+                                    handleReplyTo(msg);
+                                  }}
+                                >
+                                  <Reply size={13} />
+                                  <span>Responder</span>
+                                </button>
 
-                              {activeMenuMessageId === msg.id && (
-                                <>
-                                  <div
-                                    className={styles.menuBackdrop}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
+                                {isMe && onEditMessage && (
+                                  <button
+                                    type="button"
+                                    className={styles.messageDropdownItem}
+                                    onClick={() => {
                                       setActiveMenuMessageId(null);
+                                      handleStartEditing(msg);
                                     }}
-                                  />
-                                  <div
-                                    className={`${styles.messageDropdown} ${
-                                      isMe ? styles.messageDropdownMe : styles.messageDropdownOther
-                                    }`}
-                                    onClick={(e) => e.stopPropagation()}
                                   >
+                                    <Pencil size={13} />
+                                    <span>Editar</span>
+                                  </button>
+                                )}
+
+                                {onDeleteMessage && type === 'CHANNEL' && (isMe || canDeleteAnyMessage) && (
+                                  <>
+                                    <div className={styles.dropdownSeparator} />
                                     <button
                                       type="button"
-                                      className={styles.messageDropdownItem}
+                                      className={`${styles.messageDropdownItem} ${styles.dangerDropdownItem}`}
                                       onClick={() => {
                                         setActiveMenuMessageId(null);
-                                        handleReplyTo(msg);
+                                        onDeleteMessage(msg.id);
                                       }}
                                     >
-                                      <Reply size={13} />
-                                      <span>Responder</span>
+                                      <Trash2 size={13} />
+                                      <span>Excluir</span>
                                     </button>
+                                  </>
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      );
 
-                                    {isMe && onEditMessage && (
-                                      <button
-                                        type="button"
-                                        className={styles.messageDropdownItem}
-                                        onClick={() => {
-                                          setActiveMenuMessageId(null);
-                                          handleStartEditing(msg);
-                                        }}
-                                      >
-                                        <Pencil size={13} />
-                                        <span>Editar</span>
-                                      </button>
-                                    )}
-
-                                    {onDeleteMessage && type === 'CHANNEL' && (isMe || canDeleteAnyMessage) && (
-                                      <>
-                                        <div className={styles.dropdownSeparator} />
-                                        <button
-                                          type="button"
-                                          className={`${styles.messageDropdownItem} ${styles.dangerDropdownItem}`}
-                                          onClick={() => {
-                                            setActiveMenuMessageId(null);
-                                            onDeleteMessage(msg.id);
-                                          }}
-                                        >
-                                          <Trash2 size={13} />
-                                          <span>Excluir</span>
-                                        </button>
-                                      </>
-                                    )}
-                                  </div>
+                      return (
+                        <div className={styles.bubbleContainer}>
+                          {/* Botões de Ações Externos (Lado Esquerdo para Enviadas, Lado Direito para Recebidas) */}
+                          {editingMessageId !== msg.id && (
+                            <div
+                              className={`${styles.bubbleActions} ${
+                                isMe ? styles.bubbleActionsMe : styles.bubbleActionsOther
+                              } ${isReactionActive || isMenuActive ? styles.bubbleActionsActive : ''}`}
+                            >
+                              {isMe ? (
+                                <>
+                                  {emojiTriggerButton}
+                                  {menuTriggerButton}
+                                </>
+                              ) : (
+                                <>
+                                  {menuTriggerButton}
+                                  {emojiTriggerButton}
                                 </>
                               )}
                             </div>
                           )}
+
+                          <div
+                            className={`${styles.bubble} ${
+                              isMe ? styles.myBubble : styles.otherBubble
+                            } ${isOnlyAudio ? styles.audioBubble : ''}`}
+                          >
+                            {/* Bloco de Mensagem Respondida (WhatsApp style) */}
+                            {msg.replyTo && (
+                              <div
+                                className={styles.quotedMessage}
+                                onClick={() => scrollToMessage(msg.replyTo!.id)}
+                                title="Clique para ir até a mensagem original"
+                              >
+                                <div className={styles.quotedContent}>
+                                  <span className={styles.quotedAuthor}>
+                                    {msg.replyTo.senderId === myId
+                                      ? t('chat.you', 'Você')
+                                      : (msg.replyTo.sender?.displayName || msg.replyTo.sender?.username || t('voice.remoteUser', 'Usuário'))}
+                                  </span>
+                                  <p className={styles.quotedSnippet}>
+                                    {msg.replyTo.content || (msg.replyTo.attachments && msg.replyTo.attachments.length > 0 ? '📷 Anexo' : 'Mensagem')}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {editingMessageId === msg.id ? (
+                              <div className={styles.editContainer}>
+                                <input
+                                  ref={editInputRef}
+                                  type="text"
+                                  className={styles.editInput}
+                                  value={editingContent}
+                                  onChange={(e) => setEditingContent(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      handleSaveEditing(msg.id);
+                                    } else if (e.key === 'Escape') {
+                                      e.preventDefault();
+                                      handleCancelEditing();
+                                    }
+                                  }}
+                                />
+                                <div className={styles.editActions}>
+                                  <span className={styles.editHint}>
+                                    escape para <button type="button" onClick={handleCancelEditing} className={styles.editHintLink}>cancelar</button> • enter para <button type="button" onClick={() => handleSaveEditing(msg.id)} className={styles.editHintLink}>salvar</button>
+                                  </span>
+                                  <div className={styles.editButtons}>
+                                    <button
+                                      type="button"
+                                      className={styles.cancelEditBtn}
+                                      onClick={handleCancelEditing}
+                                    >
+                                      Cancelar
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={styles.saveEditBtn}
+                                      onClick={() => handleSaveEditing(msg.id)}
+                                      disabled={!editingContent.trim()}
+                                    >
+                                      Salvar
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              msg.content && (
+                                <div>
+                                  <span>{msg.content}</span>
+                                  {msg.isEdited && <span className={styles.editedTag}>(editada)</span>}
+                                </div>
+                              )
+                            )}
+
+                            {/* Renderização de Anexos com Thumbnails Leves */}
+                            {msg.attachments && msg.attachments.length > 0 && (
+                              <div className={isOnlyAudio ? styles.attachmentOnly : ''}>
+                                {msg.attachments.map((att) => (
+                                  <AttachmentRenderer key={att.id} attachment={att} />
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Balão de Reações Sobreposto na Base da Mensagem */}
+                            {msg.reactions && msg.reactions.length > 0 && (() => {
+                              const map = new Map<string, number>();
+                              for (const r of msg.reactions) {
+                                map.set(r.emoji, (map.get(r.emoji) || 0) + 1);
+                              }
+                              const sorted = Array.from(map.entries())
+                                .map(([emoji, count]) => ({ emoji, count }))
+                                .sort((a, b) => b.count - a.count);
+
+                              const top3 = sorted.slice(0, 3);
+                              const totalCount = msg.reactions.length;
+                              const myReaction = msg.reactions.find((r) => r.userId === myId);
+
+                              return (
+                                <div
+                                  className={`${styles.reactionsBadge} ${
+                                    isMe ? styles.reactionsBadgeMe : styles.reactionsBadgeOther
+                                  } ${myReaction ? styles.reactionsBadgeActive : ''}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setViewingReactionsMsg(msg);
+                                  }}
+                                  title="Ver quem reagiu"
+                                >
+                                  <div className={styles.reactionsBadgeEmojis}>
+                                    {top3.map(({ emoji }) => (
+                                      <span key={emoji} className={styles.badgeEmoji}>
+                                        {emoji}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  {totalCount > 1 && (
+                                    <span className={styles.badgeCount}>{totalCount}</span>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </div>
                         </div>
                       );
                     })()}
@@ -1118,6 +1303,18 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           </form>
         )}
       </div>
+
+      {/* Modal de Detalhes das Reações (WhatsApp style) */}
+      {viewingReactionsMsg && viewingReactionsMsg.reactions && (
+        <MessageReactionsModal
+          reactions={viewingReactionsMsg.reactions}
+          myId={myId}
+          onClose={() => setViewingReactionsMsg(null)}
+          onRemoveReaction={(emoji) => {
+            onToggleReaction?.(viewingReactionsMsg.id, emoji);
+          }}
+        />
+      )}
     </div>
   );
 };
