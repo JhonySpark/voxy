@@ -9,6 +9,7 @@ import { getCategorizedSources } from './gameDetector'
 import os from 'node:os'
 
 import { NATIVE_BINARIES, resolveNativeBinary, performStartupIntegrityCheck } from './nativeBinaries'
+import { IpcChannels, AutoUpdaterEvents, AppUpdateStatus } from '../src/core/enums'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -148,17 +149,17 @@ app.whenReady().then(() => {
 
   createTray()
 
-  ipcMain.handle('GET_BACKGROUND_MODE', () => getBackgroundSettings().keepRunningInBackground)
-  ipcMain.on('SET_BACKGROUND_MODE', (_event, enabled: boolean) => {
+  ipcMain.handle(IpcChannels.GET_BACKGROUND_MODE, () => getBackgroundSettings().keepRunningInBackground)
+  ipcMain.on(IpcChannels.SET_BACKGROUND_MODE, (_event, enabled: boolean) => {
     saveBackgroundSettings(enabled === true)
   })
 
   // Retorna fontes categorizadas (Jogos detectados, Janelas/Apps e Telas com ícones)
-  ipcMain.handle('DESKTOP_CAPTURER_GET_CATEGORIZED_SOURCES', async () => {
+  ipcMain.handle(IpcChannels.DESKTOP_CAPTURER_GET_CATEGORIZED_SOURCES, async () => {
     return await getCategorizedSources();
   });
 
-  ipcMain.handle('DESKTOP_CAPTURER_GET_SOURCES', async (event, opts) => {
+  ipcMain.handle(IpcChannels.DESKTOP_CAPTURER_GET_SOURCES, async (event, opts) => {
     const sources = await desktopCapturer.getSources(opts);
     return sources.map(source => ({
       id: source.id,
@@ -171,12 +172,12 @@ app.whenReady().then(() => {
   createWindow();
 
   // IPC para o Pipeline Nativo C++
-  ipcMain.handle('IS_NATIVE_STREAM_SUPPORTED', () => {
+  ipcMain.handle(IpcChannels.IS_NATIVE_STREAM_SUPPORTED, () => {
     return process.platform === 'win32' && !!resolveNativeBinary(NATIVE_BINARIES.NATIVE_STREAMER);
   });
 
   // IPC para verificação de Faixa Etária Nativa (Windows 11 Age Signals / WinRT com Assinatura Criptográfica HMAC)
-  ipcMain.handle('GET_OS_AGE_SIGNAL', async () => {
+  ipcMain.handle(IpcChannels.GET_OS_AGE_SIGNAL, async () => {
     if (process.platform !== 'win32') {
       return { available: false, reason: 'Unsupported_Platform' };
     }
@@ -216,7 +217,7 @@ app.whenReady().then(() => {
     });
   });
 
-  ipcMain.handle('START_NATIVE_STREAM', async (_event, opts: {
+  ipcMain.handle(IpcChannels.START_NATIVE_STREAM, async (_event, opts: {
     url: string;
     token: string;
     hwnd: string | number;
@@ -264,12 +265,12 @@ app.whenReady().then(() => {
     child.stdout?.on('data', (chunk) => {
       const text = chunk.toString();
       console.log('[NativeStream STDOUT]', text.trim());
-      win?.webContents.send('NATIVE_STREAM_LOG', { type: 'stdout', text: text.trim() });
+      win?.webContents.send(IpcChannels.NATIVE_STREAM_LOG, { type: 'stdout', text: text.trim() });
       const match = text.match(/\[VOXY_TELEMETRY\]\s*(\{.*\})/);
       if (match) {
         try {
           const telemetry = JSON.parse(match[1]);
-          win?.webContents.send('NATIVE_STREAM_TELEMETRY', telemetry);
+          win?.webContents.send(IpcChannels.NATIVE_STREAM_TELEMETRY, telemetry);
         } catch (_) {}
       }
     });
@@ -277,22 +278,22 @@ app.whenReady().then(() => {
     child.stderr?.on('data', (chunk) => {
       const text = chunk.toString().trim();
       console.error('[NativeStream STDERR]', text);
-      win?.webContents.send('NATIVE_STREAM_LOG', { type: 'stderr', text });
+      win?.webContents.send(IpcChannels.NATIVE_STREAM_LOG, { type: 'stderr', text });
     });
 
     child.on('exit', (code, signal) => {
       console.log(`[NativeStream] Processo encerrou (code: ${code}, signal: ${signal})`);
-      win?.webContents.send('NATIVE_STREAM_LOG', { type: 'exit', text: `Processo encerrou (code: ${code}, signal: ${signal})` });
+      win?.webContents.send(IpcChannels.NATIVE_STREAM_LOG, { type: 'exit', text: `Processo encerrou (code: ${code}, signal: ${signal})` });
       if (nativeStreamProcess === child) {
         nativeStreamProcess = null;
-        win?.webContents.send('NATIVE_STREAM_STOPPED', { code, signal });
+        win?.webContents.send(IpcChannels.NATIVE_STREAM_STOPPED, { code, signal });
       }
     });
 
     return { success: true };
   });
 
-  ipcMain.handle('STOP_NATIVE_STREAM', async () => {
+  ipcMain.handle(IpcChannels.STOP_NATIVE_STREAM, async () => {
     if (!nativeStreamProcess) return { success: true };
     try {
       nativeStreamProcess.stdin?.write('stop\n');
@@ -306,8 +307,28 @@ app.whenReady().then(() => {
     return { success: true };
   });
 
+  // Estado em memória da atualização atual
+  type UpdateStatePayload = {
+    status: AppUpdateStatus;
+    version?: string;
+    releaseDate?: string;
+    progress?: {
+      percent: number;
+      transferred: number;
+      total: number;
+      bytesPerSecond: number;
+    };
+    error?: string;
+  };
+
+  let currentUpdateState: UpdateStatePayload = { status: AppUpdateStatus.IDLE };
+
   // IPC para checagem e instalação de atualizações
-  ipcMain.handle('CHECK_FOR_UPDATES', async () => {
+  ipcMain.handle(IpcChannels.GET_UPDATE_STATUS, () => {
+    return currentUpdateState;
+  });
+
+  ipcMain.handle(IpcChannels.CHECK_FOR_UPDATES, async () => {
     if (process.env.VITE_DEV_SERVER_URL) {
       return { status: 'dev', message: 'Auto-update desativado em modo de desenvolvimento' }
     }
@@ -319,61 +340,109 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.handle('RESTART_AND_INSTALL', () => {
+  ipcMain.handle(IpcChannels.RESTART_AND_INSTALL, () => {
     autoUpdater.quitAndInstall()
   })
 
   // Autoupdate (somente em produção)
   if (!process.env.VITE_DEV_SERVER_URL) {
+    autoUpdater.logger = console
     autoUpdater.autoDownload = true
     autoUpdater.autoInstallOnAppQuit = true
 
-    autoUpdater.on('checking-for-update', () => {
+    autoUpdater.on(AutoUpdaterEvents.CHECKING_FOR_UPDATE, () => {
       console.log('[AutoUpdater] Verificando atualizações...')
-      win?.webContents.send('app-update-checking')
+      currentUpdateState = { status: AppUpdateStatus.CHECKING }
+      win?.webContents.send(IpcChannels.APP_UPDATE_CHECKING)
     })
 
-    autoUpdater.on('update-available', (info) => {
+    autoUpdater.on(AutoUpdaterEvents.UPDATE_AVAILABLE, (info) => {
       console.log(`[AutoUpdater] Nova versão encontrada: ${info.version}`)
-      win?.webContents.send('app-update-available', {
+      currentUpdateState = {
+        status: AppUpdateStatus.AVAILABLE,
+        version: info.version,
+        releaseDate: info.releaseDate
+      }
+      win?.webContents.send(IpcChannels.APP_UPDATE_AVAILABLE, {
         version: info.version,
         releaseDate: info.releaseDate
       })
     })
 
-    autoUpdater.on('update-not-available', (info) => {
+    autoUpdater.on(AutoUpdaterEvents.UPDATE_NOT_AVAILABLE, (info) => {
       console.log(`[AutoUpdater] Nenhuma atualização disponível. Versão atual: ${info.version}`)
-      win?.webContents.send('app-update-not-available', {
+      currentUpdateState = {
+        status: AppUpdateStatus.IDLE,
+        version: info.version
+      }
+      win?.webContents.send(IpcChannels.APP_UPDATE_NOT_AVAILABLE, {
         version: info.version
       })
     })
 
-    autoUpdater.on('download-progress', (progressObj) => {
-      win?.webContents.send('app-update-progress', {
+    autoUpdater.on(AutoUpdaterEvents.DOWNLOAD_PROGRESS, (progressObj) => {
+      const progress = {
         percent: Math.round(progressObj.percent),
         transferred: progressObj.transferred,
         total: progressObj.total,
         bytesPerSecond: progressObj.bytesPerSecond
-      })
+      }
+      currentUpdateState = {
+        status: AppUpdateStatus.DOWNLOADING,
+        version: currentUpdateState.version,
+        progress
+      }
+      win?.webContents.send(IpcChannels.APP_UPDATE_PROGRESS, progress)
     })
 
-    autoUpdater.on('update-downloaded', (info) => {
+    autoUpdater.on(AutoUpdaterEvents.UPDATE_DOWNLOADED, (info) => {
       console.log(`[AutoUpdater] Versão ${info.version} baixada e pronta para instalação.`)
-      win?.webContents.send('app-update-downloaded', {
+      currentUpdateState = {
+        status: AppUpdateStatus.DOWNLOADED,
+        version: info.version
+      }
+      win?.webContents.send(IpcChannels.APP_UPDATE_DOWNLOADED, {
         version: info.version
       })
     })
 
-    autoUpdater.on('error', (err) => {
+    autoUpdater.on(AutoUpdaterEvents.ERROR, (err) => {
       console.error('[AutoUpdater] Erro ao verificar ou baixar atualização:', err)
-      win?.webContents.send('app-update-error', {
+      currentUpdateState = {
+        status: AppUpdateStatus.ERROR,
+        error: err.message
+      }
+      win?.webContents.send(IpcChannels.APP_UPDATE_ERROR, {
         message: err.message
       })
     })
 
-    autoUpdater.checkForUpdates().catch((err) => {
-      console.error('[AutoUpdater] Erro no checkForUpdates:', err)
-    })
+    const triggerUpdateCheck = () => {
+      console.log('[AutoUpdater] Disparando verificação de atualizações...')
+      autoUpdater.checkForUpdates().catch((err) => {
+        console.error('[AutoUpdater] Erro no checkForUpdates:', err)
+      })
+    }
+
+    const runStartupUpdateCheck = () => {
+      // Delay de 3s para garantir que o renderer carregou o React e montou os listeners
+      setTimeout(() => {
+        triggerUpdateCheck()
+      }, 3000)
+    }
+
+    if (win) {
+      if (win.webContents.isLoading()) {
+        win.webContents.once('did-finish-load', runStartupUpdateCheck)
+      } else {
+        runStartupUpdateCheck()
+      }
+    }
+
+    // Checagem periódica a cada 2 horas em segundo plano
+    setInterval(() => {
+      triggerUpdateCheck()
+    }, 2 * 60 * 60 * 1000)
   }
 })
 

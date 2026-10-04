@@ -180,20 +180,40 @@ export type SettingsTabEnum = (typeof SettingsTabEnum)[keyof typeof SettingsTabE
 export const IpcChannels = {
   CHECK_FOR_UPDATES: 'CHECK_FOR_UPDATES',
   RESTART_AND_INSTALL: 'RESTART_AND_INSTALL',
+  GET_UPDATE_STATUS: 'GET_UPDATE_STATUS',
   DESKTOP_CAPTURER_GET_CATEGORIZED_SOURCES: 'DESKTOP_CAPTURER_GET_CATEGORIZED_SOURCES',
   DESKTOP_CAPTURER_GET_SOURCES: 'DESKTOP_CAPTURER_GET_SOURCES',
   GET_BACKGROUND_MODE: 'GET_BACKGROUND_MODE',
   SET_BACKGROUND_MODE: 'SET_BACKGROUND_MODE',
   GET_OS_AGE_SIGNAL: 'GET_OS_AGE_SIGNAL',
+  IS_NATIVE_STREAM_SUPPORTED: 'IS_NATIVE_STREAM_SUPPORTED',
+  START_NATIVE_STREAM: 'START_NATIVE_STREAM',
+  STOP_NATIVE_STREAM: 'STOP_NATIVE_STREAM',
+  NATIVE_STREAM_LOG: 'NATIVE_STREAM_LOG',
+  NATIVE_STREAM_TELEMETRY: 'NATIVE_STREAM_TELEMETRY',
+  NATIVE_STREAM_STOPPED: 'NATIVE_STREAM_STOPPED',
+  APP_UPDATE_CHECKING: 'app-update-checking',
   APP_UPDATE_AVAILABLE: 'app-update-available',
+  APP_UPDATE_NOT_AVAILABLE: 'app-update-not-available',
   APP_UPDATE_PROGRESS: 'app-update-progress',
   APP_UPDATE_DOWNLOADED: 'app-update-downloaded',
   APP_UPDATE_ERROR: 'app-update-error',
 } as const;
 export type IpcChannels = (typeof IpcChannels)[keyof typeof IpcChannels];
 
+export const AutoUpdaterEvents = {
+  CHECKING_FOR_UPDATE: 'checking-for-update',
+  UPDATE_AVAILABLE: 'update-available',
+  UPDATE_NOT_AVAILABLE: 'update-not-available',
+  DOWNLOAD_PROGRESS: 'download-progress',
+  UPDATE_DOWNLOADED: 'update-downloaded',
+  ERROR: 'error',
+} as const;
+export type AutoUpdaterEvents = (typeof AutoUpdaterEvents)[keyof typeof AutoUpdaterEvents];
+
 export const AppUpdateStatus = {
   IDLE: 'idle',
+  CHECKING: 'checking',
   AVAILABLE: 'available',
   DOWNLOADING: 'downloading',
   DOWNLOADED: 'downloaded',

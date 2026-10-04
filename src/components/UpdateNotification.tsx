@@ -27,6 +27,18 @@ export const UpdateNotification: React.FC = () => {
   useEffect(() => {
     if (!ipcRenderer) return;
 
+    // Recupera o estado da atualização caso o main process já a tenha identificado antes da montagem
+    ipcRenderer.invoke(IpcChannels.GET_UPDATE_STATUS)
+      .then((state: { status?: AppUpdateStatus; version?: string; progress?: UpdateProgress } | null) => {
+        if (state && state.status && state.status !== AppUpdateStatus.IDLE) {
+          if (state.version) setVersion(state.version);
+          if (state.progress) setProgress(state.progress);
+          setStatus(state.status);
+          setDismissed(false);
+        }
+      })
+      .catch(() => {});
+
     const onAvailable = (_: unknown, data: { version: string }) => {
       setVersion(data.version);
       setStatus(AppUpdateStatus.AVAILABLE);

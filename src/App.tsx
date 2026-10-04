@@ -4,6 +4,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import { ToastProvider } from './components/common/Toast/ToastContext';
 import { DialogProvider } from './components/common/Dialog/DialogContext';
+import { UpdateNotification } from './components/UpdateNotification';
 import { AppRoutes, StorageKeys } from './core/enums';
 import './index.css';
 
@@ -14,6 +15,7 @@ function App() {
     <ToastProvider>
       <DialogProvider>
         <HashRouter>
+          <UpdateNotification />
           <Routes>
             <Route path={AppRoutes.LOGIN} element={<Login />} />
             <Route path={AppRoutes.REGISTER} element={<Register />} />

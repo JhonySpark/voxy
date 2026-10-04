@@ -4,7 +4,6 @@ import { Users, Volume2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import VoiceRoom from '../components/VoiceRoom';
 import { SettingsModal } from '../components/SettingsModal';
-import UpdateNotification from '../components/UpdateNotification';
 import { realtimeClient } from '../infrastructure/adapters/realtime/socket-realtime.adapter';
 
 import {
@@ -716,8 +715,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* 4. Modais e Notificações */}
-      <UpdateNotification />
+      {/* 4. Modais */}
 
       <SettingsModal
         isOpen={showSettingsModal}
