@@ -43,6 +43,8 @@ export default function Register() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  const isFromLogin = searchParams.get('from') === 'login';
+
   // Redirecionamento vindo do login com ?verify=email
   useEffect(() => {
     const verifyEmailParam = searchParams.get('verify');
@@ -50,6 +52,9 @@ export default function Register() {
       setTargetEmail(verifyEmailParam);
       setEmail(verifyEmailParam);
       setStep(3);
+      if (searchParams.get('from') === 'login') {
+        setVerificationMsg('Código de confirmação enviado para seu e-mail!');
+      }
     }
   }, [searchParams]);
 
@@ -365,18 +370,26 @@ export default function Register() {
       <div className="auth-container">
         <div className="auth-card-wizard">
           {/* Header do Wizard */}
-          <div className="wizard-steps-header">
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--brand-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Passo 3 de 3 • Verificação
-            </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div className="wizard-step-bullet completed">✓</div>
-              <div className="wizard-step-line active" style={{ width: 16 }} />
-              <div className="wizard-step-bullet completed">✓</div>
-              <div className="wizard-step-line active" style={{ width: 16 }} />
-              <div className="wizard-step-bullet active">3</div>
+          {isFromLogin ? (
+            <div className="wizard-steps-header" style={{ justifyContent: 'center' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--brand-primary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                🔐 Confirmação de Segurança
+              </span>
             </div>
-          </div>
+          ) : (
+            <div className="wizard-steps-header">
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--brand-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Passo 3 de 3 • Verificação
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div className="wizard-step-bullet completed">✓</div>
+                <div className="wizard-step-line active" style={{ width: 16 }} />
+                <div className="wizard-step-bullet completed">✓</div>
+                <div className="wizard-step-line active" style={{ width: 16 }} />
+                <div className="wizard-step-bullet active">3</div>
+              </div>
+            </div>
+          )}
 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginTop: '0.25rem' }}>
             <div style={{
@@ -394,10 +407,12 @@ export default function Register() {
               <Mail size={26} />
             </div>
             <h1 className="auth-title" style={{ fontSize: '1.35rem', marginBottom: '0.25rem' }}>
-              Confirme seu e-mail
+              {isFromLogin ? 'Verifique seu e-mail para acessar' : 'Confirme seu e-mail'}
             </h1>
             <p className="auth-subtitle" style={{ fontSize: '0.85rem', lineHeight: '1.4' }}>
-              Insira o código de 6 dígitos que enviamos para <br />
+              {isFromLogin
+                ? 'Sua conta ainda não foi confirmada. Insira o código de 6 dígitos que enviamos para:'
+                : 'Insira o código de 6 dígitos que enviamos para:'} <br />
               <strong style={{ color: 'var(--text-primary)' }}>{targetEmail}</strong>
             </p>
           </div>
@@ -471,7 +486,11 @@ export default function Register() {
               type="button"
               onClick={() => {
                 setError('');
-                setStep(1);
+                if (isFromLogin) {
+                  navigate(AppRoutes.LOGIN);
+                } else {
+                  setStep(1);
+                }
               }}
               style={{
                 background: 'none',
@@ -482,7 +501,7 @@ export default function Register() {
                 textDecoration: 'underline'
               }}
             >
-              ← Corrigir e-mail ou dados
+              {isFromLogin ? '← Voltar para o Login' : '← Corrigir e-mail ou dados'}
             </button>
           </div>
         </div>

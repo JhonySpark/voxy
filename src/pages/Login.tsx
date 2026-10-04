@@ -27,7 +27,8 @@ export default function Login() {
       const res = await api.post(ApiRoutes.AUTH_LOGIN, { email, password });
 
       if (res.data?.requireEmailVerification) {
-        navigate(`${AppRoutes.REGISTER}?verify=${encodeURIComponent(email)}`);
+        const destEmail = res.data.email || email;
+        navigate(`${AppRoutes.REGISTER}?verify=${encodeURIComponent(destEmail)}&from=login`);
         return;
       }
 
