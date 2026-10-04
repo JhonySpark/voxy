@@ -109,6 +109,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
 
   useEffect(() => {
     setIsLoading(true);
+    setMembers([]);
     fetchMembers();
 
     const onMembersRefresh = (data?: { serverId: string }) => {
@@ -466,7 +467,8 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
         <div className={styles.headerLeft}>
           <Users size={16} color="var(--brand-primary, #34d399)" />
           <span>
-            {t('server.members', 'Membros')} — {members.length}
+            {t('server.members', 'Membros')}
+            {!isLoading && ` — ${members.length}`}
           </span>
         </div>
         <button type="button" className={styles.closeBtn} onClick={onClose} title={t('common.close', 'Fechar')}>
@@ -489,13 +491,13 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
       {/* Members list */}
       <div className={styles.membersList}>
         {isLoading ? (
-          <div className={styles.emptyMembers}>
-            <Loader2 size={24} className="spinner" style={{ margin: '0 auto 8px' }} />
-            <span>Carregando membros...</span>
+          <div className={styles.loadingContainer}>
+            <Loader2 size={24} className={styles.spinner} />
+            <span>{t('server.loadingMembers', 'Carregando membros...')}</span>
           </div>
         ) : filteredMembers.length === 0 ? (
           <div className={styles.emptyMembers}>
-            <span>Nenhum membro encontrado.</span>
+            <span>{t('server.noMembersFound', 'Nenhum membro encontrado.')}</span>
           </div>
         ) : (
           <>
