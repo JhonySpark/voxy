@@ -50,6 +50,15 @@ export interface ServerMemberItem {
   };
 }
 
+const PRESET_BAN_REASONS = [
+  'Violação das regras do servidor',
+  'Spam ou divulgação não autorizada',
+  'Comportamento tóxico ou assédio',
+  'Discurso de ódio ou preconceito',
+  'Conteúdo impróprio / NSFW não autorizado',
+  'Tentativa de golpe ou links suspeitos',
+];
+
 interface ServerMembersSidebarProps {
   serverId: string;
   serverOwnerId: string;
@@ -771,58 +780,134 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
             position: 'fixed',
             inset: 0,
             backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(6px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 10000,
           }}
-          onClick={() => setBanTargetMember(null)}
+          onClick={() => {
+            setBanTargetMember(null);
+            setBanReason('');
+          }}
         >
           <div
             style={{
               backgroundColor: '#111520',
               border: '1px solid rgba(255, 255, 255, 0.12)',
-              borderRadius: 12,
+              borderRadius: 14,
               padding: '1.5rem',
-              maxWidth: 420,
-              width: '90%',
+              maxWidth: 480,
+              width: '92%',
               display: 'flex',
               flexDirection: 'column',
               gap: '1rem',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(239, 68, 68, 0.12)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#ef4444', fontWeight: 700 }}>
-              Banir {banTargetMember.user?.displayName || banTargetMember.user?.username}?
-            </h3>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.4 }}>
-              Tem certeza que deseja banir @{banTargetMember.user?.username}? O usuário será removido imediatamente e não poderá reentrar no servidor.
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#ef4444',
+                  flexShrink: 0,
+                }}
+              >
+                <Ban size={20} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#f8fafc', fontWeight: 700 }}>
+                  Banir {banTargetMember.user?.displayName || banTargetMember.user?.username}?
+                </h3>
+                <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                  @{banTargetMember.user?.username}
+                </span>
+              </div>
+            </div>
+
+            <p style={{ margin: 0, fontSize: '0.84rem', color: '#94a3b8', lineHeight: 1.45 }}>
+              Tem certeza que deseja banir este usuário? Ele será removido imediatamente e perderá o acesso definitivo a este servidor.
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              <label style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>
-                Motivo do Banimento (opcional)
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Motivo do Banimento
               </label>
+
+              {/* Predefined reason chips */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                {PRESET_BAN_REASONS.map((preset) => {
+                  const isSelected = banReason === preset;
+                  return (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setBanReason(isSelected ? '' : preset)}
+                      style={{
+                        padding: '0.35rem 0.65rem',
+                        borderRadius: 6,
+                        border: isSelected
+                          ? '1px solid rgba(239, 68, 68, 0.6)'
+                          : '1px solid rgba(255, 255, 255, 0.08)',
+                        backgroundColor: isSelected
+                          ? 'rgba(239, 68, 68, 0.18)'
+                          : 'rgba(255, 255, 255, 0.03)',
+                        color: isSelected ? '#fca5a5' : '#cbd5e1',
+                        fontSize: '0.75rem',
+                        fontWeight: isSelected ? 600 : 500,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      {preset}
+                    </button>
+                  );
+                })}
+              </div>
+
               <input
                 type="text"
-                placeholder="Ex: Quebra de regras de conduta"
+                placeholder="Ou digite/complemente um motivo personalizado..."
                 value={banReason}
                 onChange={(e) => setBanReason(e.target.value)}
                 style={{
-                  padding: '0.55rem 0.75rem',
+                  padding: '0.6rem 0.75rem',
                   borderRadius: 6,
-                  background: '#0b0e17',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: '#080b12',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
                   color: '#ffffff',
                   fontSize: '0.85rem',
                   outline: 'none',
+                  marginTop: '0.2rem',
                 }}
               />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem', marginTop: '0.25rem' }}>
               <button
                 type="button"
-                style={{ padding: '0.5rem 1rem', borderRadius: 6, background: '#1e2433', color: '#e2e8f0', border: 'none', cursor: 'pointer' }}
-                onClick={() => setBanTargetMember(null)}
+                style={{
+                  padding: '0.55rem 1rem',
+                  borderRadius: 8,
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  color: '#cbd5e1',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  cursor: 'pointer',
+                  fontWeight: 500,
+                  fontSize: '0.85rem',
+                }}
+                onClick={() => {
+                  setBanTargetMember(null);
+                  setBanReason('');
+                }}
                 disabled={isBanning}
               >
                 Cancelar
@@ -830,18 +915,24 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
               <button
                 type="button"
                 style={{
-                  padding: '0.5rem 1rem',
-                  borderRadius: 6,
+                  padding: '0.55rem 1.15rem',
+                  borderRadius: 8,
                   background: '#ef4444',
                   color: '#ffffff',
                   border: 'none',
                   fontWeight: 600,
+                  fontSize: '0.85rem',
                   cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.35)',
                 }}
                 onClick={handleConfirmBan}
                 disabled={isBanning}
               >
-                {isBanning ? 'Banindo...' : 'Confirmar Banimento'}
+                <Ban size={15} />
+                <span>{isBanning ? 'Banindo...' : 'Confirmar Banimento'}</span>
               </button>
             </div>
           </div>

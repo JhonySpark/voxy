@@ -183,10 +183,15 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                     >
                       <div className={styles.reasonContent}>
                         <span className={styles.reasonIcon}>{r.icon}</span>
-                        <span className={styles.reasonTitle}>{r.label}</span>
-                        {r.isChildSafety && (
-                          <span className={styles.priorityBadge}>Prioridade Máxima</span>
-                        )}
+                        <div className={styles.reasonTextWrapper}>
+                          <span className={styles.reasonTitle}>{r.label}</span>
+                          {r.isChildSafety && (
+                            <span className={styles.priorityBadge}>
+                              <span className={styles.priorityBadgeDot} />
+                              Prioridade Máxima
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div
                         className={`${styles.radioCircle} ${
