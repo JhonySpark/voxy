@@ -10,11 +10,13 @@ import {
   Trash2,
   Settings as SettingsIcon,
   Loader2,
+  FileText,
+  Clock,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../../../components/common/Toast/ToastContext';
 import { httpClient } from '../../../../infrastructure/adapters/http/http-client.adapter';
-import { ApiRoutes, RealtimeEvents } from '../../../../core/enums';
+import { ApiRoutes, RealtimeEvents, AuditLogActionEnum } from '../../../../core/enums';
 import { realtimeClient } from '../../../../infrastructure/adapters/realtime/socket-realtime.adapter';
 import type { ServerItem } from '../ServerSidebar/ServerSidebar';
 import { getMediaUrl } from '../../../../core/utils/media.util';
@@ -50,6 +52,30 @@ interface BannedUserData {
   };
 }
 
+interface ServerAuditLogItem {
+  id: string;
+  action: AuditLogActionEnum;
+  actorId: string;
+  targetType: string;
+  targetId?: string | null;
+  serverId?: string | null;
+  reason?: string | null;
+  metadata?: any;
+  createdAt: string;
+  actor: {
+    id: string;
+    username: string;
+    displayName?: string | null;
+    avatarUrl?: string | null;
+  };
+  targetUser?: {
+    id: string;
+    username: string;
+    displayName?: string | null;
+    avatarUrl?: string | null;
+  } | null;
+}
+
 export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
   isOpen,
   server,
@@ -62,7 +88,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
   const { toast } = useToast();
 
   const isOwner = server.ownerId === myId;
-  const [activeTab, setActiveTab] = useState<'overview' | 'roles' | 'bans' | 'danger'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'roles' | 'bans' | 'audit' | 'danger'>('overview');
 
   // Overview states
   const [serverName, setServerName] = useState(server.name);
@@ -106,10 +132,112 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
   const [bans, setBans] = useState<BannedUserData[]>([]);
   const [isLoadingBans, setIsLoadingBans] = useState(false);
 
+  // Audit Logs states
+  const [auditLogs, setAuditLogs] = useState<ServerAuditLogItem[]>([]);
+  const [isLoadingAuditLogs, setIsLoadingAuditLogs] = useState(false);
+  const [auditActionFilter, setAuditActionFilter] = useState<string>('ALL');
+
   // Delete server confirmation state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const loadAuditLogs = async (actionFilter?: string) => {
+    setIsLoadingAuditLogs(true);
+    try {
+      const selected = actionFilter !== undefined ? actionFilter : auditActionFilter;
+      const params = new URLSearchParams();
+      if (selected && selected !== 'ALL') {
+        params.append('action', selected);
+      }
+      const queryString = params.toString() ? `?${params.toString()}` : '';
+      const res = await httpClient.get<{ logs: ServerAuditLogItem[]; total: number }>(
+        `/servers/${server.id}/audit-logs${queryString}`
+      );
+      if (res && Array.isArray(res.logs)) {
+        setAuditLogs(res.logs);
+      } else {
+        setAuditLogs([]);
+      }
+    } catch (err) {
+      console.error('Error loading audit logs', err);
+      setAuditLogs([]);
+    } finally {
+      setIsLoadingAuditLogs(false);
+    }
+  };
+
+  const getActionBadgeClass = (action: string) => {
+    switch (action) {
+      case AuditLogActionEnum.SERVER_CREATED:
+      case AuditLogActionEnum.MEMBER_UNMUTED:
+      case AuditLogActionEnum.MEMBER_UNBANNED:
+      case AuditLogActionEnum.REPORT_RESOLVED:
+      case AuditLogActionEnum.SERVER_UNSUSPENDED:
+      case AuditLogActionEnum.USER_UNSUSPENDED:
+        return styles.auditBadgeGreen;
+      case AuditLogActionEnum.STREAM_STARTED:
+        return styles.auditBadgeBlue;
+      case AuditLogActionEnum.MEMBER_MUTED:
+      case AuditLogActionEnum.REPORT_CREATED:
+        return styles.auditBadgeAmber;
+      case AuditLogActionEnum.MEMBER_KICKED:
+      case AuditLogActionEnum.MEMBER_BANNED:
+      case AuditLogActionEnum.SERVER_SUSPENDED:
+      case AuditLogActionEnum.USER_SUSPENDED:
+        return styles.auditBadgeRed;
+      default:
+        return styles.auditBadgeBlue;
+    }
+  };
+
+  const getActionLabel = (action: string) => {
+    switch (action) {
+      case AuditLogActionEnum.SERVER_CREATED:
+        return 'Servidor Criado';
+      case AuditLogActionEnum.STREAM_STARTED:
+        return 'Transmissão Iniciada';
+      case AuditLogActionEnum.MEMBER_MUTED:
+        return 'Membro Silenciado';
+      case AuditLogActionEnum.MEMBER_UNMUTED:
+        return 'Silenciamento Revogado';
+      case AuditLogActionEnum.MEMBER_KICKED:
+        return 'Membro Expulso';
+      case AuditLogActionEnum.MEMBER_BANNED:
+        return 'Membro Banido';
+      case AuditLogActionEnum.MEMBER_UNBANNED:
+        return 'Membro Desbanido';
+      case AuditLogActionEnum.REPORT_CREATED:
+        return 'Denúncia Enviada';
+      case AuditLogActionEnum.REPORT_RESOLVED:
+        return 'Denúncia Resolvida';
+      case AuditLogActionEnum.SERVER_SUSPENDED:
+        return 'Servidor Suspenso';
+      case AuditLogActionEnum.SERVER_UNSUSPENDED:
+        return 'Servidor Reativado';
+      case AuditLogActionEnum.USER_SUSPENDED:
+        return 'Conta Suspensa';
+      case AuditLogActionEnum.USER_UNSUSPENDED:
+        return 'Conta Reativada';
+      default:
+        return action;
+    }
+  };
+
+  const formatAuditDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -125,6 +253,12 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
       loadPermissionsAndBans();
     }
   }, [isOpen, server]);
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'audit') {
+      loadAuditLogs(auditActionFilter);
+    }
+  }, [isOpen, activeTab, auditActionFilter]);
 
   const loadPermissionsAndBans = async () => {
     setIsLoadingBans(true);
@@ -339,6 +473,15 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                 <span>{t('server.tabBans', 'Banimentos')}</span>
               </button>
 
+              <button
+                type="button"
+                className={`${styles.settingsTabBtn} ${activeTab === 'audit' ? styles.settingsTabBtnActive : ''}`}
+                onClick={() => setActiveTab('audit')}
+              >
+                <FileText size={16} />
+                <span>{t('server.tabAudit', 'Auditoria')}</span>
+              </button>
+
               {isOwner && (
                 <>
                   <div className={styles.settingsSidebarSection} style={{ marginTop: '0.75rem' }}>
@@ -372,12 +515,14 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                 {activeTab === 'overview' && t('server.overviewTitle', 'Visão Geral do Servidor')}
                 {activeTab === 'roles' && t('server.rolesTitle', 'Moderação & Permissões por Cargo')}
                 {activeTab === 'bans' && t('server.bansTitle', 'Usuários Banidos')}
+                {activeTab === 'audit' && t('server.auditTitle', 'Registro de Auditoria de Segurança')}
                 {activeTab === 'danger' && t('server.dangerTitle', 'Zona de Perigo')}
               </h3>
               <p className={styles.contentHeaderSubtitle}>
                 {activeTab === 'overview' && t('server.overviewSubtitle', 'Atualize as informações públicas e o ícone de identificação deste servidor.')}
                 {activeTab === 'roles' && t('server.rolesSubtitle', 'Configure permissões granulares para administradores, moderadores e membros padrão.')}
                 {activeTab === 'bans' && t('server.bansSubtitle', 'Gerencie usuários que foram banidos deste servidor e revogue punições.')}
+                {activeTab === 'audit' && t('server.auditSubtitle', 'Histórico completo de ações de moderação, transmissões e conformidade de segurança (ECA / ANPD).')}
                 {activeTab === 'danger' && t('server.dangerSubtitle', 'Ações destrutivas com soft delete que desativam o servidor para todos os membros.')}
               </p>
             </div>
@@ -632,6 +777,126 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                     >
                       Desbanir
                     </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB: REGISTRO DE AUDITORIA */}
+        {activeTab === 'audit' && (
+          <div className={styles.inputGroup}>
+            {/* Filter Bar */}
+            <div className={styles.auditFilterBar}>
+              <span className={styles.label} style={{ marginBottom: 0 }}>Filtrar Evento:</span>
+              <select
+                className={styles.auditSelect}
+                value={auditActionFilter}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setAuditActionFilter(val);
+                  loadAuditLogs(val);
+                }}
+              >
+                <option value="ALL">Todos os Eventos</option>
+                <option value={AuditLogActionEnum.SERVER_CREATED}>Criação de Servidor</option>
+                <option value={AuditLogActionEnum.STREAM_STARTED}>Transmissão ao Vivo</option>
+                <option value={AuditLogActionEnum.MEMBER_MUTED}>Membro Silenciado</option>
+                <option value={AuditLogActionEnum.MEMBER_UNMUTED}>Silenciamento Revogado</option>
+                <option value={AuditLogActionEnum.MEMBER_KICKED}>Membro Expulso</option>
+                <option value={AuditLogActionEnum.MEMBER_BANNED}>Membro Banido</option>
+                <option value={AuditLogActionEnum.MEMBER_UNBANNED}>Membro Desbanido</option>
+                <option value={AuditLogActionEnum.REPORT_RESOLVED}>Denúncia Resolvida</option>
+              </select>
+            </div>
+
+            {isLoadingAuditLogs ? (
+              <div className={styles.emptyBansState}>
+                <div className={styles.emptyBansIcon}>
+                  <Loader2 size={24} className={styles.spinnerIcon} />
+                </div>
+                <span className={styles.emptyBansText}>Carregando logs de auditoria...</span>
+              </div>
+            ) : auditLogs.length === 0 ? (
+              <div className={styles.emptyBansState}>
+                <div className={styles.emptyBansIcon}>
+                  <FileText size={26} />
+                </div>
+                <span className={styles.emptyBansText}>Nenhum registro de auditoria encontrado.</span>
+              </div>
+            ) : (
+              <div className={styles.auditList}>
+                {auditLogs.map((log) => (
+                  <div key={log.id} className={styles.auditItem}>
+                    <div className={styles.auditItemHeader}>
+                      <div className={styles.auditActorCol}>
+                        <div className={styles.auditActorAvatar}>
+                          {getMediaUrl(log.actor?.avatarUrl) ? (
+                            <img
+                              src={getMediaUrl(log.actor?.avatarUrl)}
+                              alt={log.actor?.displayName || log.actor?.username}
+                              className={styles.auditActorAvatarImg}
+                            />
+                          ) : (
+                            <span>{(log.actor?.displayName || log.actor?.username || 'U').charAt(0).toUpperCase()}</span>
+                          )}
+                        </div>
+                        <div className={styles.auditActorInfo}>
+                          <span className={styles.auditActorName}>
+                            {log.actor?.displayName || log.actor?.username}
+                          </span>
+                          <span className={styles.auditActorTag}>
+                            @{log.actor?.username}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                        <span className={`${styles.auditBadge} ${getActionBadgeClass(log.action)}`}>
+                          {getActionLabel(log.action)}
+                        </span>
+                        <span className={styles.auditTimestamp}>
+                          <Clock size={12} />
+                          {formatAuditDate(log.createdAt)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className={styles.auditDetailsRow}>
+                      {log.targetUser && (
+                        <div>
+                          <span className={styles.auditTargetText}>Usuário afetado: </span>
+                          <span className={styles.auditTargetHighlight}>
+                            {log.targetUser.displayName || log.targetUser.username} (@{log.targetUser.username})
+                          </span>
+                        </div>
+                      )}
+
+                      {log.action === AuditLogActionEnum.STREAM_STARTED && log.metadata?.channelName && (
+                        <div>
+                          <span className={styles.auditTargetText}>Canal: </span>
+                          <span className={styles.auditTargetHighlight}>
+                            🔊 #{log.metadata.channelName}
+                          </span>
+                        </div>
+                      )}
+
+                      {log.metadata?.durationMinutes && (
+                        <div>
+                          <span className={styles.auditTargetText}>Duração: </span>
+                          <span className={styles.auditTargetHighlight}>
+                            {log.metadata.durationMinutes} minutos
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {log.reason && (
+                      <div className={styles.auditReasonBox}>
+                        Motivo: {log.reason}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

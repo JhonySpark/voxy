@@ -122,6 +122,23 @@ export const ReportReasonEnum = {
 } as const;
 export type ReportReasonEnum = (typeof ReportReasonEnum)[keyof typeof ReportReasonEnum];
 
+export const AuditLogActionEnum = {
+  SERVER_CREATED: 'SERVER_CREATED',
+  STREAM_STARTED: 'STREAM_STARTED',
+  MEMBER_MUTED: 'MEMBER_MUTED',
+  MEMBER_UNMUTED: 'MEMBER_UNMUTED',
+  MEMBER_KICKED: 'MEMBER_KICKED',
+  MEMBER_BANNED: 'MEMBER_BANNED',
+  MEMBER_UNBANNED: 'MEMBER_UNBANNED',
+  REPORT_CREATED: 'REPORT_CREATED',
+  REPORT_RESOLVED: 'REPORT_RESOLVED',
+  SERVER_SUSPENDED: 'SERVER_SUSPENDED',
+  SERVER_UNSUSPENDED: 'SERVER_UNSUSPENDED',
+  USER_SUSPENDED: 'USER_SUSPENDED',
+  USER_UNSUSPENDED: 'USER_UNSUSPENDED',
+} as const;
+export type AuditLogActionEnum = (typeof AuditLogActionEnum)[keyof typeof AuditLogActionEnum];
+
 export const UserStatusEnum = {
   ONLINE: 'ONLINE',
   IDLE: 'IDLE',
