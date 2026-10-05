@@ -18,6 +18,7 @@ import {
 } from '../core/enums';
 import { httpClient } from '../infrastructure/adapters/http/http-client.adapter';
 import { preloadMedia } from '../core/utils/media.util';
+import { logger } from '../core/services/logger.service';
 
 import { ServerSidebar } from '../features/servers/components/ServerSidebar/ServerSidebar';
 import { ChannelList } from '../features/servers/components/ChannelList/ChannelList';
@@ -394,7 +395,27 @@ export default function Dashboard() {
     };
   }, [activeServer?.id]);
 
+  useEffect(() => {
+    if (activeServer) {
+      logger.logEvent('SERVER_OPENED', {
+        serverId: activeServer.id,
+        serverName: activeServer.name,
+      });
+    }
+  }, [activeServer?.id]);
+
+  useEffect(() => {
+    if (activeChannel) {
+      logger.logEvent('CHANNEL_OPENED', {
+        channelId: activeChannel.id,
+        channelName: activeChannel.name,
+        type: activeChannel.type,
+      });
+    }
+  }, [activeChannel?.id]);
+
   const handleLogout = () => {
+    logger.logEvent('USER_LOGOUT', { myId, myUsername });
     localStorage.removeItem(StorageKeys.AUTH_TOKEN);
     navigate(AppRoutes.LOGIN);
   };

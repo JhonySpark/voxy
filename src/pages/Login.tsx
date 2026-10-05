@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { ApiRoutes, AppRoutes, StorageKeys } from "../core/enums";
 import { getApiErrorMessage } from "../core/utils/error.util";
 import heroLogo from "../assets/logo.png";
+import { logger } from "../core/services/logger.service";
 
 export default function Login() {
   const { t } = useTranslation();
@@ -61,8 +62,10 @@ export default function Login() {
         } catch (_) {}
       }
 
+      logger.logEvent('USER_LOGIN_SUCCESS', { email });
       navigate(AppRoutes.APP);
     } catch (err: any) {
+      logger.warn('USER_LOGIN_FAILED', { email, error: err?.message });
       setError(getApiErrorMessage(err, t("auth.login.failed")));
     } finally {
       setIsLoading(false);
