@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 import { VideoRenderer } from "../VideoRenderer/VideoRenderer";
 import { StreamSettingsMenu } from "../StreamSettingsMenu/StreamSettingsMenu";
 import { DevStreamDiagnostics } from "../../../../components/DevStreamDiagnostics";
+import { ReportModal } from "../../../moderation/components/ReportModal/ReportModal";
+import { ReportTargetTypeEnum } from "../../../../core/enums";
 
 import { getMediaUrl } from '../../../../core/utils/media.util';
 
@@ -42,6 +44,7 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [isReportingStream, setIsReportingStream] = useState(false);
   const [avatarFailed, setAvatarFailed] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const avatarMedia = getMediaUrl(participant.avatarUrl);
@@ -205,8 +208,17 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
           onVolumeChange={onStreamVolumeChange}
           onToggleWatch={onToggleWatchStream}
           onClose={() => setShowSettings(false)}
+          onReport={!participant.isLocal ? () => setIsReportingStream(true) : undefined}
         />
       </div>
+
+      <ReportModal
+        isOpen={isReportingStream}
+        onClose={() => setIsReportingStream(false)}
+        targetType={ReportTargetTypeEnum.STREAM}
+        targetId={participant.id}
+        targetName={participant.displayName || participant.username}
+      />
     </div>
   );
 };

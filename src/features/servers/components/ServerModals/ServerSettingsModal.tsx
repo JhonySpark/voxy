@@ -9,6 +9,7 @@ import {
   UserX,
   Trash2,
   Settings as SettingsIcon,
+  Loader2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../../../components/common/Toast/ToastContext';
@@ -586,13 +587,18 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
             </span>
 
             {isLoadingBans ? (
-              <div className={styles.emptyFriends} style={{ padding: '2.5rem 1rem' }}>
-                <span>Carregando banimentos...</span>
+              <div className={styles.emptyBansState}>
+                <div className={styles.emptyBansIcon}>
+                  <Loader2 size={24} className={styles.spinnerIcon} />
+                </div>
+                <span className={styles.emptyBansText}>Carregando banimentos...</span>
               </div>
             ) : bans.length === 0 ? (
-              <div className={styles.emptyFriends} style={{ padding: '2.5rem 1rem' }}>
-                <UserX size={36} color="#64748b" style={{ margin: '0 auto 10px', opacity: 0.6 }} />
-                <span>Nenhum usuário banido neste servidor.</span>
+              <div className={styles.emptyBansState}>
+                <div className={styles.emptyBansIcon}>
+                  <UserX size={26} />
+                </div>
+                <span className={styles.emptyBansText}>Nenhum usuário banido neste servidor.</span>
               </div>
             ) : (
               <div className={styles.friendsList} style={{ maxHeight: 'none' }}>

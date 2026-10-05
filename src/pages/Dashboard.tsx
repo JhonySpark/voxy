@@ -21,7 +21,7 @@ import { preloadMedia } from '../core/utils/media.util';
 import { logger } from '../core/services/logger.service';
 
 import { ServerSidebar } from '../features/servers/components/ServerSidebar/ServerSidebar';
-import { ChannelList } from '../features/servers/components/ChannelList/ChannelList';
+import { ChannelList, type ServerPermissions } from '../features/servers/components/ChannelList/ChannelList';
 import { CreateServerModal } from '../features/servers/components/ServerModals/CreateServerModal';
 import { CreateChannelModal } from '../features/servers/components/ServerModals/CreateChannelModal';
 import { InviteServerModal } from '../features/servers/components/ServerModals/InviteServerModal';
@@ -128,17 +128,7 @@ export default function Dashboard() {
 
   // Membros do Servidor & Permissões
   const [isMembersListOpen, setIsMembersListOpen] = useState(true);
-  const [activeServerPermissions, setActiveServerPermissions] = useState<{
-    isAdmin: boolean;
-    isModerator: boolean;
-    isOwner: boolean;
-    canInvite: boolean;
-    canDeleteMessages: boolean;
-    canKickMembers: boolean;
-    canBanMembers: boolean;
-    canManageChannels: boolean;
-    canManageServer: boolean;
-  } | null>(null);
+  const [activeServerPermissions, setActiveServerPermissions] = useState<ServerPermissions | null>(null);
 
   // Estados de Voz
   const [connectedVoiceChannel, setConnectedVoiceChannel] = useState<{
@@ -372,9 +362,37 @@ export default function Dashboard() {
       httpClient
         .get<any>(`${ApiRoutes.SERVERS}/${activeServer.id}/my-permissions`)
         .then((perms) => {
-          if (isMounted) setActiveServerPermissions(perms);
+          if (isMounted && perms) {
+            const isOwner = perms.role === 'OWNER' || activeServer.ownerId === myId;
+            const isAdmin = perms.role === 'ADMIN' || isOwner;
+            const isModerator = perms.role === 'MODERATOR';
+            setActiveServerPermissions({
+              ...perms,
+              isOwner,
+              isAdmin,
+              isModerator,
+              canInvite: isOwner || isAdmin || Boolean(perms.canInvite),
+              canManageChannels: isOwner || isAdmin || Boolean(perms.canManageChannels),
+              canManageServer: isOwner || isAdmin || Boolean(perms.canManageServer),
+            });
+          }
         })
-        .catch(() => {});
+        .catch(() => {
+          if (isMounted && activeServer.ownerId === myId) {
+            setActiveServerPermissions({
+              role: 'OWNER',
+              isOwner: true,
+              isAdmin: true,
+              isModerator: false,
+              canInvite: true,
+              canDeleteMessages: true,
+              canKickMembers: true,
+              canBanMembers: true,
+              canManageChannels: true,
+              canManageServer: true,
+            });
+          }
+        });
     };
 
     fetchPerms();
@@ -394,6 +412,85 @@ export default function Dashboard() {
       realtimeClient.off(RealtimeEvents.SERVER_UPDATED, onMembershipChanged);
     };
   }, [activeServer?.id]);
+
+  // Eventos de Moderação em Tempo Real (ANPD / Diretrizes de Segurança)
+  useEffect(() => {
+    const onServerSuspended = (data: { serverId: string; reason?: string }) => {
+      fetchServers();
+      if (activeServer?.id === data.serverId) {
+        if (connectedVoiceChannel?.serverId === data.serverId) {
+          setConnectedVoiceChannel(null);
+        }
+        setActiveServer(null);
+        setActiveChannel(null);
+        setActiveView(DashboardView.DM);
+        toast.error(`Servidor suspenso pela moderação: ${data.reason || 'Violação das regras'}`);
+      }
+    };
+
+    const onAccountSuspended = (data: { userId: string; reason?: string }) => {
+      if (data.userId === myId) {
+        localStorage.removeItem(StorageKeys.AUTH_TOKEN);
+        realtimeClient.disconnect();
+        toast.error(`Sua conta foi suspensa: ${data.reason || 'Violação das diretrizes'}`);
+        navigate(AppRoutes.LOGIN);
+      }
+    };
+
+    const onMemberKicked = (data: { serverId: string; userId: string; serverName?: string }) => {
+      if (data.userId === myId) {
+        fetchServers();
+        if (activeServer?.id === data.serverId) {
+          if (connectedVoiceChannel?.serverId === data.serverId) {
+            setConnectedVoiceChannel(null);
+          }
+          setActiveServer(null);
+          setActiveChannel(null);
+          setActiveView(DashboardView.DM);
+        }
+        toast.info(`Você foi expulso do servidor ${data.serverName || ''}`);
+      }
+    };
+
+    const onMemberBanned = (data: { serverId: string; userId: string; serverName?: string }) => {
+      if (data.userId === myId) {
+        fetchServers();
+        if (activeServer?.id === data.serverId) {
+          if (connectedVoiceChannel?.serverId === data.serverId) {
+            setConnectedVoiceChannel(null);
+          }
+          setActiveServer(null);
+          setActiveChannel(null);
+          setActiveView(DashboardView.DM);
+        }
+        toast.error(`Você foi banido do servidor ${data.serverName || ''}`);
+      }
+    };
+
+    const onMemberMuted = (data: { serverId: string; userId: string; reason?: string; isMuted?: boolean }) => {
+      if (data.userId === myId && activeServer?.id === data.serverId) {
+        if (data.isMuted) {
+          toast.warning(`Você foi silenciado neste servidor. Motivo: ${data.reason || 'Silenciado por um moderador'}`);
+        } else {
+          toast.info('Seu silenciamento no servidor foi removido.');
+        }
+      }
+    };
+
+    realtimeClient.on(RealtimeEvents.SERVER_SUSPENDED, onServerSuspended);
+    realtimeClient.on(RealtimeEvents.ACCOUNT_SUSPENDED, onAccountSuspended);
+    realtimeClient.on(RealtimeEvents.MEMBER_KICKED, onMemberKicked);
+    realtimeClient.on(RealtimeEvents.MEMBER_BANNED, onMemberBanned);
+    realtimeClient.on(RealtimeEvents.MEMBER_MUTED, onMemberMuted);
+
+    return () => {
+      realtimeClient.off(RealtimeEvents.SERVER_SUSPENDED, onServerSuspended);
+      realtimeClient.off(RealtimeEvents.ACCOUNT_SUSPENDED, onAccountSuspended);
+      realtimeClient.off(RealtimeEvents.MEMBER_KICKED, onMemberKicked);
+      realtimeClient.off(RealtimeEvents.MEMBER_BANNED, onMemberBanned);
+      realtimeClient.off(RealtimeEvents.MEMBER_MUTED, onMemberMuted);
+    };
+  }, [myId, activeServer?.id, connectedVoiceChannel?.serverId, fetchServers, navigate, toast, setActiveServer, setActiveChannel]);
 
   useEffect(() => {
     if (activeServer) {
@@ -542,6 +639,7 @@ export default function Dashboard() {
           <ChannelList
             server={activeServer}
             myId={myId}
+            permissions={activeServerPermissions}
             activeChannel={activeChannel}
             serverVoiceStates={serverVoiceStates}
             channelStartTimes={channelStartTimes}

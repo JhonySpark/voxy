@@ -7,6 +7,8 @@ import { StreamSettingsMenu } from '../StreamSettingsMenu/StreamSettingsMenu';
 import { DevStreamDiagnostics } from '../../../../components/DevStreamDiagnostics';
 
 import { getMediaUrl } from '../../../../core/utils/media.util';
+import { ReportModal } from '../../../moderation/components/ReportModal/ReportModal';
+import { ReportTargetTypeEnum } from '../../../../core/enums';
 
 interface ParticipantCardProps {
   participant: {
@@ -51,6 +53,7 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
   const { t } = useTranslation();
   const isSpeaking = useIsSpeaking(p.lkParticipant);
   const [showSettings, setShowSettings] = useState(false);
+  const [isReportingStream, setIsReportingStream] = useState(false);
   const [avatarFailed, setAvatarFailed] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const avatarMedia = getMediaUrl(p.avatarUrl);
@@ -292,6 +295,15 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
         onVolumeChange={onStreamVolumeChange}
         onToggleWatch={onToggleWatchStream}
         onClose={() => setShowSettings(false)}
+        onReport={!p.isLocal ? () => setIsReportingStream(true) : undefined}
+      />
+
+      <ReportModal
+        isOpen={isReportingStream}
+        onClose={() => setIsReportingStream(false)}
+        targetType={ReportTargetTypeEnum.STREAM}
+        targetId={p.id}
+        targetName={p.displayName || p.username}
       />
     </div>
   );

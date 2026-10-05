@@ -1,19 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import styles from './ChannelList.module.css';
-import { Hash, Volume2, VolumeX, Plus, UserPlus, Search, ChevronDown, Mic, MicOff, Settings, Pencil, Trash2 } from 'lucide-react';
+import { Hash, Volume2, VolumeX, Plus, UserPlus, Search, ChevronDown, Mic, MicOff, Settings, Pencil, Trash2, ShieldAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import * as Slider from '@radix-ui/react-slider';
 import * as Switch from '@radix-ui/react-switch';
 import type { ChannelItem, ServerItem } from '../ServerSidebar/ServerSidebar';
-import { ChannelTypeEnum, UserStatusEnum } from '../../../../core/enums';
+import { ChannelTypeEnum, UserStatusEnum, ReportTargetTypeEnum } from '../../../../core/enums';
 import { getMediaUrl } from '../../../../core/utils/media.util';
 import type { VoiceParticipantState } from '../../hooks/useServers';
 import { StatusDot } from '../../../../components/common/StatusDot/StatusDot';
+import { ReportModal } from '../../../moderation/components/ReportModal/ReportModal';
+import { useClickOutside } from '../../../../hooks/useClickOutside';
+
+export interface ServerPermissions {
+  role?: string;
+  isAdmin?: boolean;
+  isModerator?: boolean;
+  isOwner?: boolean;
+  canInvite?: boolean;
+  canDeleteMessages?: boolean;
+  canKickMembers?: boolean;
+  canBanMembers?: boolean;
+  canMuteMembers?: boolean;
+  canManageChannels?: boolean;
+  canManageServer?: boolean;
+}
 
 interface ChannelListProps {
   server: ServerItem;
   myId: string;
+  permissions?: ServerPermissions | null;
   activeChannel: ChannelItem | null;
   serverVoiceStates: Record<string, VoiceParticipantState[]>;
   channelStartTimes?: Record<string, number>;
@@ -115,12 +132,19 @@ export const ChannelList: React.FC<ChannelListProps> = ({
   onViewUserProfile,
   onDeleteChannel,
   onRenameChannel,
+  permissions,
 }) => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [failedAvatars, setFailedAvatars] = useState<Record<string, boolean>>({});
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isServerMenuOpen, setIsServerMenuOpen] = useState(false);
+  const serverMenuRef = useClickOutside<HTMLDivElement>(() => setIsServerMenuOpen(false), isServerMenuOpen);
 
-  const isOwner = server.ownerId === myId;
+  const isOwner = server.ownerId === myId || !!permissions?.isOwner;
+  const canInvite = isOwner || !!permissions?.isAdmin || !!permissions?.canInvite;
+  const canManageChannels = isOwner || !!permissions?.isAdmin || !!permissions?.canManageChannels;
+  const canManageServer = isOwner || !!permissions?.isAdmin || !!permissions?.canManageServer;
 
   const textChannels = (server.channels || []).filter(
     (ch) => ch.type === ChannelTypeEnum.TEXT && ch.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -140,49 +164,133 @@ export const ChannelList: React.FC<ChannelListProps> = ({
       <div className={styles.header}>
         <div 
           className={styles.serverNameWrapper}
-          onClick={isOwner && onOpenServerSettings ? onOpenServerSettings : undefined}
-          style={{ cursor: isOwner && onOpenServerSettings ? 'pointer' : 'default' }}
-          title={isOwner ? t('server.settingsTitle', 'Configurações do Servidor') : undefined}
+          onClick={() => setIsServerMenuOpen((prev) => !prev)}
+          title="Opções do Servidor"
         >
           <span className={styles.serverTitle}>{server.name}</span>
-          <ChevronDown size={14} color="#64748b" />
+          <ChevronDown 
+            size={16} 
+            className={`${styles.chevron} ${isServerMenuOpen ? styles.chevronOpen : ''}`} 
+          />
         </div>
+
         <div className={styles.headerActions}>
-          {isOwner && onOpenServerSettings && (
-            <button
-              className={styles.iconBtn}
-              title={t('server.settingsTitle', 'Configurações do Servidor')}
-              onClick={onOpenServerSettings}
-            >
-              <Settings size={16} />
-            </button>
-          )}
-          {isOwner && <span className={styles.ownerBadge}>{t('common.owner')}</span>}
           <button
             className={styles.iconBtn}
-            title={t('channel.createChannel')}
-            onClick={onOpenCreateChannelModal}
-            disabled={!isOwner}
+            title={canInvite ? t('server.inviteUsers', 'Convidar Pessoas') : t('server.noInvitePermission', 'Você não tem permissão para convidar')}
+            onClick={onOpenInviteModal}
+            disabled={!canInvite || server.isSuspended}
           >
             <Plus size={18} />
           </button>
         </div>
+
+        {/* Server Dropdown Menu */}
+        {isServerMenuOpen && (
+          <div ref={serverMenuRef} className={styles.serverDropdownMenu}>
+            <div className={styles.dropdownHeader}>
+              <span className={styles.dropdownServerName}>{server.name}</span>
+            </div>
+
+            <div className={styles.dropdownDivider} />
+
+            {(isOwner || canManageServer) && onOpenServerSettings && (
+              <button
+                type="button"
+                className={styles.dropdownItem}
+                onClick={() => {
+                  setIsServerMenuOpen(false);
+                  onOpenServerSettings();
+                }}
+              >
+                <Settings size={15} />
+                <span>{t('server.settingsTitle', 'Configurações do Servidor')}</span>
+              </button>
+            )}
+
+            {canInvite && !server.isSuspended && (
+              <button
+                type="button"
+                className={styles.dropdownItem}
+                onClick={() => {
+                  setIsServerMenuOpen(false);
+                  onOpenInviteModal();
+                }}
+              >
+                <UserPlus size={15} />
+                <span>{t('server.inviteUsers', 'Convidar Pessoas')}</span>
+              </button>
+            )}
+
+            {canManageChannels && !server.isSuspended && (
+              <button
+                type="button"
+                className={styles.dropdownItem}
+                onClick={() => {
+                  setIsServerMenuOpen(false);
+                  onOpenCreateChannelModal();
+                }}
+              >
+                <Plus size={15} />
+                <span>{t('channel.createChannel', 'Criar Canal')}</span>
+              </button>
+            )}
+
+            <div className={styles.dropdownDivider} />
+
+            <button
+              type="button"
+              className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
+              onClick={() => {
+                setIsServerMenuOpen(false);
+                setIsReportModalOpen(true);
+              }}
+            >
+              <ShieldAlert size={15} />
+              <span>Denunciar Servidor</span>
+            </button>
+          </div>
+        )}
       </div>
 
-      <button className={styles.inviteBtn} onClick={onOpenInviteModal}>
-        <UserPlus size={16} /> {t('server.inviteUsers')}
-      </button>
+      {server.isSuspended ? (
+        <div
+          style={{
+            margin: '1rem',
+            padding: '1.25rem 1rem',
+            background: 'rgba(239, 68, 68, 0.12)',
+            border: '1px solid rgba(239, 68, 68, 0.35)',
+            borderRadius: '8px',
+            textAlign: 'center',
+            color: '#fca5a5',
+          }}
+        >
+          <ShieldAlert size={28} color="#ef4444" style={{ margin: '0 auto 0.5rem', display: 'block' }} />
+          <h4 style={{ color: '#fff', fontSize: '0.9rem', marginBottom: '0.35rem', fontWeight: 700 }}>
+            Servidor Suspenso
+          </h4>
+          <p style={{ fontSize: '0.75rem', lineHeight: 1.4, color: '#fca5a5', margin: 0 }}>
+            {server.suspendedReason || 'Este servidor foi suspenso pela moderação por violação das diretrizes de segurança ou regras da ANPD.'}
+          </p>
+        </div>
+      ) : (
+        <>
+          {canInvite && (
+            <button className={styles.inviteBtn} onClick={onOpenInviteModal}>
+              <UserPlus size={16} /> {t('server.inviteUsers')}
+            </button>
+          )}
 
-      <div className={styles.searchWrapper}>
-        <Search size={14} className={styles.searchIcon} />
-        <input
-          type="text"
-          className={styles.searchInput}
-          placeholder={t('channel.searchPlaceholder')}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
+          <div className={styles.searchWrapper}>
+            <Search size={14} className={styles.searchIcon} />
+            <input
+              type="text"
+              className={styles.searchInput}
+              placeholder={t('channel.searchPlaceholder')}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
 
       <div className={styles.channelList}>
         {/* Text Channels Section */}
@@ -200,7 +308,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                 <ChannelActions
                   key={channel.id}
                   channel={channel}
-                  isOwner={isOwner}
+                  isOwner={canManageChannels}
                   onRename={onRenameChannel}
                   onDelete={onDeleteChannel}
                 >
@@ -240,7 +348,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                   <div key={channel.id} className={styles.voiceCard}>
                     <ChannelActions
                       channel={channel}
-                      isOwner={isOwner}
+                      isOwner={canManageChannels}
                       onRename={onRenameChannel}
                       onDelete={onDeleteChannel}
                     >
@@ -410,7 +518,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                 <ChannelActions
                   key={channel.id}
                   channel={channel}
-                  isOwner={isOwner}
+                  isOwner={canManageChannels}
                   onRename={onRenameChannel}
                   onDelete={onDeleteChannel}
                 >
@@ -435,6 +543,16 @@ export const ChannelList: React.FC<ChannelListProps> = ({
           </div>
         </div>
       </div>
+      </>
+      )}
+
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        targetType={ReportTargetTypeEnum.SERVER}
+        targetId={server.id}
+        targetName={server.name}
+      />
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from './StreamSettingsMenu.module.css';
-import { Volume2, VolumeX, Eye, EyeOff } from 'lucide-react';
+import { Volume2, VolumeX, Eye, EyeOff, ShieldAlert } from 'lucide-react';
 import * as Slider from '@radix-ui/react-slider';
 import { useClickOutside } from '../../../../hooks/useClickOutside';
 
@@ -12,6 +12,7 @@ interface StreamSettingsMenuProps {
   onVolumeChange: (val: number) => void;
   onToggleWatch: () => void;
   onClose: () => void;
+  onReport?: () => void;
 }
 
 export const StreamSettingsMenu: React.FC<StreamSettingsMenuProps> = ({
@@ -21,6 +22,7 @@ export const StreamSettingsMenu: React.FC<StreamSettingsMenuProps> = ({
   onVolumeChange,
   onToggleWatch,
   onClose,
+  onReport,
 }) => {
   const menuRef = useClickOutside<HTMLDivElement>(onClose, isOpen);
 
@@ -73,6 +75,20 @@ export const StreamSettingsMenu: React.FC<StreamSettingsMenuProps> = ({
         {isWatching ? <EyeOff size={16} /> : <Eye size={16} />}
         <span>{isWatching ? 'Parar de Assistir' : 'Assistir Transmissão'}</span>
       </button>
+
+      {onReport && (
+        <button
+          type="button"
+          className={styles.reportButton}
+          onClick={() => {
+            onClose();
+            onReport();
+          }}
+        >
+          <ShieldAlert size={16} />
+          <span>Denunciar Transmissão</span>
+        </button>
+      )}
     </div>
   );
 };

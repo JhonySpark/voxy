@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import styles from './UserProfileModal.module.css';
-import { X, MessageSquare, UserPlus, Pencil, Calendar, Check, Ban, UserMinus, ShieldCheck } from 'lucide-react';
+import { X, MessageSquare, UserPlus, Pencil, Calendar, Check, Ban, UserMinus, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { httpClient } from '../../../../infrastructure/adapters/http/http-client.adapter';
 import { realtimeClient } from '../../../../infrastructure/adapters/realtime/socket-realtime.adapter';
-import { RealtimeEvents, UserStatusEnum } from '../../../../core/enums';
+import { RealtimeEvents, UserStatusEnum, ReportTargetTypeEnum } from '../../../../core/enums';
 import { getMediaUrl } from '../../../../core/utils/media.util';
 import type { UserProfileData } from '../UserPopout/UserPopout';
 import { StatusDot, getStatusLabel } from '../../../../components/common/StatusDot/StatusDot';
 import { useDialog } from '../../../../components/common/Dialog/DialogContext';
+import { ReportModal } from '../../../moderation/components/ReportModal/ReportModal';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -55,6 +56,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
   const [friendRequested, setFriendRequested] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !userId) {
@@ -269,114 +271,147 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   onOpenEditProfile?.();
                 }}
               >
-                <Pencil size={16} />
+                <Pencil size={18} />
                 <span>{t('user.editProfile', 'Editar Perfil')}</span>
               </button>
             ) : relationship?.hasBlocked ? (
-              <button
-                type="button"
-                className={styles.secondaryActionBtn}
-                onClick={async () => {
-                  if (onUnblockUser && userId) {
-                    await onUnblockUser(userId);
-                    setRelationship((prev) => prev ? { ...prev, isBlocked: false, hasBlocked: false } : null);
-                  }
-                }}
-              >
-                <ShieldCheck size={16} color="#10b981" />
-                <span>{t('friends.unblockUser', 'Desbloquear')}</span>
-              </button>
+              <div className={styles.moderationActionsRow}>
+                <button
+                  type="button"
+                  className={styles.secondaryActionBtn}
+                  onClick={async () => {
+                    if (onUnblockUser && userId) {
+                      await onUnblockUser(userId);
+                      setRelationship((prev) => prev ? { ...prev, isBlocked: false, hasBlocked: false } : null);
+                    }
+                  }}
+                >
+                  <ShieldCheck size={18} color="#10b981" />
+                  <span>{t('friends.unblockUser', 'Desbloquear')}</span>
+                </button>
+                <button
+                  type="button"
+                  className={styles.reportActionBtn}
+                  onClick={() => setIsReportOpen(true)}
+                  title={t('moderation.reportUser', 'Denunciar Usuário')}
+                >
+                  <ShieldAlert size={18} />
+                  <span>{t('moderation.reportUser', 'Denunciar Usuário')}</span>
+                </button>
+              </div>
             ) : (
               <>
-                {onOpenDirectMessage && !relationship?.isBlocked && (
-                  <button
-                    type="button"
-                    className={styles.primaryActionBtn}
-                    onClick={() => {
-                      onClose();
-                      onOpenDirectMessage(userId);
-                    }}
-                  >
-                    <MessageSquare size={16} />
-                    <span>{t('chat.sendMessage', 'Enviar Mensagem')}</span>
-                  </button>
-                )}
-
-                {(isFriend || relationship?.isFriend) ? (
-                  onRemoveFriend && (
+                <div className={styles.socialActionsRow}>
+                  {onOpenDirectMessage && !relationship?.isBlocked && (
                     <button
                       type="button"
-                      className={styles.dangerActionBtn}
+                      className={styles.primaryActionBtn}
+                      onClick={() => {
+                        onClose();
+                        onOpenDirectMessage(userId);
+                      }}
+                    >
+                      <MessageSquare size={18} />
+                      <span>{t('chat.sendMessage', 'Enviar Mensagem')}</span>
+                    </button>
+                  )}
+
+                  {(isFriend || relationship?.isFriend) ? (
+                    onRemoveFriend && (
+                      <button
+                        type="button"
+                        className={styles.secondaryActionBtn}
+                        onClick={async () => {
+                          const ok = await confirm({
+                            title: t('friends.removeFriend', 'Desfazer Amizade'),
+                            message: t('friends.removeFriendConfirm', { name: displayName }),
+                            confirmText: t('friends.removeFriend', 'Desfazer Amizade'),
+                            variant: 'danger',
+                          });
+                          if (ok) {
+                            await onRemoveFriend(userId);
+                            setRelationship((prev) => prev ? { ...prev, isFriend: false } : null);
+                          }
+                        }}
+                        title={t('friends.removeFriend', 'Desfazer Amizade')}
+                      >
+                        <UserMinus size={18} />
+                        <span>{t('friends.removeFriend', 'Desfazer Amizade')}</span>
+                      </button>
+                    )
+                  ) : (
+                    onAddFriend && (
+                      <button
+                        type="button"
+                        className={styles.secondaryActionBtn}
+                        onClick={() => {
+                          onAddFriend(username);
+                          setFriendRequested(true);
+                        }}
+                        disabled={friendRequested || relationship?.isPending}
+                      >
+                        {friendRequested || relationship?.isPending ? (
+                          <Check size={18} color="#10b981" />
+                        ) : (
+                          <UserPlus size={18} />
+                        )}
+                        <span>
+                          {friendRequested || relationship?.isPending
+                            ? t('friends.requestSentShort', 'Pedido Enviado!')
+                            : t('friends.addFriend', 'Adicionar Amigo')}
+                        </span>
+                      </button>
+                    )
+                  )}
+                </div>
+
+                <div className={styles.moderationActionsRow}>
+                  {onBlockUser && (
+                    <button
+                      type="button"
+                      className={styles.blockActionBtn}
                       onClick={async () => {
                         const ok = await confirm({
-                          title: t('friends.removeFriend', 'Desfazer Amizade'),
-                          message: t('friends.removeFriendConfirm', { name: displayName }),
-                          confirmText: t('friends.removeFriend', 'Desfazer Amizade'),
+                          title: t('friends.blockUser', 'Bloquear Usuário'),
+                          message: t('friends.blockUserConfirm', { name: displayName }),
+                          confirmText: t('friends.blockUser', 'Bloquear Usuário'),
                           variant: 'danger',
                         });
                         if (ok) {
-                          await onRemoveFriend(userId);
-                          setRelationship((prev) => prev ? { ...prev, isFriend: false } : null);
+                          await onBlockUser(userId);
+                          setRelationship((prev) => prev ? { ...prev, isFriend: false, isBlocked: true, hasBlocked: true } : null);
                         }
                       }}
-                      title={t('friends.removeFriend', 'Desfazer Amizade')}
+                      title={t('friends.blockUser', 'Bloquear Usuário')}
                     >
-                      <UserMinus size={16} />
-                      <span>{t('friends.removeFriend', 'Desfazer Amizade')}</span>
+                      <Ban size={18} />
+                      <span>{t('friends.blockUser', 'Bloquear Usuário')}</span>
                     </button>
-                  )
-                ) : (
-                  onAddFriend && (
-                    <button
-                      type="button"
-                      className={styles.secondaryActionBtn}
-                      onClick={() => {
-                        onAddFriend(username);
-                        setFriendRequested(true);
-                      }}
-                      disabled={friendRequested || relationship?.isPending}
-                    >
-                      {friendRequested || relationship?.isPending ? (
-                        <Check size={16} color="#10b981" />
-                      ) : (
-                        <UserPlus size={16} />
-                      )}
-                      <span>
-                        {friendRequested || relationship?.isPending
-                          ? t('friends.requestSentShort', 'Pedido Enviado!')
-                          : t('friends.addFriend', 'Adicionar Amigo')}
-                      </span>
-                    </button>
-                  )
-                )}
+                  )}
 
-                {onBlockUser && (
                   <button
                     type="button"
-                    className={styles.dangerActionBtn}
-                    onClick={async () => {
-                      const ok = await confirm({
-                        title: t('friends.blockUser', 'Bloquear Usuário'),
-                        message: t('friends.blockUserConfirm', { name: displayName }),
-                        confirmText: t('friends.blockUser', 'Bloquear Usuário'),
-                        variant: 'danger',
-                      });
-                      if (ok) {
-                        await onBlockUser(userId);
-                        setRelationship((prev) => prev ? { ...prev, isFriend: false, isBlocked: true, hasBlocked: true } : null);
-                      }
-                    }}
-                    title={t('friends.blockUser', 'Bloquear Usuário')}
+                    className={styles.reportActionBtn}
+                    onClick={() => setIsReportOpen(true)}
+                    title={t('moderation.reportUser', 'Denunciar Usuário')}
                   >
-                    <Ban size={16} />
-                    <span>{t('friends.blockUser', 'Bloquear')}</span>
+                    <ShieldAlert size={18} />
+                    <span>{t('moderation.reportUser', 'Denunciar Usuário')}</span>
                   </button>
-                )}
+                </div>
               </>
             )}
           </div>
         </div>
       </div>
+
+      <ReportModal
+        isOpen={isReportOpen}
+        onClose={() => setIsReportOpen(false)}
+        targetType={ReportTargetTypeEnum.USER}
+        targetId={userId}
+        targetName={username}
+      />
     </div>
   );
 };

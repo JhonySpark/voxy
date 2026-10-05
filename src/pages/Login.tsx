@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../api";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, ShieldAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ApiRoutes, AppRoutes, StorageKeys } from "../core/enums";
 import { getApiErrorMessage } from "../core/utils/error.util";
@@ -100,15 +100,43 @@ export default function Login() {
         </div>
 
         {error && (
-          <div
-            style={{
-              color: "var(--danger)",
-              fontSize: "0.9rem",
-              textAlign: "center",
-            }}
-          >
-            {error}
-          </div>
+          error.toLowerCase().includes('suspens') ? (
+            <div
+              style={{
+                backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid rgba(239, 68, 68, 0.35)',
+                borderRadius: '8px',
+                padding: '0.85rem',
+                textAlign: 'left',
+                display: 'flex',
+                gap: '0.75rem',
+                alignItems: 'flex-start',
+              }}
+            >
+              <ShieldAlert size={22} color="#ef4444" style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                <strong style={{ color: '#ef4444', fontSize: '0.85rem', display: 'block', marginBottom: '0.2rem' }}>
+                  Conta Suspensa
+                </strong>
+                <p style={{ color: '#fca5a5', fontSize: '0.8rem', lineHeight: 1.4, margin: '0 0 0.35rem 0' }}>
+                  {error}
+                </p>
+                <span style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>
+                  Em conformidade com as diretrizes da ANPD e ECA. Para contestar ou solicitar revisão, contate o suporte.
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                color: "var(--danger)",
+                fontSize: "0.9rem",
+                textAlign: "center",
+              }}
+            >
+              {error}
+            </div>
+          )
         )}
 
         <form

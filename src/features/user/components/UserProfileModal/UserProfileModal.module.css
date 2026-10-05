@@ -282,8 +282,21 @@
 
 .actionsBar {
   display: flex;
+  flex-direction: column;
   gap: 10px;
-  margin-top: 4px;
+  margin-top: 6px;
+}
+
+.socialActionsRow {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.moderationActionsRow {
+  display: flex;
+  gap: 10px;
+  width: 100%;
 }
 
 .primaryActionBtn {
@@ -292,29 +305,33 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 16px;
+  height: 42px;
+  padding: 0 16px;
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   border: none;
   border-radius: 10px;
   color: #ffffff;
-  font-size: 0.88rem;
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
 }
 
 .primaryActionBtn:hover {
   filter: brightness(1.1);
   transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.4);
 }
 
 .secondaryActionBtn {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 16px;
+  height: 42px;
+  padding: 0 16px;
   background: rgba(255, 255, 255, 0.07);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
@@ -326,7 +343,60 @@
 }
 
 .secondaryActionBtn:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.22);
+  transform: translateY(-1px);
+}
+
+.blockActionBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  background: rgba(239, 68, 68, 0.07);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  border-radius: 10px;
+  color: #f87171;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.blockActionBtn:hover {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+  transform: translateY(-1px);
+}
+
+.reportActionBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.18) 0%, rgba(185, 28, 28, 0.24) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  border-radius: 10px;
+  color: #fecaca;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.15);
+}
+
+.reportActionBtn:hover {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.28) 0%, rgba(185, 28, 28, 0.38) 100%);
+  border-color: #ef4444;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
   transform: translateY(-1px);
 }
 

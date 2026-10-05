@@ -93,8 +93,34 @@ export const RealtimeEvents = {
   GET_USER_STATUSES: 'getUserStatuses',
   ALL_USER_STATUSES: 'allUserStatuses',
   UPDATE_STATUS: 'updateStatus',
+
+  // Moderation & Safety (ANPD / ECA)
+  MEMBER_KICKED: 'memberKicked',
+  MEMBER_BANNED: 'memberBanned',
+  MEMBER_MUTED: 'serverMemberMuted',
+  SERVER_SUSPENDED: 'serverSuspended',
+  ACCOUNT_SUSPENDED: 'accountSuspended',
 } as const;
 export type RealtimeEvents = (typeof RealtimeEvents)[keyof typeof RealtimeEvents];
+
+export const ReportTargetTypeEnum = {
+  USER: 'USER',
+  SERVER: 'SERVER',
+  STREAM: 'STREAM',
+} as const;
+export type ReportTargetTypeEnum = (typeof ReportTargetTypeEnum)[keyof typeof ReportTargetTypeEnum];
+
+export const ReportReasonEnum = {
+  CHILD_SAFETY_EXPLOITATION: 'CHILD_SAFETY_EXPLOITATION',
+  HARASSMENT_BULLYING: 'HARASSMENT_BULLYING',
+  HATE_SPEECH: 'HATE_SPEECH',
+  SEXUAL_CONTENT: 'SEXUAL_CONTENT',
+  VIOLENCE_THREATS: 'VIOLENCE_THREATS',
+  SELF_HARM: 'SELF_HARM',
+  SPAM_SCAM: 'SPAM_SCAM',
+  OTHER: 'OTHER',
+} as const;
+export type ReportReasonEnum = (typeof ReportReasonEnum)[keyof typeof ReportReasonEnum];
 
 export const UserStatusEnum = {
   ONLINE: 'ONLINE',
@@ -148,6 +174,7 @@ export const ApiRoutes = {
   USERS_ME: '/users/me',
   USERS_PROFILE: '/users/profile',
   USERS_CHANGE_PASSWORD: '/users/change-password',
+  MODERATION_REPORTS: '/moderation/reports',
 } as const;
 export type ApiRoutes = (typeof ApiRoutes)[keyof typeof ApiRoutes];
 
