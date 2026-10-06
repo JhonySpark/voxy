@@ -63,6 +63,13 @@ export function useServers() {
     };
   }, [servers]);
 
+  // Sempre que o servidor ativo for selecionado ou alterado, sincroniza os estados de voz do servidor
+  useEffect(() => {
+    if (activeServer?.id) {
+      realtimeClient.emit(RealtimeEvents.JOIN_SERVER, { serverId: activeServer.id });
+    }
+  }, [activeServer?.id]);
+
   const syncVoiceRoomParticipants = useCallback(
     (
       channelId: string,

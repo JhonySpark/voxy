@@ -74,8 +74,6 @@ export class SocketRealtimeAdapter implements IRealtimeClientPort {
   emit(event: string, ...args: any[]): void {
     if (this.socket?.connected) {
       this.socket.emit(event, ...args);
-    } else if (this.socket) {
-      this.socket.emit(event, ...args);
     } else {
       this.emitQueue.push({ event, args });
     }

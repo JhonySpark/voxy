@@ -628,6 +628,7 @@ export default function Dashboard() {
             server.channels?.[0] ||
             null;
           setActiveChannel(defaultChannel);
+          realtimeClient.emit(RealtimeEvents.JOIN_SERVER, { serverId: server.id });
         }}
         onOpenCreateServerModal={() => setShowServerModal(true)}
       />
