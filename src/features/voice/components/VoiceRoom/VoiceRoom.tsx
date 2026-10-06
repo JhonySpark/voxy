@@ -332,6 +332,14 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         const audio = new Audio(chatConnectedSound);
         audio.volume = 0.3;
         audio.play().catch(console.error);
+      } else if (realParticipants.length < prevParticipantsCount.current) {
+        // Toca apenas se o usuário local ainda estiver na sala (ou seja, quem saiu foi outro participante)
+        const isLocalStillInRoom = localParticipant && realParticipants.some((p) => p.identity === localParticipant.identity);
+        if (isLocalStillInRoom) {
+          const audio = new Audio(chatDisconnectedSound);
+          audio.volume = 0.3;
+          audio.play().catch(console.error);
+        }
       }
     }
 
