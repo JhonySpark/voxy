@@ -92,6 +92,9 @@ interface ChatAreaProps {
   onEditMessage?: (messageId: string, newContent: string) => void | Promise<void>;
   onToggleReaction?: (messageId: string, emoji: string) => void;
   isLoading?: boolean;
+  isLoadingMore?: boolean;
+  hasMoreMessages?: boolean;
+  onLoadMoreMessages?: () => void;
   onOpenUserProfile?: (userId: string) => void;
   onToggleMembersList?: () => void;
   isMembersListOpen?: boolean;
@@ -114,6 +117,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   onEditMessage,
   onToggleReaction,
   isLoading = false,
+  isLoadingMore = false,
+  hasMoreMessages = false,
+  onLoadMoreMessages,
   onOpenUserProfile,
   onToggleMembersList,
   isMembersListOpen = false,
@@ -128,6 +134,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const { confirm } = useDialog();
   const messagesListRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevScrollHeightRef = useRef<number>(0);
+  const prevScrollTopRef = useRef<number>(0);
+  const isPrependingRef = useRef<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
@@ -236,12 +245,36 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     setReplyingTo(null);
     handleCancelEditing();
     setActiveMenuMessageId(null);
+    isPrependingRef.current = false;
     scrollToBottom('auto');
   }, [target.id]);
 
-  // Scroll suave ao receber novas mensagens
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (el.scrollTop < 60 && hasMoreMessages && !isLoadingMore && !isLoading && onLoadMoreMessages) {
+      prevScrollHeightRef.current = el.scrollHeight;
+      prevScrollTopRef.current = el.scrollTop;
+      isPrependingRef.current = true;
+      onLoadMoreMessages();
+    }
+  };
+
+  // Preserva posição do scroll ao carregar mensagens anteriores ou rola suavemente em novas mensagens
   useEffect(() => {
-    scrollToBottom('smooth');
+    const listEl = messagesListRef.current;
+    if (!listEl) return;
+
+    if (isPrependingRef.current) {
+      const heightDiff = listEl.scrollHeight - prevScrollHeightRef.current;
+      listEl.scrollTop = prevScrollTopRef.current + heightDiff;
+      isPrependingRef.current = false;
+      return;
+    }
+
+    const isNearBottom = listEl.scrollHeight - listEl.scrollTop - listEl.clientHeight < 250;
+    if (isNearBottom || messages.length <= 50) {
+      scrollToBottom('smooth');
+    }
   }, [messages]);
 
   // Captura o momento em que imagens ou vídeos terminam de baixar
@@ -700,7 +733,13 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       </header>
 
       {/* Messages */}
-      <div className={styles.messagesList} ref={messagesListRef}>
+      <div className={styles.messagesList} ref={messagesListRef} onScroll={handleScroll}>
+        {isLoadingMore && (
+          <div className={styles.loadingMoreContainer}>
+            <Loader2 size={16} className={styles.loadingSpinner} />
+            <span>{t('chat.loadingOlderMessages', 'Carregando mensagens anteriores...')}</span>
+          </div>
+        )}
         {isLoading && messages.length === 0 ? (
           <div className={styles.loadingMessagesContainer}>
             <Loader2 size={32} className={styles.loadingSpinner} />

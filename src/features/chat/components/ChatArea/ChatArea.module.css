@@ -521,6 +521,17 @@
   min-height: 250px;
 }
 
+.loadingMoreContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  width: 100%;
+}
+
 .loadingSpinner {
   color: var(--brand-primary, #34d399);
   animation: spin 1s linear infinite;

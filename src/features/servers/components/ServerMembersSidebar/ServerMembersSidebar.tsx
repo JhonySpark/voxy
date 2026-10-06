@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import styles from './ServerMembersSidebar.module.css';
 import {
   Users,
@@ -59,10 +59,16 @@ const PRESET_BAN_REASONS = [
   'Tentativa de golpe ou links suspeitos',
 ];
 
+// Cache em memória por servidor (sobrevive ao desmontar a sidebar).
+// Permite exibir a lista instantaneamente e revalidar em segundo plano.
+const membersCache = new Map<string, ServerMemberItem[]>();
+
 interface ServerMembersSidebarProps {
   serverId: string;
   serverOwnerId: string;
   myId: string;
+  /** Permissões do usuário no servidor, já carregadas pelo Dashboard */
+  permissions?: any;
   userStatuses?: Record<string, { status: UserStatusEnum | string; customStatus?: string }>;
   onClose: () => void;
   onOpenUserProfile?: (userId: string, initialData?: any) => void;
@@ -74,6 +80,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
   serverId,
   serverOwnerId,
   myId,
+  permissions: myPermissions,
   userStatuses,
   onClose,
   onOpenUserProfile,
@@ -83,10 +90,10 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
   const { t } = useTranslation();
   const { toast } = useToast();
 
-  const [members, setMembers] = useState<ServerMemberItem[]>([]);
+  const [members, setMembers] = useState<ServerMemberItem[]>(() => membersCache.get(serverId) || []);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [myPermissions, setMyPermissions] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(() => !membersCache.has(serverId));
+  const currentServerIdRef = useRef(serverId);
   const [activeMenuMemberId, setActiveMenuMemberId] = useState<string | null>(null);
   const [showRoleSelectorForId, setShowRoleSelectorForId] = useState<string | null>(null);
 
@@ -109,32 +116,36 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
   const [reportTargetMember, setReportTargetMember] = useState<ServerMemberItem | null>(null);
 
   const fetchMembers = async () => {
+    const requestedServerId = serverId;
     try {
-      const [membersRes, permsRes] = await Promise.allSettled([
-        httpClient.get<ServerMemberItem[]>(`/servers/${serverId}/members`),
-        httpClient.get<any>(`/servers/${serverId}/my-permissions`),
-      ]);
+      const res = await httpClient.get<ServerMemberItem[]>(`/servers/${requestedServerId}/members`);
+      if (!Array.isArray(res)) return;
 
-      if (membersRes.status === 'fulfilled' && Array.isArray(membersRes.value)) {
-        setMembers(membersRes.value);
-        membersRes.value.forEach((m) => {
-          if (m.user?.avatarUrl) preloadMedia(m.user.avatarUrl);
-          if (m.user?.bannerUrl) preloadMedia(m.user.bannerUrl);
-        });
-      }
-      if (permsRes.status === 'fulfilled' && permsRes.value) {
-        setMyPermissions(permsRes.value);
+      membersCache.set(requestedServerId, res);
+      res.forEach((m) => {
+        if (m.user?.avatarUrl) preloadMedia(m.user.avatarUrl);
+        if (m.user?.bannerUrl) preloadMedia(m.user.bannerUrl);
+      });
+
+      // Ignora respostas de um servidor que já não está ativo
+      if (currentServerIdRef.current === requestedServerId) {
+        setMembers(res);
       }
     } catch (err) {
       console.error('Error fetching server members', err);
     } finally {
-      setIsLoading(false);
+      if (currentServerIdRef.current === requestedServerId) {
+        setIsLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    setIsLoading(true);
-    setMembers([]);
+    currentServerIdRef.current = serverId;
+    const cached = membersCache.get(serverId);
+    // Com cache: exibe na hora e revalida em segundo plano (sem spinner)
+    setMembers(cached || []);
+    setIsLoading(!cached);
     fetchMembers();
 
     const onMembersRefresh = (data?: { serverId: string }) => {
@@ -165,6 +176,12 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
       realtimeClient.off(RealtimeEvents.MEMBER_MUTED, onMemberMutedEvent);
     };
   }, [serverId]);
+
+  // Mantém o cache alinhado com mutações locais (expulsar, banir, cargo, mute)
+  useEffect(() => {
+    if (!isLoading) membersCache.set(serverId, members);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [members]);
 
   const isOwner = serverOwnerId === myId;
   const canManageServer = isOwner || myPermissions?.canManageServer;

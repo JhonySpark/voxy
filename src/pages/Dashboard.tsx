@@ -109,6 +109,9 @@ export default function Dashboard() {
     unreadDMs,
     unreadChannels,
     isLoadingMessages,
+    hasMoreMessages,
+    isLoadingMoreMessages,
+    loadMoreMessages,
     sendMessage,
     sendAttachmentMessage,
     editMessage,
@@ -794,6 +797,9 @@ export default function Dashboard() {
                 onEditMessage={editMessage}
                 onToggleReaction={toggleReaction}
                 isLoading={isLoadingMessages}
+                isLoadingMore={isLoadingMoreMessages}
+                hasMoreMessages={hasMoreMessages}
+                onLoadMoreMessages={loadMoreMessages}
                 onOpenUserProfile={setViewingUserId}
                 isMembersListOpen={isMembersListOpen}
                 onToggleMembersList={() => setIsMembersListOpen((prev) => !prev)}
@@ -815,6 +821,7 @@ export default function Dashboard() {
                   serverId={activeServer.id}
                   serverOwnerId={activeServer.ownerId}
                   myId={myId}
+                  permissions={activeServerPermissions}
                   userStatuses={userStatuses}
                   onClose={() => setIsMembersListOpen(false)}
                   onOpenUserProfile={(id, data) => {

@@ -28,9 +28,12 @@ export function useChat({
   const [unreadDMs, setUnreadDMs] = useState<Record<string, number>>({});
   const [unreadChannels, setUnreadChannels] = useState<Record<string, number>>({});
   const [isLoadingMessages, setIsLoadingMessages] = useState<boolean>(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState<boolean>(true);
+  const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState<boolean>(false);
 
   // Cache em memória: chave ("dm_{friendId}" ou "channel_{channelId}") -> ChatMessage[]
   const messageCacheRef = useRef<Map<string, ChatMessage[]>>(new Map());
+  const hasMoreMapRef = useRef<Map<string, boolean>>(new Map());
 
   const activeViewRef = useRef(activeView);
   const activeFriendIdRef = useRef(activeFriendId);
@@ -148,17 +151,22 @@ export function useChat({
       // 0ms instant switch com dados em cache
       setMessages(cached);
       setIsLoadingMessages(false);
+      setHasMoreMessages(hasMoreMapRef.current.get(cacheKey) ?? true);
     } else {
       // Limpa imediatamente as mensagens do canal anterior para não ficarem congeladas na tela
       setMessages([]);
       setIsLoadingMessages(true);
+      setHasMoreMessages(true);
     }
 
     try {
-      const res = await httpClient.get<ChatMessage[]>(`${ApiRoutes.CHANNELS}/${channelId}/messages`);
+      const res = await httpClient.get<ChatMessage[]>(`${ApiRoutes.CHANNELS}/${channelId}/messages?limit=50`);
       const mergedMessages = mergeWithPendingMessages(res, cached);
       const isIdentical = areMessagesEqual(cached, mergedMessages);
       messageCacheRef.current.set(cacheKey, mergedMessages);
+
+      const hasMore = Array.isArray(res) && res.length === 50;
+      hasMoreMapRef.current.set(cacheKey, hasMore);
 
       // Só atualiza a tela se o usuário ainda estiver neste canal E se houver novas mensagens
       if (
@@ -168,6 +176,7 @@ export function useChat({
         if (!isIdentical) {
           setMessages(mergedMessages);
         }
+        setHasMoreMessages(hasMore);
         setIsLoadingMessages(false);
       }
     } catch (err) {
@@ -178,6 +187,52 @@ export function useChat({
       ) {
         setIsLoadingMessages(false);
       }
+    }
+  }, []);
+
+  const loadMoreMessages = useCallback(async () => {
+    if (activeViewRef.current !== DashboardView.SERVER || !activeChannelIdRef.current) return;
+    const channelId = activeChannelIdRef.current;
+    const cacheKey = `channel_${channelId}`;
+    if (hasMoreMapRef.current.get(cacheKey) === false) return;
+
+    const currentList = messageCacheRef.current.get(cacheKey) || [];
+    const oldestMessage = currentList.find((m) => !m.id.startsWith('temp-'));
+    if (!oldestMessage) return;
+
+    setIsLoadingMoreMessages(true);
+    try {
+      const older = await httpClient.get<ChatMessage[]>(
+        `${ApiRoutes.CHANNELS}/${channelId}/messages?before=${oldestMessage.id}&limit=50`,
+      );
+
+      const hasMore = Array.isArray(older) && older.length === 50;
+      hasMoreMapRef.current.set(cacheKey, hasMore);
+
+      if (
+        activeViewRef.current === DashboardView.SERVER &&
+        activeChannelIdRef.current === channelId
+      ) {
+        setHasMoreMessages(hasMore);
+      }
+
+      if (Array.isArray(older) && older.length > 0) {
+        const existingIds = new Set(currentList.map((m) => m.id));
+        const filteredOlder = older.filter((m) => !existingIds.has(m.id));
+        const combined = [...filteredOlder, ...currentList];
+        messageCacheRef.current.set(cacheKey, combined);
+
+        if (
+          activeViewRef.current === DashboardView.SERVER &&
+          activeChannelIdRef.current === channelId
+        ) {
+          setMessages(combined);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading older channel messages', err);
+    } finally {
+      setIsLoadingMoreMessages(false);
     }
   }, []);
 
@@ -602,6 +657,9 @@ export function useChat({
     unreadDMs,
     unreadChannels,
     isLoadingMessages,
+    hasMoreMessages,
+    isLoadingMoreMessages,
+    loadMoreMessages,
     sendMessage,
     sendAttachmentMessage,
     editMessage,
