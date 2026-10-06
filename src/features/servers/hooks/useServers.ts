@@ -39,20 +39,73 @@ export function useServers() {
     }
   }, []);
 
-  // Entra nas salas de realtime de todos os servidores
+  // Entra nas salas de realtime de todos os servidores e re-conecta automaticamente se a conexão cair
   useEffect(() => {
-    if (servers.length > 0) {
-      servers.forEach((server) => {
-        realtimeClient.emit(RealtimeEvents.JOIN_SERVER, { serverId: server.id });
-        // Acompanha todos os canais de texto para mostrar badges fora do canal ativo.
-        server.channels
-          .filter((channel) => channel.type === 'TEXT')
-          .forEach((channel) => {
-            realtimeClient.emit(RealtimeEvents.JOIN_CHANNEL, { channelId: channel.id });
-          });
-      });
-    }
+    const joinAllServers = () => {
+      if (servers.length > 0) {
+        servers.forEach((server) => {
+          realtimeClient.emit(RealtimeEvents.JOIN_SERVER, { serverId: server.id });
+          // Acompanha todos os canais de texto para mostrar badges fora do canal ativo.
+          server.channels
+            .filter((channel) => channel.type === 'TEXT')
+            .forEach((channel) => {
+              realtimeClient.emit(RealtimeEvents.JOIN_CHANNEL, { channelId: channel.id });
+            });
+        });
+      }
+    };
+
+    joinAllServers();
+
+    realtimeClient.on('connect', joinAllServers);
+    return () => {
+      realtimeClient.off('connect', joinAllServers);
+    };
   }, [servers]);
+
+  const syncVoiceRoomParticipants = useCallback(
+    (
+      channelId: string,
+      participants: { id: string; username: string; isMuted?: boolean }[],
+      profileResolver?: (userId: string) => { displayName?: string | null; avatarUrl?: string | null } | undefined
+    ) => {
+      setServerVoiceStates((prev) => {
+        const existingList = prev[channelId] || [];
+        const existingMap = new Map(existingList.map((p) => [p.userId, p]));
+
+        const updatedList: VoiceParticipantState[] = participants.map((p) => {
+          const ex = existingMap.get(p.id);
+          const resolved = profileResolver ? profileResolver(p.id) : undefined;
+          return {
+            userId: p.id,
+            username: ex?.username || p.username,
+            displayName: ex?.displayName || resolved?.displayName || p.username,
+            avatarUrl: ex?.avatarUrl !== undefined ? ex.avatarUrl : resolved?.avatarUrl || null,
+            isMuted: p.isMuted,
+          };
+        });
+
+        if (
+          existingList.length === updatedList.length &&
+          existingList.every(
+            (item, i) =>
+              item.userId === updatedList[i]?.userId &&
+              item.isMuted === updatedList[i]?.isMuted &&
+              item.displayName === updatedList[i]?.displayName &&
+              item.avatarUrl === updatedList[i]?.avatarUrl
+          )
+        ) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          [channelId]: updatedList,
+        };
+      });
+    },
+    []
+  );
 
   useEffect(() => {
     const onVoiceUpdate = (data: {
@@ -124,5 +177,6 @@ export function useServers() {
     channelStartTimes,
     loading,
     fetchServers,
+    syncVoiceRoomParticipants,
   };
 }

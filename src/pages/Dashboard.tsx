@@ -100,6 +100,7 @@ export default function Dashboard() {
     serverVoiceStates,
     channelStartTimes,
     fetchServers,
+    syncVoiceRoomParticipants,
   } = useServers();
 
   const {
@@ -231,21 +232,33 @@ export default function Dashboard() {
     });
   }, [friends]);
 
-  // Sincronizar presença no canal de voz ativo
+  // Sincronizar presença no canal de voz ativo e re-conectar se a conexão cair
   useEffect(() => {
-    if (connectedVoiceChannel) {
+    if (!connectedVoiceChannel) return;
+
+    const currentChannelId = connectedVoiceChannel.channelId;
+    const currentServerId = connectedVoiceChannel.serverId;
+
+    const emitJoinVoice = () => {
       realtimeClient.emit(RealtimeEvents.JOIN_VOICE, {
-        serverId: connectedVoiceChannel.serverId,
-        channelId: connectedVoiceChannel.channelId,
+        serverId: currentServerId,
+        channelId: currentChannelId,
+        avatarUrl: currentUserProfile?.avatarUrl || undefined,
       });
-      return () => {
-        realtimeClient.emit(RealtimeEvents.LEAVE_VOICE, {
-          serverId: connectedVoiceChannel.serverId,
-          channelId: connectedVoiceChannel.channelId,
-        });
-      };
-    }
-  }, [connectedVoiceChannel]);
+    };
+
+    emitJoinVoice();
+
+    realtimeClient.on('connect', emitJoinVoice);
+
+    return () => {
+      realtimeClient.off('connect', emitJoinVoice);
+      realtimeClient.emit(RealtimeEvents.LEAVE_VOICE, {
+        serverId: currentServerId,
+        channelId: currentChannelId,
+      });
+    };
+  }, [connectedVoiceChannel?.channelId, connectedVoiceChannel?.serverId, currentUserProfile?.avatarUrl]);
 
   // Sincronizar perfis atualizados em tempo real (avatar, banner, etc.)
   useEffect(() => {
@@ -653,6 +666,7 @@ export default function Dashboard() {
             userStatuses={userStatuses}
             onSelectChannel={(ch) => setActiveChannel(ch)}
             onConnectVoice={(ch) => {
+              if (connectedVoiceChannel?.channelId === ch.id) return;
               setConnectedVoiceChannel({
                 channelId: ch.id,
                 serverId: activeServer.id,
@@ -745,7 +759,30 @@ export default function Dashboard() {
               setConnectedVoiceChannel(null);
               setIsVoiceMuted(false);
             }}
-            onParticipantsChange={() => {}}
+            onParticipantsChange={(roomParticipants) => {
+              if (connectedVoiceChannel) {
+                syncVoiceRoomParticipants(
+                  connectedVoiceChannel.channelId,
+                  roomParticipants,
+                  (userId) => {
+                    if (userId === myId && currentUserProfile) {
+                      return {
+                        displayName: currentUserProfile.displayName,
+                        avatarUrl: currentUserProfile.avatarUrl,
+                      };
+                    }
+                    const friend = friends.find((f) => f.id === userId);
+                    if (friend) {
+                      return {
+                        displayName: friend.displayName,
+                        avatarUrl: friend.avatarUrl,
+                      };
+                    }
+                    return undefined;
+                  }
+                );
+              }
+            }}
             onMuteChange={handleMuteChange}
             audioInput={selectedAudioInput}
             audioOutput={selectedAudioOutput}
