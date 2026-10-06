@@ -232,17 +232,17 @@ export default function Dashboard() {
     });
   }, [friends]);
 
+  const connectedVoiceChannelId = connectedVoiceChannel?.channelId;
+  const connectedVoiceServerId = connectedVoiceChannel?.serverId;
+
   // Sincronizar presença no canal de voz ativo e re-conectar se a conexão cair
   useEffect(() => {
-    if (!connectedVoiceChannel) return;
-
-    const currentChannelId = connectedVoiceChannel.channelId;
-    const currentServerId = connectedVoiceChannel.serverId;
+    if (!connectedVoiceChannelId || !connectedVoiceServerId) return;
 
     const emitJoinVoice = () => {
       realtimeClient.emit(RealtimeEvents.JOIN_VOICE, {
-        serverId: currentServerId,
-        channelId: currentChannelId,
+        serverId: connectedVoiceServerId,
+        channelId: connectedVoiceChannelId,
         avatarUrl: currentUserProfile?.avatarUrl || undefined,
       });
     };
@@ -254,11 +254,11 @@ export default function Dashboard() {
     return () => {
       realtimeClient.off('connect', emitJoinVoice);
       realtimeClient.emit(RealtimeEvents.LEAVE_VOICE, {
-        serverId: currentServerId,
-        channelId: currentChannelId,
+        serverId: connectedVoiceServerId,
+        channelId: connectedVoiceChannelId,
       });
     };
-  }, [connectedVoiceChannel?.channelId, connectedVoiceChannel?.serverId, currentUserProfile?.avatarUrl]);
+  }, [connectedVoiceChannelId, connectedVoiceServerId, currentUserProfile?.avatarUrl]);
 
   // Sincronizar perfis atualizados em tempo real (avatar, banner, etc.)
   useEffect(() => {

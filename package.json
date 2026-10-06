@@ -55,7 +55,8 @@
       }
     ],
     "asarUnpack": [
-      "**/*.exe"
+      "**/*.exe",
+      "build/icon.ico"
     ],
     "publish": [
       {

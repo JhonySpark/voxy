@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, desktopCapturer, Menu, Tray, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, desktopCapturer, Menu, Tray, dialog, nativeImage } from 'electron'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawn, ChildProcess } from 'node:child_process'
@@ -47,14 +47,18 @@ const backgroundSettingsPath = () => join(app.getPath('userData'), 'background-s
 function getBackgroundSettings(): BackgroundSettings {
   try {
     const settings = JSON.parse(readFileSync(backgroundSettingsPath(), 'utf8'))
-    return { keepRunningInBackground: settings.keepRunningInBackground === true }
+    return { keepRunningInBackground: settings.keepRunningInBackground !== false }
   } catch {
-    return { keepRunningInBackground: false }
+    return { keepRunningInBackground: true }
   }
 }
 
 function saveBackgroundSettings(keepRunningInBackground: boolean) {
-  writeFileSync(backgroundSettingsPath(), JSON.stringify({ keepRunningInBackground }), 'utf8')
+  try {
+    writeFileSync(backgroundSettingsPath(), JSON.stringify({ keepRunningInBackground }), 'utf8')
+  } catch (err) {
+    console.error('[Background] Falha ao salvar configurações:', err)
+  }
   refreshTrayMenu()
 }
 
@@ -90,15 +94,33 @@ function refreshTrayMenu() {
   ]))
 }
 
+function getTrayIcon(): nativeImage {
+  const devPath = join(process.cwd(), 'build/icon.ico')
+  const unpackedPath = join(process.resourcesPath, 'app.asar.unpacked/build/icon.ico')
+  const asarPath = join(app.getAppPath(), 'build/icon.ico')
+
+  const candidates = [devPath, unpackedPath, asarPath]
+  for (const p of candidates) {
+    if (existsSync(p)) {
+      const img = nativeImage.createFromPath(p)
+      if (!img.isEmpty()) return img
+    }
+  }
+  return nativeImage.createFromPath(asarPath)
+}
+
 function createTray() {
   if (tray) return
-  const iconPath = process.env.VITE_DEV_SERVER_URL
-    ? join(process.cwd(), 'build/icon.ico')
-    : join(process.resourcesPath, 'app.asar.unpacked/build/icon.ico')
-  tray = new Tray(existsSync(iconPath) ? iconPath : join(app.getAppPath(), 'build/icon.ico'))
-  tray.setToolTip('Voxy')
-  tray.on('click', showMainWindow)
-  refreshTrayMenu()
+  try {
+    const icon = getTrayIcon()
+    tray = new Tray(icon)
+    tray.setToolTip('Voxy')
+    tray.on('click', showMainWindow)
+    tray.on('double-click', showMainWindow)
+    refreshTrayMenu()
+  } catch (err) {
+    console.error('[Tray] Falha ao criar ícone da bandeja:', err)
+  }
 }
 
 async function createWindow() {

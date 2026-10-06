@@ -224,7 +224,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     localStorage.getItem(StorageKeys.NOTIFY_SOUNDS) !== 'false'
   );
   const [runInBackground, setRunInBackground] = useState<boolean>(
-    localStorage.getItem(StorageKeys.RUN_IN_BACKGROUND) === 'true'
+    localStorage.getItem(StorageKeys.RUN_IN_BACKGROUND) !== 'false'
   );
   const [gamePresence, setGamePresence] = useState<boolean>(
     localStorage.getItem(StorageKeys.GAME_PRESENCE) !== 'false'
@@ -232,9 +232,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   useEffect(() => {
     ipcRenderer?.invoke(IpcChannels.GET_BACKGROUND_MODE)
-      .then((enabled: boolean) => setRunInBackground(enabled === true))
+      .then((enabled: boolean) => setRunInBackground(enabled !== false))
       .catch(() => undefined);
   }, []);
+
+  const handleToggleRunInBackground = () => {
+    const nextVal = !runInBackground;
+    setRunInBackground(nextVal);
+    localStorage.setItem(StorageKeys.RUN_IN_BACKGROUND, nextVal.toString());
+    ipcRenderer?.send(IpcChannels.SET_BACKGROUND_MODE, nextVal);
+  };
 
   // Verificação manual de atualização
   const [checkingUpdate, setCheckingUpdate] = useState<boolean>(false);
@@ -994,7 +1001,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 <div
                   className="settings-subcard"
-                  onClick={() => setRunInBackground(!runInBackground)}
+                  onClick={handleToggleRunInBackground}
                 >
                   <div>
                     <div className="settings-subcard-title">Executar em segundo plano</div>
