@@ -9,7 +9,6 @@ import {
   X,
   Clipboard,
   ArrowRight,
-  ShieldAlert,
   CheckCircle2,
   Volume2,
   Users,
