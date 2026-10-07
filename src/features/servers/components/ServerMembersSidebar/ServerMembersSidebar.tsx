@@ -211,6 +211,10 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
       toast.success(t('server.memberKicked', 'Membro expulso do servidor!'));
       setMembers((prev) => prev.filter((m) => m.userId !== kickTargetMember.userId));
       realtimeClient.emit(RealtimeEvents.SERVER_MEMBERS_UPDATED, { serverId });
+      realtimeClient.emit(RealtimeEvents.MEMBER_KICKED, {
+        serverId,
+        targetUserId: kickTargetMember.userId,
+      });
       onMembersUpdated?.();
       setKickTargetMember(null);
     } catch (err: any) {

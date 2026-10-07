@@ -91,7 +91,12 @@ export const InviteServerModal: React.FC<InviteServerModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      await httpClient.post(`/servers/${server.id}/members`, { userIds: userIdsToAdd });
+      const res = await httpClient.post<{ added?: string[]; success?: boolean }>(
+        `/servers/${server.id}/members`,
+        { userIds: userIdsToAdd },
+      );
+      const addedIds = res?.added && res.added.length > 0 ? res.added : userIdsToAdd;
+
       toast.success(
         userIdsToAdd.length === 1
           ? t('server.friendAddedSuccess', 'Amigo adicionado ao servidor com sucesso!')
@@ -112,8 +117,24 @@ export const InviteServerModal: React.FC<InviteServerModalProps> = ({
         return next;
       });
 
+      // Notifica o servidor e os membros conectados
       realtimeClient.emit(RealtimeEvents.SERVER_UPDATED, { serverId: server.id });
       realtimeClient.emit(RealtimeEvents.SERVER_MEMBERS_UPDATED, { serverId: server.id });
+
+      // Notifica instantaneamente os amigos adicionados para que o servidor apareça na hora para eles
+      realtimeClient.emit(RealtimeEvents.SERVER_MEMBERS_ADDED, {
+        serverId: server.id,
+        serverName: server.name,
+        userIds: addedIds,
+      });
+      for (const targetUserId of addedIds) {
+        realtimeClient.emit(RealtimeEvents.SERVER_MEMBER_ACTION, {
+          serverId: server.id,
+          serverName: server.name,
+          targetUserId,
+        });
+      }
+
       onMembersUpdated?.();
     } catch (err: any) {
       toast.error(err.response?.data?.message || t('server.addFriendError', 'Erro ao adicionar amigo ao servidor.'));

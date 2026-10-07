@@ -493,11 +493,19 @@ export default function Dashboard() {
       }
     };
 
+    const onServerMembershipChanged = (data?: { serverId: string; serverName?: string }) => {
+      fetchServers();
+      if (data?.serverName) {
+        toast.info(`Você foi adicionado ao servidor ${data.serverName}!`);
+      }
+    };
+
     realtimeClient.on(RealtimeEvents.SERVER_SUSPENDED, onServerSuspended);
     realtimeClient.on(RealtimeEvents.ACCOUNT_SUSPENDED, onAccountSuspended);
     realtimeClient.on(RealtimeEvents.MEMBER_KICKED, onMemberKicked);
     realtimeClient.on(RealtimeEvents.MEMBER_BANNED, onMemberBanned);
     realtimeClient.on(RealtimeEvents.MEMBER_MUTED, onMemberMuted);
+    realtimeClient.on(RealtimeEvents.SERVER_MEMBERSHIP_CHANGED, onServerMembershipChanged);
 
     return () => {
       realtimeClient.off(RealtimeEvents.SERVER_SUSPENDED, onServerSuspended);
@@ -505,6 +513,7 @@ export default function Dashboard() {
       realtimeClient.off(RealtimeEvents.MEMBER_KICKED, onMemberKicked);
       realtimeClient.off(RealtimeEvents.MEMBER_BANNED, onMemberBanned);
       realtimeClient.off(RealtimeEvents.MEMBER_MUTED, onMemberMuted);
+      realtimeClient.off(RealtimeEvents.SERVER_MEMBERSHIP_CHANGED, onServerMembershipChanged);
     };
   }, [myId, activeServer?.id, connectedVoiceChannel?.serverId, fetchServers, navigate, toast, setActiveServer, setActiveChannel]);
 

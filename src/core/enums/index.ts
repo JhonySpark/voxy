@@ -75,6 +75,8 @@ export const RealtimeEvents = {
   SERVER_DELETED: 'serverDeleted',
   SERVER_MEMBERS_UPDATED: 'serverMembersUpdated',
   SERVER_MEMBERSHIP_CHANGED: 'serverMembershipChanged',
+  SERVER_MEMBER_ACTION: 'serverMemberAction',
+  SERVER_MEMBERS_ADDED: 'serverMembersAdded',
 
   // Voice
   JOIN_VOICE: 'joinVoice',
