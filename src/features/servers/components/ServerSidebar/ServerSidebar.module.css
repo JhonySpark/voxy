@@ -11,6 +11,27 @@
   z-index: 20;
 }
 
+.serverItemWrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.activeNeonBar {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 34px;
+  background-color: var(--brand-primary, #34d399);
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 0 10px #34d399, 0 0 20px rgba(52, 211, 153, 0.6);
+  z-index: 5;
+}
+
 .serverIcon {
   width: 48px;
   height: 48px;
@@ -33,6 +54,7 @@
   background-color: var(--brand-primary, #34d399);
   color: #0b0f17;
   transform: translateY(-1px);
+  filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.35));
 }
 
 .serverIcon.active {
@@ -43,6 +65,7 @@
 
 .serverIcon.home {
   background-color: transparent;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   padding: 0;
   box-shadow: none;
 }
@@ -67,9 +90,9 @@
 }
 
 .serverIcon.add:hover {
-  border-color: var(--brand-primary, #34d399);
-  background-color: rgba(52, 211, 153, 0.1);
+  background-color: rgba(52, 211, 153, 0.16);
   color: var(--brand-primary, #34d399);
+  filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.3));
 }
 
 .divider {
@@ -82,15 +105,16 @@
 
 .badge {
   position: absolute;
-  bottom: -3px;
-  right: -3px;
+  bottom: 0px;
+  right: 2px;
   background-color: #ef4444;
   color: #ffffff;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 800;
-  padding: 1px 5px;
+  padding: 1px 4px;
   border-radius: 10px;
-  border: 2px solid #080b12;
-  min-width: 18px;
+  border: 1.5px solid #080b12;
+  min-width: 16px;
   text-align: center;
+  z-index: 4;
 }

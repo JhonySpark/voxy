@@ -383,19 +383,14 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
           <div className={styles.memberNames}>
             <span className={styles.displayName}>
               {member.user?.displayName || member.user?.username}
-              {member.role === 'OWNER' && (
-                <span className={styles.badgeOwner} title="Proprietário do Servidor">
-                  <Crown size={10} /> Dono
-                </span>
-              )}
-              {member.role === 'ADMIN' && (
-                <span className={styles.badgeAdmin} title="Administrador">
-                  <Shield size={10} /> Admin
+              {(member.role === 'OWNER' || member.role === 'ADMIN') && (
+                <span title={member.role === 'OWNER' ? 'Líder do Servidor' : 'Administrador'} style={{ display: 'inline-flex', alignItems: 'center' }}>
+                  <Crown size={14} className={styles.adminCrown} />
                 </span>
               )}
               {member.role === 'MODERATOR' && (
-                <span className={styles.badgeMod} title="Moderador">
-                  <Award size={10} /> Mod
+                <span className={styles.badgeMod} title="Oficial / Moderador">
+                  <Award size={10} /> Oficial
                 </span>
               )}
               {member.isMuted && (
@@ -702,7 +697,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
             {ownerAndAdmins.length > 0 && (
               <div className={styles.group}>
                 <span className={styles.groupTitle}>
-                  Administração — {ownerAndAdmins.length}
+                  LÍDERES — {ownerAndAdmins.length}
                 </span>
                 {ownerAndAdmins.map(renderMemberRow)}
               </div>
@@ -711,7 +706,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
             {moderators.length > 0 && (
               <div className={styles.group}>
                 <span className={styles.groupTitle}>
-                  Moderadores — {moderators.length}
+                  OFICIAIS — {moderators.length}
                 </span>
                 {moderators.map(renderMemberRow)}
               </div>
@@ -720,7 +715,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
             {standardMembers.length > 0 && (
               <div className={styles.group}>
                 <span className={styles.groupTitle}>
-                  Membros — {standardMembers.length}
+                  ESQUADRÃO — {standardMembers.length}
                 </span>
                 {standardMembers.map(renderMemberRow)}
               </div>
