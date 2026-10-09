@@ -4,6 +4,7 @@ import { httpClient } from '../../../infrastructure/adapters/http/http-client.ad
 import { realtimeClient } from '../../../infrastructure/adapters/realtime/socket-realtime.adapter';
 import { ApiRoutes, RealtimeEvents } from '../../../core/enums';
 import { useToast } from '../../../components/common/Toast/ToastContext';
+import { notificationService } from '../../../core/services/notification.service';
 import type { FriendUser } from '../components/FriendsSidebar/FriendsSidebar';
 
 export function useFriends() {
@@ -39,7 +40,7 @@ export function useFriends() {
         const res = await httpClient.post<{ targetId: string }>(`${ApiRoutes.FRIEND_ACCEPT}/${friendId}`);
         toast.success(t('friends.accept'));
         await fetchFriends();
-        realtimeClient.emit(RealtimeEvents.FRIEND_ACTION, { targetId: res.targetId });
+        realtimeClient.emit(RealtimeEvents.FRIEND_ACTION, { targetId: res.targetId, actionType: 'ACCEPT' });
       } catch (err) {
         toast.error(t('friends.userNotFound'));
       }
@@ -115,6 +116,21 @@ export function useFriends() {
       fetchFriends();
     };
 
+    const onFriendActionUpdate = (data?: { actionType?: string; sender?: any }) => {
+      fetchFriends();
+      if (data?.actionType === 'REQUEST') {
+        notificationService.notifyFriendRequestReceived({
+          senderName: data.sender?.displayName || data.sender?.username || 'Novo usuário',
+          senderAvatarUrl: data.sender?.avatarUrl,
+        });
+      } else if (data?.actionType === 'ACCEPT') {
+        notificationService.notifyFriendRequestAccepted({
+          friendName: data.sender?.displayName || data.sender?.username || 'Amigo',
+          friendAvatarUrl: data.sender?.avatarUrl,
+        });
+      }
+    };
+
     const onUserProfileUpdated = (data: {
       userId: string;
       displayName?: string | null;
@@ -140,12 +156,12 @@ export function useFriends() {
     };
 
     realtimeClient.on(RealtimeEvents.FRIEND_ACTION, onFriendAction);
-    realtimeClient.on(RealtimeEvents.FRIEND_ACTION_UPDATE, onFriendAction);
+    realtimeClient.on(RealtimeEvents.FRIEND_ACTION_UPDATE, onFriendActionUpdate);
     realtimeClient.on(RealtimeEvents.USER_PROFILE_UPDATED, onUserProfileUpdated);
 
     return () => {
       realtimeClient.off(RealtimeEvents.FRIEND_ACTION, onFriendAction);
-      realtimeClient.off(RealtimeEvents.FRIEND_ACTION_UPDATE, onFriendAction);
+      realtimeClient.off(RealtimeEvents.FRIEND_ACTION_UPDATE, onFriendActionUpdate);
       realtimeClient.off(RealtimeEvents.USER_PROFILE_UPDATED, onUserProfileUpdated);
     };
   }, [fetchFriends]);

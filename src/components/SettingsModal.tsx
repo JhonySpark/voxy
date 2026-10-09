@@ -25,6 +25,8 @@ import { SettingsTabEnum, StorageKeys, IpcChannels, LanguageEnum, ApiRoutes } fr
 import { httpClient } from '../infrastructure/adapters/http/http-client.adapter';
 import type { UserProfileData } from '../features/user/components/UserPopout/UserPopout';
 import { getMediaUrl } from '../core/utils/media.util';
+import { useNotificationSettings } from '../features/user/hooks/useNotificationSettings';
+import { soundService } from '../core/services/sound.service';
 import './SettingsModal.css';
 
 interface SettingsModalProps {
@@ -217,12 +219,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   );
 
   // Notificações e Privacidade
-  const [notifyMessages, setNotifyMessages] = useState<boolean>(
-    localStorage.getItem(StorageKeys.NOTIFY_MESSAGES) !== 'false'
-  );
-  const [notifySounds, setNotifySounds] = useState<boolean>(
-    localStorage.getItem(StorageKeys.NOTIFY_SOUNDS) !== 'false'
-  );
+  const { settings: notifSettings, updateSettings: updateNotifSettings } = useNotificationSettings();
+  const [isTestingNotifSound, setIsTestingNotifSound] = useState(false);
   const [runInBackground, setRunInBackground] = useState<boolean>(
     localStorage.getItem(StorageKeys.RUN_IN_BACKGROUND) !== 'false'
   );
@@ -438,8 +436,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     localStorage.setItem(StorageKeys.NOISE_SUPPRESSION, noiseSuppression.toString());
     localStorage.setItem(StorageKeys.ECHO_CANCELLATION, echoCancellation.toString());
     localStorage.setItem(StorageKeys.AUTO_GAIN, autoGainControl.toString());
-    localStorage.setItem(StorageKeys.NOTIFY_MESSAGES, notifyMessages.toString());
-    localStorage.setItem(StorageKeys.NOTIFY_SOUNDS, notifySounds.toString());
+    localStorage.setItem(StorageKeys.NOTIFY_MESSAGES, notifSettings.desktopNotifications.toString());
+    localStorage.setItem(StorageKeys.NOTIFY_SOUNDS, notifSettings.soundEnabled.toString());
     localStorage.setItem(StorageKeys.RUN_IN_BACKGROUND, runInBackground.toString());
     localStorage.setItem(StorageKeys.GAME_PRESENCE, gamePresence.toString());
     ipcRenderer?.send(IpcChannels.SET_BACKGROUND_MODE, runInBackground);
@@ -972,40 +970,167 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             )}
 
             {activeTab === SettingsTabEnum.NOTIFICATIONS && (
-              <div className="settings-field-group" style={{ gap: '1rem' }}>
+              <div className="settings-field-group" style={{ gap: '1.25rem' }}>
+                {/* Controles Mestres */}
                 <div 
                   className="settings-subcard"
-                  onClick={() => setNotifyMessages(!notifyMessages)}
+                  onClick={() => updateNotifSettings({ desktopNotifications: !notifSettings.desktopNotifications })}
                 >
                   <div>
                     <div className="settings-subcard-title">{t('settings.desktopNotifications')}</div>
                     <div className="settings-subcard-desc">{t('settings.desktopNotificationsDesc')}</div>
                   </div>
-                  <div className={`settings-checkbox ${notifyMessages ? 'checked' : ''}`}>
+                  <div className={`settings-checkbox ${notifSettings.desktopNotifications ? 'checked' : ''}`}>
                     <Check size={14} strokeWidth={3} />
                   </div>
                 </div>
 
                 <div 
                   className="settings-subcard"
-                  onClick={() => setNotifySounds(!notifySounds)}
+                  onClick={() => updateNotifSettings({ soundEnabled: !notifSettings.soundEnabled })}
                 >
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <div className="settings-subcard-title">{t('settings.alertSounds')}</div>
-                    <div className="settings-subcard-desc">{t('settings.alertSoundsDesc')}</div>
+                    <div className="settings-subcard-desc">Tocar sons curtos para mensagens, pedidos e menções</div>
                   </div>
-                  <div className={`settings-checkbox ${notifySounds ? 'checked' : ''}`}>
-                    <Check size={14} strokeWidth={3} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <button
+                      type="button"
+                      className="settings-btn settings-btn-secondary"
+                      style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', height: 'auto' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsTestingNotifSound(true);
+                        soundService.testSound();
+                        setTimeout(() => setIsTestingNotifSound(false), 800);
+                      }}
+                      title="Testar áudio de notificação"
+                    >
+                      <Volume2 size={13} className={isTestingNotifSound ? 'spinning-icon' : ''} />
+                      <span>{isTestingNotifSound ? 'Tocando...' : 'Ouvir Som'}</span>
+                    </button>
+                    <div className={`settings-checkbox ${notifSettings.soundEnabled ? 'checked' : ''}`}>
+                      <Check size={14} strokeWidth={3} />
+                    </div>
                   </div>
                 </div>
 
+                {/* Callout Informativo de Chamadas de Voz e DND */}
+                <div style={{
+                  padding: '0.75rem 1rem',
+                  borderRadius: '8px',
+                  background: 'rgba(56, 189, 248, 0.08)',
+                  border: '1px solid rgba(56, 189, 248, 0.2)',
+                  fontSize: '0.78rem',
+                  color: '#93c5fd',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                  <span>
+                    Os sons de notificação são automaticamente pausados enquanto você estiver em um canal de voz ativo ou com o status definido como <strong>Não Perturbe (DND)</strong>.
+                  </span>
+                </div>
+
+                {/* Seção de Categorias Específicas */}
+                <div style={{ marginTop: '0.5rem' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.65rem' }}>
+                    Categorias de Notificação
+                  </div>
+                  <div className="settings-subcards-grid">
+                    {/* Mensagens Diretas */}
+                    <div 
+                      className="settings-subcard"
+                      onClick={() => updateNotifSettings({ directMessages: !notifSettings.directMessages })}
+                    >
+                      <div>
+                        <div className="settings-subcard-title">Mensagens Diretas (DMs)</div>
+                        <div className="settings-subcard-desc">Avisos na tela para novas conversas privadas</div>
+                      </div>
+                      <div className={`settings-checkbox ${notifSettings.directMessages ? 'checked' : ''}`}>
+                        <Check size={14} strokeWidth={3} />
+                      </div>
+                    </div>
+
+                    <div 
+                      className="settings-subcard"
+                      onClick={() => updateNotifSettings({ dmSound: !notifSettings.dmSound })}
+                    >
+                      <div>
+                        <div className="settings-subcard-title">Som para DMs</div>
+                        <div className="settings-subcard-desc">Efeito sonoro em mensagens diretas</div>
+                      </div>
+                      <div className={`settings-checkbox ${notifSettings.dmSound ? 'checked' : ''}`}>
+                        <Check size={14} strokeWidth={3} />
+                      </div>
+                    </div>
+
+                    {/* Pedidos de Amizade */}
+                    <div 
+                      className="settings-subcard"
+                      onClick={() => updateNotifSettings({ friendRequests: !notifSettings.friendRequests })}
+                    >
+                      <div>
+                        <div className="settings-subcard-title">Convites de Amizade</div>
+                        <div className="settings-subcard-desc">Alertas de convites recebidos e aceitos</div>
+                      </div>
+                      <div className={`settings-checkbox ${notifSettings.friendRequests ? 'checked' : ''}`}>
+                        <Check size={14} strokeWidth={3} />
+                      </div>
+                    </div>
+
+                    <div 
+                      className="settings-subcard"
+                      onClick={() => updateNotifSettings({ friendSound: !notifSettings.friendSound })}
+                    >
+                      <div>
+                        <div className="settings-subcard-title">Som de Amizade</div>
+                        <div className="settings-subcard-desc">Efeito sonoro para eventos de amigos</div>
+                      </div>
+                      <div className={`settings-checkbox ${notifSettings.friendSound ? 'checked' : ''}`}>
+                        <Check size={14} strokeWidth={3} />
+                      </div>
+                    </div>
+
+                    {/* Menções */}
+                    <div 
+                      className="settings-subcard"
+                      onClick={() => updateNotifSettings({ mentions: !notifSettings.mentions })}
+                    >
+                      <div>
+                        <div className="settings-subcard-title">Menções (@você e @everyone)</div>
+                        <div className="settings-subcard-desc">Avisos quando alguém citar seu nome em canais</div>
+                      </div>
+                      <div className={`settings-checkbox ${notifSettings.mentions ? 'checked' : ''}`}>
+                        <Check size={14} strokeWidth={3} />
+                      </div>
+                    </div>
+
+                    <div 
+                      className="settings-subcard"
+                      onClick={() => updateNotifSettings({ mentionSound: !notifSettings.mentionSound })}
+                    >
+                      <div>
+                        <div className="settings-subcard-title">Som para Menções</div>
+                        <div className="settings-subcard-desc">Efeito sonoro ao ser mencionado</div>
+                      </div>
+                      <div className={`settings-checkbox ${notifSettings.mentionSound ? 'checked' : ''}`}>
+                        <Check size={14} strokeWidth={3} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Executar em Segundo Plano */}
                 <div
                   className="settings-subcard"
+                  style={{ marginTop: '0.5rem' }}
                   onClick={handleToggleRunInBackground}
                 >
                   <div>
                     <div className="settings-subcard-title">Executar em segundo plano</div>
-                    <div className="settings-subcard-desc">Ao fechar a janela, manter o Voxy no ícone perto do relógio do Windows.</div>
+                    <div className="settings-subcard-desc">Ao fechar a janela, manter o Voxy ativo no ícone perto do relógio do Windows.</div>
                   </div>
                   <div className={`settings-checkbox ${runInBackground ? 'checked' : ''}`}>
                     <Check size={14} strokeWidth={3} />

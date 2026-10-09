@@ -37,6 +37,8 @@ import { UserProfileModal } from '../features/user/components/UserProfileModal/U
 import type { UserProfileData } from '../features/user/components/UserPopout/UserPopout';
 import { useToast } from '../components/common/Toast/ToastContext';
 import { useDialog } from '../components/common/Dialog/DialogContext';
+import { notificationService } from '../core/services/notification.service';
+import { soundService } from '../core/services/sound.service';
 
 // Custom Hooks refatorados da Fase 3
 import { useFriends } from '../features/friends/hooks/useFriends';
@@ -47,7 +49,7 @@ import styles from './Dashboard.module.css';
 
 export default function Dashboard() {
   const { t } = useTranslation();
-  const { toast } = useToast();
+  const { toast, showToast } = useToast();
   const { confirm, prompt } = useDialog();
   const navigate = useNavigate();
 
@@ -55,6 +57,13 @@ export default function Dashboard() {
   const [myId, setMyId] = useState('');
   const [myUsername, setMyUsername] = useState('');
   const [currentUserProfile, setCurrentUserProfile] = useState<UserProfileData | null>(null);
+
+  useEffect(() => {
+    notificationService.registerToastHandler(showToast);
+    return () => {
+      notificationService.registerToastHandler(null);
+    };
+  }, [showToast]);
 
   // Navegação e Seleção de Visualização
   const [activeView, setActiveView] = useState<DashboardView>(DashboardView.DM);
@@ -128,6 +137,7 @@ export default function Dashboard() {
     activeView,
     activeFriendId: activeFriend?.id || null,
     activeChannelId: activeChannel?.id || null,
+    servers,
   });
 
   // Membros do Servidor & Permissões
@@ -147,6 +157,18 @@ export default function Dashboard() {
   const [userStatuses, setUserStatuses] = useState<
     Record<string, { status: UserStatusEnum | string; customStatus?: string }>
   >({});
+
+  // Sincroniza estado de call de voz para bloquear som de notificação se estiver em conferência
+  useEffect(() => {
+    soundService.setIsInVoiceCall(!!connectedVoiceChannel);
+  }, [connectedVoiceChannel]);
+
+  // Sincroniza status DND (Não Perturbe) para bloquear som
+  useEffect(() => {
+    if (myId && userStatuses[myId]) {
+      soundService.setUserStatus(userStatuses[myId].status);
+    }
+  }, [myId, userStatuses]);
 
   // Modais
   const [showServerModal, setShowServerModal] = useState(false);
@@ -809,6 +831,8 @@ export default function Dashboard() {
             type="DM"
             target={activeFriend}
             myId={myId}
+            myUsername={myUsername}
+            friends={friends}
             messages={messages}
             newMessage={newMessage}
             onNewMessageChange={setNewMessage}
@@ -835,7 +859,10 @@ export default function Dashboard() {
               <ChatArea
                 type="CHANNEL"
                 target={activeChannel}
+                serverId={activeServer?.id}
                 myId={myId}
+                myUsername={myUsername}
+                friends={friends}
                 messages={messages}
                 newMessage={newMessage}
                 onNewMessageChange={setNewMessage}
@@ -924,7 +951,17 @@ export default function Dashboard() {
         isOpen={showFriendModal}
         onClose={() => setShowFriendModal(false)}
         onFriendAdded={fetchFriends}
-        onFriendAction={(targetId) => realtimeClient.emit(RealtimeEvents.FRIEND_ACTION, { targetId })}
+        onFriendAction={(targetId) =>
+          realtimeClient.emit(RealtimeEvents.FRIEND_ACTION, {
+            targetId,
+            actionType: 'REQUEST',
+            sender: {
+              id: myId,
+              username: myUsername,
+              displayName: currentUserProfile?.displayName,
+            },
+          })
+        }
       />
 
       <CreateServerModal

@@ -3,6 +3,8 @@ import { httpClient } from '../../../infrastructure/adapters/http/http-client.ad
 import { realtimeClient } from '../../../infrastructure/adapters/realtime/socket-realtime.adapter';
 import { ApiRoutes, RealtimeEvents, DashboardView } from '../../../core/enums';
 import type { ChatMessage } from '../components/ChatArea/ChatArea';
+import { notificationService } from '../../../core/services/notification.service';
+import { isUserMentioned } from '../utils/mentionParser';
 
 interface UseChatProps {
   myId: string;
@@ -12,6 +14,12 @@ interface UseChatProps {
   activeView: DashboardView;
   activeFriendId: string | null;
   activeChannelId: string | null;
+  servers?: Array<{
+    id: string;
+    name: string;
+    iconUrl?: string | null;
+    channels?: Array<{ id: string; name: string }>;
+  }>;
 }
 
 export function useChat({
@@ -22,6 +30,7 @@ export function useChat({
   activeView,
   activeFriendId,
   activeChannelId,
+  servers,
 }: UseChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -39,8 +48,18 @@ export function useChat({
   const activeFriendIdRef = useRef(activeFriendId);
   const activeChannelIdRef = useRef(activeChannelId);
   const myIdRef = useRef(myId);
+  const myUsernameRef = useRef(myUsername);
   const myDisplayNameRef = useRef(myDisplayName);
   const myAvatarUrlRef = useRef(myAvatarUrl);
+  const serversRef = useRef(servers);
+
+  useEffect(() => {
+    serversRef.current = servers;
+  }, [servers]);
+
+  useEffect(() => {
+    myUsernameRef.current = myUsername;
+  }, [myUsername]);
 
   useEffect(() => {
     myDisplayNameRef.current = myDisplayName;
@@ -324,10 +343,20 @@ export function useChat({
         messageCacheRef.current.set(cacheKey, [...cached, msg]);
       }
 
-      if (
+      const isCurrentChatActive =
         activeViewRef.current === DashboardView.DM &&
-        activeFriendIdRef.current === msg.senderId
-      ) {
+        activeFriendIdRef.current === msg.senderId;
+
+      // Dispara serviço unificado de notificação (Desktop, In-App, Som e Anti-Spam)
+      notificationService.notifyDirectMessage({
+        senderName: msg.sender?.displayName || msg.sender?.username || 'Amigo',
+        senderId: msg.senderId,
+        senderAvatarUrl: msg.sender?.avatarUrl,
+        content: msg.content || (msg.attachments && msg.attachments.length > 0 ? '📷 Anexo' : ''),
+        isCurrentChatActive,
+      });
+
+      if (isCurrentChatActive) {
         setMessages((prev) => {
           if (prev.some((m) => m.id === msg.id)) return prev;
           return [...prev, msg];
@@ -408,10 +437,29 @@ export function useChat({
         }
       }
 
-      if (
+      const isCurrentChannelActive =
         activeViewRef.current === DashboardView.SERVER &&
-        activeChannelIdRef.current === msg.channelId
-      ) {
+        activeChannelIdRef.current === msg.channelId;
+
+      // Notificação de Menção em canal (@username ou @everyone)
+      if (isUserMentioned(msg.content, myUsernameRef.current)) {
+        const currentServer = serversRef.current?.find((s) =>
+          s.channels?.some((c) => c.id === msg.channelId)
+        );
+        const currentChannel = currentServer?.channels?.find((c) => c.id === msg.channelId);
+
+        notificationService.notifyMention({
+          senderName: msg.sender?.displayName || msg.sender?.username || 'Usuário',
+          channelName: currentChannel?.name || 'canal',
+          serverName: currentServer?.name,
+          serverIconUrl: currentServer?.iconUrl,
+          senderAvatarUrl: msg.sender?.avatarUrl,
+          content: msg.content,
+          isCurrentChannelActive,
+        });
+      }
+
+      if (isCurrentChannelActive) {
         setMessages((prev) => {
           if (prev.some((m) => m.id === msg.id)) return prev;
           return [...prev, msg];

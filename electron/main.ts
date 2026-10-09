@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, desktopCapturer, Menu, Tray, dialog, nativeImage } from 'electron'
+import { app, BrowserWindow, ipcMain, desktopCapturer, Menu, Tray, dialog, nativeImage, Notification } from 'electron'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawn, ChildProcess } from 'node:child_process'
@@ -13,18 +13,36 @@ import { IpcChannels, AutoUpdaterEvents, AppUpdateStatus } from '../src/core/enu
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
-// Garante instância única: se o app já estiver em execução (inclusive em segundo plano),
-// a nova execução apenas restaura e foca a janela existente em vez de criar um processo duplicado.
-const gotTheLock = app.requestSingleInstanceLock()
+// Define o nome da aplicação e o Application User Model ID (AUMID) no Windows.
+// Isso garante que as notificações Toast exibam "Voxy" no cabeçalho em vez de "Electron".
+app.name = 'Voxy'
+if (process.platform === 'win32') {
+  app.setAppUserModelId('Voxy')
+}
 
-if (!gotTheLock) {
-  app.quit()
+// Em desenvolvimento, permite abrir uma 2ª instância simultânea com pasta de sessão isolada.
+// Isso possibilita testar troca de mensagens e notificações entre 2 usuários diferentes no mesmo PC.
+const isDev = !app.isPackaged || process.env.NODE_ENV === 'development'
+
+if (isDev) {
+  const hasLock = app.requestSingleInstanceLock()
+  if (!hasLock) {
+    const secondUserData = join(app.getPath('appData'), 'voxy-dev-session-2')
+    app.setPath('userData', secondUserData)
+    app.requestSingleInstanceLock()
+  }
 } else {
-  app.on('second-instance', () => {
-    showMainWindow()
-  })
+  const gotTheLock = app.requestSingleInstanceLock()
+  if (!gotTheLock) {
+    app.quit()
+  } else {
+    app.on('second-instance', () => {
+      showMainWindow()
+    })
+  }
+}
 
-  let nativeStreamProcess: ChildProcess | null = null
+let nativeStreamProcess: ChildProcess | null = null
 
 // Eleva a prioridade de agendamento do processo no Windows para que o jogo 3D não congele as threads de captura e WebRTC
 try {
@@ -86,13 +104,28 @@ function showMainWindow() {
 function refreshTrayMenu() {
   if (!tray) return
   const settings = getBackgroundSettings()
-  tray.setContextMenu(Menu.buildFromTemplate([
+  const menuItems: any[] = [
     { label: 'Abrir Voxy', click: showMainWindow },
+  ]
+
+  if (isDev) {
+    menuItems.push({
+      label: 'Abrir 2ª Instância (Dev)',
+      click: () => {
+        spawn(process.execPath, process.argv.slice(1), {
+          detached: true,
+          stdio: 'ignore',
+        }).unref()
+      },
+    })
+  }
+
+  menuItems.push(
     {
       label: 'Manter o Voxy em segundo plano',
       type: 'checkbox',
       checked: settings.keepRunningInBackground,
-      click: (item) => saveBackgroundSettings(item.checked),
+      click: (item: any) => saveBackgroundSettings(item.checked),
     },
     { type: 'separator' },
     {
@@ -102,7 +135,9 @@ function refreshTrayMenu() {
         app.quit()
       },
     },
-  ]))
+  )
+
+  tray.setContextMenu(Menu.buildFromTemplate(menuItems))
 }
 
 function getTrayIcon(): nativeImage {
@@ -118,6 +153,56 @@ function getTrayIcon(): nativeImage {
     }
   }
   return nativeImage.createFromPath(asarPath)
+}
+
+function getVoxyLogoIcon(): nativeImage {
+  const candidates = [
+    join(process.cwd(), 'build/icon_resized.png'),
+    join(process.cwd(), 'build/icon.png'),
+    join(process.resourcesPath, 'app.asar.unpacked/build/icon_resized.png'),
+    join(process.resourcesPath, 'app.asar.unpacked/build/icon.png'),
+    join(app.getAppPath(), 'build/icon_resized.png'),
+    join(app.getAppPath(), 'build/icon.png'),
+    join(process.cwd(), 'build/icon.ico'),
+    join(app.getAppPath(), 'build/icon.ico'),
+  ]
+
+  for (const p of candidates) {
+    if (existsSync(p)) {
+      const img = nativeImage.createFromPath(p)
+      if (!img.isEmpty()) return img
+    }
+  }
+  return getTrayIcon()
+}
+
+async function resolveNotificationIcon(iconUrl?: string): Promise<nativeImage> {
+  if (iconUrl) {
+    try {
+      if (iconUrl.startsWith('data:')) {
+        const img = nativeImage.createFromDataURL(iconUrl)
+        if (!img.isEmpty()) return img
+      } else if (iconUrl.startsWith('http://') || iconUrl.startsWith('https://')) {
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 2500)
+        const response = await fetch(iconUrl, { signal: controller.signal })
+        clearTimeout(timer)
+        if (response.ok) {
+          const buffer = Buffer.from(await response.arrayBuffer())
+          const img = nativeImage.createFromBuffer(buffer)
+          if (!img.isEmpty()) return img
+        }
+      } else if (existsSync(iconUrl)) {
+        const img = nativeImage.createFromPath(iconUrl)
+        if (!img.isEmpty()) return img
+      }
+    } catch (err) {
+      console.warn('[Notification] Falha ao carregar ícone customizado da notificação:', err)
+    }
+  }
+
+  // Fallback padrão: Logo oficial do Voxy
+  return getVoxyLogoIcon()
 }
 
 function createTray() {
@@ -203,6 +288,37 @@ app.whenReady().then(() => {
   });
 
   createWindow();
+
+  // IPC para Notificações Desktop Nativas do Sistema Operacional
+  ipcMain.handle(
+    IpcChannels.SHOW_DESKTOP_NOTIFICATION,
+    async (_event, opts: { title: string; body: string; iconUrl?: string }) => {
+      if (!Notification.isSupported()) return false;
+      try {
+        const icon = await resolveNotificationIcon(opts?.iconUrl);
+        const notif = new Notification({
+          title: opts?.title || 'Voxy',
+          body: opts?.body || '',
+          icon: !icon.isEmpty() ? icon : undefined,
+          silent: true, // O som é gerenciado pelo sound.service para controle de throttle e canais de voz
+        });
+        notif.on('click', () => {
+          showMainWindow();
+        });
+        notif.show();
+        return true;
+      } catch (err) {
+        console.error('[Notification] Falha ao exibir notificação:', err);
+        return false;
+      }
+    }
+  );
+
+  ipcMain.handle(IpcChannels.FLASH_FRAME, (_event, flag: boolean) => {
+    if (win && !win.isFocused()) {
+      win.flashFrame(flag !== false);
+    }
+  });
 
   // IPC para o Pipeline Nativo C++
   ipcMain.handle(IpcChannels.IS_NATIVE_STREAM_SUPPORTED, () => {
@@ -496,4 +612,3 @@ app.on('activate', () => {
     createWindow()
   }
 })
-}

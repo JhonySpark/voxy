@@ -1082,4 +1082,143 @@
   filter: brightness(1.1);
 }
 
+/* ==========================================================================
+   Menções e Autocomplete (@user)
+   ========================================================================== */
+
+.mentionBadge {
+  display: inline;
+  padding: 1px 5px;
+  margin: 0 1px;
+  border-radius: 4px;
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--brand-primary, #34d399);
+  font-weight: 500;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  user-select: text;
+}
+
+.mentionBadge:hover {
+  background: rgba(52, 211, 153, 0.22);
+  color: #6ee7b7;
+}
+
+.mentionMeBadge {
+  background: rgba(251, 191, 36, 0.14);
+  color: #fbbf24;
+}
+
+.mentionMeBadge:hover {
+  background: rgba(251, 191, 36, 0.24);
+  color: #fde047;
+}
+
+.mentionBroadcastBadge {
+  background: rgba(129, 140, 248, 0.14);
+  color: #a5b4fc;
+}
+
+.mentionBroadcastBadge:hover {
+  background: rgba(129, 140, 248, 0.24);
+  color: #c7d2fe;
+}
+
+.mentionedRow {
+  /* Mantém o fluxo natural das mensagens sem bordas amarelas pesadas */
+  position: relative;
+}
+
+/* Popup de Autocomplete de Menções */
+.mentionSuggestionsPopup {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 12px;
+  width: min(320px, calc(100% - 24px));
+  max-height: 220px;
+  background: rgba(15, 20, 32, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(16px);
+  overflow-y: auto;
+  z-index: 1000;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mentionSuggestionHeader {
+  padding: 4px 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+
+.mentionSuggestionItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  transition: all 0.12s ease;
+}
+
+.mentionSuggestionItem:hover,
+.mentionSuggestionItemActive {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mentionSuggestionAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.mentionSuggestionAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mentionSuggestionInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.mentionSuggestionName {
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mentionSuggestionTag {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+
 

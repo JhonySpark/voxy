@@ -37,6 +37,7 @@ export const StorageKeys = {
   AUTO_GAIN: 'voxy-auto-gain',
   NOTIFY_MESSAGES: 'voxy-notify-messages',
   NOTIFY_SOUNDS: 'voxy-notify-sounds',
+  NOTIFICATION_SETTINGS: 'voxy-notification-settings',
   RUN_IN_BACKGROUND: 'voxy-run-in-background',
   GAME_PRESENCE: 'voxy-game-presence',
   LANGUAGE: 'voxy-language',
@@ -244,6 +245,8 @@ export const IpcChannels = {
   APP_UPDATE_PROGRESS: 'app-update-progress',
   APP_UPDATE_DOWNLOADED: 'app-update-downloaded',
   APP_UPDATE_ERROR: 'app-update-error',
+  SHOW_DESKTOP_NOTIFICATION: 'SHOW_DESKTOP_NOTIFICATION',
+  FLASH_FRAME: 'FLASH_FRAME',
 } as const;
 export type IpcChannels = (typeof IpcChannels)[keyof typeof IpcChannels];
 

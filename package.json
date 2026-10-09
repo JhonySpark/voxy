@@ -1,7 +1,7 @@
 {
   "name": "voxy",
   "private": true,
-  "version": "0.5.12",
+  "version": "0.5.13",
   "type": "module",
   "main": "dist-electron/main.js",
   "author": "D4rk Side",
@@ -39,6 +39,8 @@
       "dist-electron/**/*",
       "electron/native_manifest.json",
       "build/icon.ico",
+      "build/icon.png",
+      "build/icon_resized.png",
       "package.json"
     ],
     "extraResources": [

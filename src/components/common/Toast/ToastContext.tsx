@@ -12,20 +12,53 @@ export interface ToastItem {
   message: string;
   duration?: number;
   isExiting?: boolean;
+  avatarUrl?: string | null;
 }
 
 interface ToastContextData {
-  showToast: (options: { type: ToastType | ToastTypeEnum; message: string; title?: string; duration?: number }) => void;
+  showToast: (options: {
+    type: ToastType | ToastTypeEnum;
+    message: string;
+    title?: string;
+    duration?: number;
+    avatarUrl?: string | null;
+  }) => void;
   toast: {
-    success: (message: string, title?: string) => void;
+    success: (message: string, title?: string, avatarUrl?: string | null) => void;
     error: (message: string, title?: string) => void;
-    warning: (message: string, title?: string) => void;
-    info: (message: string, title?: string) => void;
+    warning: (message: string, title?: string, avatarUrl?: string | null) => void;
+    info: (message: string, title?: string, avatarUrl?: string | null) => void;
   };
 }
 
-
 const ToastContext = createContext<ToastContextData | null>(null);
+
+const ToastIcon: React.FC<{ item: ToastItem }> = ({ item }) => {
+  const [imgError, setImgError] = useState(false);
+
+  if (item.avatarUrl && !imgError) {
+    return (
+      <img
+        src={item.avatarUrl}
+        alt=""
+        className={styles.avatar}
+        onError={() => setImgError(true)}
+      />
+    );
+  }
+
+  switch (item.type) {
+    case 'success':
+      return <CheckCircle2 size={18} />;
+    case 'error':
+      return <AlertCircle size={18} />;
+    case 'warning':
+      return <AlertTriangle size={18} />;
+    case 'info':
+    default:
+      return <Info size={18} />;
+  }
+};
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -40,9 +73,21 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const showToast = useCallback(
-    ({ type, message, title, duration = 4000 }: { type: ToastType; message: string; title?: string; duration?: number }) => {
+    ({
+      type,
+      message,
+      title,
+      duration = 4000,
+      avatarUrl,
+    }: {
+      type: ToastType | ToastTypeEnum;
+      message: string;
+      title?: string;
+      duration?: number;
+      avatarUrl?: string | null;
+    }) => {
       const id = Math.random().toString(36).substring(2, 9);
-      const newToast: ToastItem = { id, type, message, title, duration };
+      const newToast: ToastItem = { id, type, message, title, duration, avatarUrl };
 
       setToasts((prev) => [...prev, newToast]);
 
@@ -56,23 +101,14 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   const toast = {
-    success: (message: string, title?: string) => showToast({ type: 'success', message, title: title || 'Sucesso' }),
-    error: (message: string, title?: string) => showToast({ type: 'error', message, title: title || 'Atenção' }),
-    warning: (message: string, title?: string) => showToast({ type: 'warning', message, title: title || 'Aviso' }),
-    info: (message: string, title?: string) => showToast({ type: 'info', message, title: title || 'Informação' }),
-  };
-
-  const getIcon = (type: ToastType) => {
-    switch (type) {
-      case 'success':
-        return <CheckCircle2 size={18} />;
-      case 'error':
-        return <AlertCircle size={18} />;
-      case 'warning':
-        return <AlertTriangle size={18} />;
-      case 'info':
-        return <Info size={18} />;
-    }
+    success: (message: string, title?: string, avatarUrl?: string | null) =>
+      showToast({ type: 'success', message, title: title || 'Sucesso', avatarUrl }),
+    error: (message: string, title?: string) =>
+      showToast({ type: 'error', message, title: title || 'Atenção' }),
+    warning: (message: string, title?: string, avatarUrl?: string | null) =>
+      showToast({ type: 'warning', message, title: title || 'Aviso', avatarUrl }),
+    info: (message: string, title?: string, avatarUrl?: string | null) =>
+      showToast({ type: 'info', message, title: title || 'Informação', avatarUrl }),
   };
 
   return (
@@ -84,7 +120,9 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             key={item.id}
             className={`${styles.toast} ${styles[item.type]} ${item.isExiting ? styles.exiting : ''}`}
           >
-            <div className={styles.iconWrapper}>{getIcon(item.type)}</div>
+            <div className={styles.iconWrapper}>
+              <ToastIcon item={item} />
+            </div>
             <div className={styles.content}>
               {item.title && <div className={styles.title}>{item.title}</div>}
               <div className={styles.message}>{item.message}</div>

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './ChatArea.module.css';
 import { 
@@ -19,6 +19,9 @@ import { StatusDot } from '../../../../components/common/StatusDot/StatusDot';
 import { getMediaUrl } from '../../../../core/utils/media.util';
 import { useToast } from '../../../../components/common/Toast/ToastContext';
 import { useDialog } from '../../../../components/common/Dialog/DialogContext';
+import { formatMessageWithMentions, isUserMentioned } from '../../utils/mentionParser';
+import { membersCache, type ServerMemberItem } from '../../../servers/components/ServerMembersSidebar/ServerMembersSidebar';
+import { httpClient } from '../../../../infrastructure/adapters/http/http-client.adapter';
 
 export interface ChatAttachment {
   id: string;
@@ -103,6 +106,9 @@ interface ChatAreaProps {
   targetStatus?: UserStatusEnum | string;
   onRemoveFriend?: (userId: string) => void;
   onBlockUser?: (userId: string) => void;
+  myUsername?: string;
+  serverId?: string;
+  friends?: FriendUser[];
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({
@@ -128,6 +134,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   targetStatus,
   onRemoveFriend,
   onBlockUser,
+  myUsername,
+  serverId,
+  friends = [],
 }) => {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
@@ -177,6 +186,140 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const [activeFullReactionMsgId, setActiveFullReactionMsgId] = useState<string | null>(null);
   const [reactionAnchorRect, setReactionAnchorRect] = useState<DOMRect | null>(null);
   const [viewingReactionsMsg, setViewingReactionsMsg] = useState<ChatMessage | null>(null);
+
+  // Estados e Candidatos para Autocomplete de Menção (@user)
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+  const [mentionDismissed, setMentionDismissed] = useState(false);
+  const [channelMembers, setChannelMembers] = useState<ServerMemberItem[]>(() => {
+    const activeServerId = serverId || (target as any)?.serverId;
+    return (activeServerId && membersCache.get(activeServerId)) || [];
+  });
+
+  // Busca e sincroniza os membros do servidor para autocomplete de menções no canal
+  useEffect(() => {
+    if (type !== 'CHANNEL') {
+      setChannelMembers([]);
+      return;
+    }
+
+    const activeServerId = serverId || (target as any)?.serverId;
+    if (!activeServerId) return;
+
+    // Se já estiver em cache, usa de imediato para resposta instantânea
+    const cached = membersCache.get(activeServerId);
+    if (cached && cached.length > 0) {
+      setChannelMembers(cached);
+    }
+
+    let isCancelled = false;
+    httpClient
+      .get<ServerMemberItem[]>(`/servers/${activeServerId}/members`)
+      .then((res) => {
+        if (isCancelled || !Array.isArray(res)) return;
+        membersCache.set(activeServerId, res);
+        setChannelMembers(res);
+      })
+      .catch((err) => {
+        console.warn('[ChatArea] Falha ao carregar membros para menções:', err);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [type, serverId, target]);
+
+  // Ouve atualizações de membros vindas da ServerMembersSidebar ou de ações no servidor
+  useEffect(() => {
+    const handleMembersUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent<{ serverId: string; members: ServerMemberItem[] }>;
+      const activeServerId = serverId || (target as any)?.serverId;
+      if (customEvent.detail && customEvent.detail.serverId === activeServerId) {
+        setChannelMembers(customEvent.detail.members);
+      }
+    };
+    window.addEventListener('voxy:server-members-updated', handleMembersUpdated);
+    return () => {
+      window.removeEventListener('voxy:server-members-updated', handleMembersUpdated);
+    };
+  }, [serverId, target]);
+
+  const mentionCandidates = useMemo(() => {
+    const list: Array<{ id: string; username: string; displayName?: string | null; avatarUrl?: string | null }> = [];
+    
+    if (type === 'CHANNEL') {
+      channelMembers.forEach((m: any) => {
+        const u = m.user || m;
+        const uname = u?.username || m?.username;
+        const uid = u?.id || m?.userId || m?.id;
+        if (uname && uid) {
+          list.push({
+            id: uid,
+            username: uname,
+            displayName: u.displayName || uname,
+            avatarUrl: u.avatarUrl || null,
+          });
+        }
+      });
+
+      // Menção broadcast para o canal (@everyone)
+      list.unshift({
+        id: 'everyone',
+        username: 'everyone',
+        displayName: 'Notificar todos neste canal',
+        avatarUrl: null,
+      });
+    } else {
+      friends.forEach((f) => {
+        list.push({
+          id: f.id,
+          username: f.username,
+          displayName: f.displayName,
+          avatarUrl: f.avatarUrl,
+        });
+      });
+    }
+
+    const unique = new Map<string, typeof list[0]>();
+    list.forEach((item) => {
+      if (!unique.has(item.username.toLowerCase())) {
+        unique.set(item.username.toLowerCase(), item);
+      }
+    });
+
+    return Array.from(unique.values());
+  }, [type, serverId, target, friends, channelMembers]);
+
+  const activeMention = useMemo(() => {
+    if (mentionDismissed || !newMessage) return null;
+    
+    const match = newMessage.match(/(?:^|\s)@([a-zA-Z0-9_\-.]*)$/);
+    if (!match) return null;
+
+    const query = match[1].toLowerCase();
+    const filtered = mentionCandidates.filter((c) =>
+      c.username.toLowerCase().includes(query) ||
+      (c.displayName && c.displayName.toLowerCase().includes(query))
+    ).slice(0, 10);
+
+    return {
+      query,
+      suggestions: filtered,
+    };
+  }, [newMessage, mentionCandidates, mentionDismissed]);
+
+  useEffect(() => {
+    setSelectedMentionIndex(0);
+  }, [activeMention?.query]);
+
+  const handleApplyMention = (username: string) => {
+    const replaced = newMessage.replace(/@([a-zA-Z0-9_\-.]*)$/, `@${username} `);
+    onNewMessageChange(replaced);
+    setMentionDismissed(false);
+    setSelectedMentionIndex(0);
+    setTimeout(() => {
+      textInputRef.current?.focus();
+    }, 50);
+  };
 
   const getFullPickerStyle = (rect: DOMRect): React.CSSProperties => {
     const pickerWidth = 320;
@@ -773,6 +916,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               minute: '2-digit',
             });
 
+            const isMentioned = !isMe && isUserMentioned(msg.content, myUsername);
+
             return (
               <React.Fragment key={msg.id}>
                 {showDateSeparator && (
@@ -784,6 +929,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   id={`message-${msg.id}`}
                   className={`${styles.messageRow} ${
                     isMe ? styles.myMessage : styles.otherMessage
+                  } ${
+                    isMentioned ? styles.mentionedRow : ''
                   } ${
                     activeMenuMessageId === msg.id || activeQuickReactionMsgId === msg.id || activeFullReactionMsgId === msg.id
                       ? styles.activeMenuRow
@@ -1073,7 +1220,12 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                             ) : (
                               msg.content && (
                                 <div>
-                                  <span>{msg.content}</span>
+                                  <span>
+                                    {formatMessageWithMentions(msg.content, myUsername, (clickedUser) => {
+                                      onNewMessageChange(newMessage ? `${newMessage} @${clickedUser} ` : `@${clickedUser} `);
+                                      textInputRef.current?.focus();
+                                    })}
+                                  </span>
                                   {msg.isEdited && <span className={styles.editedTag}>(editada)</span>}
                                 </div>
                               )
@@ -1289,7 +1441,46 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               <Mic size={18} />
             </button>
 
-            <div className={styles.textInputWrapper}>
+            <div className={styles.textInputWrapper} style={{ position: 'relative' }}>
+              {activeMention && activeMention.suggestions.length > 0 && (
+                <div className={styles.mentionSuggestionsPopup}>
+                  <div className={styles.mentionSuggestionHeader}>
+                    {type === 'CHANNEL' ? 'Membros do Canal' : 'Amigos'}
+                  </div>
+                  {activeMention.suggestions.map((suggestion, index) => {
+                    const isSelected = index === selectedMentionIndex;
+                    const avatarSrc = suggestion.avatarUrl ? getMediaUrl(suggestion.avatarUrl) : null;
+                    return (
+                      <button
+                        key={suggestion.id}
+                        type="button"
+                        className={`${styles.mentionSuggestionItem} ${
+                          isSelected ? styles.mentionSuggestionItemActive : ''
+                        }`}
+                        onClick={() => handleApplyMention(suggestion.username)}
+                        onMouseEnter={() => setSelectedMentionIndex(index)}
+                      >
+                        <div className={styles.mentionSuggestionAvatar}>
+                          {avatarSrc ? (
+                            <img src={avatarSrc} alt={suggestion.username} />
+                          ) : (
+                            suggestion.username === 'everyone' ? '@' : suggestion.username.charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <div className={styles.mentionSuggestionInfo}>
+                          <span className={styles.mentionSuggestionName}>
+                            {suggestion.displayName || suggestion.username}
+                          </span>
+                          <span className={styles.mentionSuggestionTag}>
+                            @{suggestion.username}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               <input
                 ref={textInputRef}
                 type="text"
@@ -1300,8 +1491,37 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     : placeholder
                 }
                 value={newMessage}
-                onChange={(e) => onNewMessageChange(e.target.value)}
+                onChange={(e) => {
+                  setMentionDismissed(false);
+                  onNewMessageChange(e.target.value);
+                }}
                 onKeyDown={(e) => {
+                  if (activeMention && activeMention.suggestions.length > 0) {
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      setSelectedMentionIndex((prev) => (prev + 1) % activeMention.suggestions.length);
+                      return;
+                    }
+                    if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      setSelectedMentionIndex((prev) => (prev - 1 + activeMention.suggestions.length) % activeMention.suggestions.length);
+                      return;
+                    }
+                    if (e.key === 'Enter' || e.key === 'Tab') {
+                      e.preventDefault();
+                      const chosen = activeMention.suggestions[selectedMentionIndex] || activeMention.suggestions[0];
+                      if (chosen) {
+                        handleApplyMention(chosen.username);
+                        return;
+                      }
+                    }
+                    if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setMentionDismissed(true);
+                      return;
+                    }
+                  }
+
                   if (e.key === 'Escape') {
                     if (replyingTo) {
                       setReplyingTo(null);

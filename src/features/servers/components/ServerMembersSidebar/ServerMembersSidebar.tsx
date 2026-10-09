@@ -61,7 +61,7 @@ const PRESET_BAN_REASONS = [
 
 // Cache em memória por servidor (sobrevive ao desmontar a sidebar).
 // Permite exibir a lista instantaneamente e revalidar em segundo plano.
-const membersCache = new Map<string, ServerMemberItem[]>();
+export const membersCache = new Map<string, ServerMemberItem[]>();
 
 interface ServerMembersSidebarProps {
   serverId: string;
@@ -122,6 +122,11 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
       if (!Array.isArray(res)) return;
 
       membersCache.set(requestedServerId, res);
+      window.dispatchEvent(
+        new CustomEvent('voxy:server-members-updated', {
+          detail: { serverId: requestedServerId, members: res },
+        })
+      );
       res.forEach((m) => {
         if (m.user?.avatarUrl) preloadMedia(m.user.avatarUrl);
         if (m.user?.bannerUrl) preloadMedia(m.user.bannerUrl);
@@ -179,7 +184,14 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
 
   // Mantém o cache alinhado com mutações locais (expulsar, banir, cargo, mute)
   useEffect(() => {
-    if (!isLoading) membersCache.set(serverId, members);
+    if (!isLoading) {
+      membersCache.set(serverId, members);
+      window.dispatchEvent(
+        new CustomEvent('voxy:server-members-updated', {
+          detail: { serverId, members },
+        })
+      );
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [members]);
 

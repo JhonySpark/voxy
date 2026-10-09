@@ -208,9 +208,10 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
                     </div>
                   </div>
 
-                  {unreadDMs[friend.id] > 0 && activeFriend?.id !== friend.id && (
-                    <div className={styles.badge}>{unreadDMs[friend.id]}</div>
-                  )}
+                  <div className={styles.friendItemRight}>
+                    {unreadDMs[friend.id] > 0 && activeFriend?.id !== friend.id && (
+                      <div className={styles.badge}>{unreadDMs[friend.id]}</div>
+                    )}
 
                   {/* Ações Rápidas via Menu de 3 Pontinhos */}
                   <div className={styles.friendHoverActions} style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
@@ -325,6 +326,7 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
                       </>
                     )}
                   </div>
+                </div>
                 </div>
               );
             })}
