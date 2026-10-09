@@ -175,6 +175,7 @@ export const ApiRoutes = {
   AUTH_LOGIN: '/auth/login',
   AUTH_REGISTER: '/auth/register',
   AUTH_BETA_STATUS: '/auth/beta-status',
+  CONFIG_APP_STATUS: '/config/app-status',
   AUTH_CHECK_USERNAME: '/auth/check-username',
   AUTH_VERIFY_EMAIL: '/auth/verify-email',
   AUTH_RESEND_CODE: '/auth/resend-code',

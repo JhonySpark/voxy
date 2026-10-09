@@ -85,9 +85,15 @@ export default function Register() {
   useEffect(() => {
     const fetchBetaStatus = async () => {
       try {
-        const res = await api.get<BetaStatus>(ApiRoutes.AUTH_BETA_STATUS);
-        setBetaStatus(res.data);
-        if (res.data && !res.data.isOpen && !searchParams.get('verify')) {
+        const res = await api.get<any>(ApiRoutes.CONFIG_APP_STATUS);
+        const data: BetaStatus = {
+          isOpen: res.data.isBetaOpen ?? res.data.isOpen ?? true,
+          currentUsers: res.data.currentUsers ?? 0,
+          maxUsers: res.data.maxBetaUsers ?? res.data.maxUsers ?? 50,
+          remainingSlots: res.data.remainingSlots ?? 0,
+        };
+        setBetaStatus(data);
+        if (!data.isOpen && !searchParams.get('verify')) {
           setStep('beta_full');
         }
       } catch (err) {
