@@ -20,7 +20,7 @@ import { httpClient } from '../infrastructure/adapters/http/http-client.adapter'
 import { preloadMedia } from '../core/utils/media.util';
 import { logger } from '../core/services/logger.service';
 
-import { ServerSidebar } from '../features/servers/components/ServerSidebar/ServerSidebar';
+import { ServerSidebar, type ServerItem } from '../features/servers/components/ServerSidebar/ServerSidebar';
 import { ChannelList, type ServerPermissions } from '../features/servers/components/ChannelList/ChannelList';
 import { CreateServerModal } from '../features/servers/components/ServerModals/CreateServerModal';
 import { CreateChannelModal } from '../features/servers/components/ServerModals/CreateChannelModal';
