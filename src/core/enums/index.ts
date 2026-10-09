@@ -41,6 +41,7 @@ export const StorageKeys = {
   RUN_IN_BACKGROUND: 'voxy-run-in-background',
   GAME_PRESENCE: 'voxy-game-presence',
   LANGUAGE: 'voxy-language',
+  BETA_WELCOME_SEEN: 'voxy_beta_welcome_dismissed',
 } as const;
 export type StorageKeys = (typeof StorageKeys)[keyof typeof StorageKeys];
 
@@ -173,6 +174,7 @@ export type DesktopSourceType = (typeof DesktopSourceType)[keyof typeof DesktopS
 export const ApiRoutes = {
   AUTH_LOGIN: '/auth/login',
   AUTH_REGISTER: '/auth/register',
+  AUTH_BETA_STATUS: '/auth/beta-status',
   AUTH_CHECK_USERNAME: '/auth/check-username',
   AUTH_VERIFY_EMAIL: '/auth/verify-email',
   AUTH_RESEND_CODE: '/auth/resend-code',

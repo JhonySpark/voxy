@@ -38,6 +38,7 @@ interface ServerSidebarProps {
   onSelectServer: (server: ServerItem) => void;
   onOpenCreateServerModal: () => void;
   onLeaveServer?: (server: ServerItem) => void;
+  onOpenBetaModal?: () => void;
 }
 
 export const ServerSidebar: React.FC<ServerSidebarProps> = ({
@@ -52,6 +53,7 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({
   onSelectServer,
   onOpenCreateServerModal,
   onLeaveServer,
+  onOpenBetaModal,
 }) => {
   const { t } = useTranslation();
   const [failedIcons, setFailedIcons] = useState<Record<string, boolean>>({});
@@ -75,6 +77,18 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({
               alt="Home"
               style={{ width: '42px', height: '42px', objectFit: 'contain' }}
             />
+            {onOpenBetaModal && (
+              <span
+                className={styles.betaTagBadge}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenBetaModal();
+                }}
+                title="Informações do Voxy Beta (50 Vagas)"
+              >
+                BETA
+              </span>
+            )}
             {totalUnreadDMs > 0 && (
               <div className={styles.badge}>
                 {totalUnreadDMs > 99 ? '99+' : totalUnreadDMs}

@@ -1099,7 +1099,7 @@ input {
 /* Auth Wizard & OTP Inputs */
 .auth-card-wizard {
   width: 100%;
-  max-width: 450px;
+  max-width: 490px;
   padding: 1.75rem 2rem;
   box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
   display: flex;
@@ -1112,19 +1112,25 @@ input {
   animation: fadeIn 0.25s ease-out;
 }
 
-.wizard-steps-header {
+.wizard-stepper-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.5rem;
-  padding: 0 0.25rem;
+  padding: 0.25rem 0 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.wizard-step-node {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .wizard-step-bullet {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -1133,6 +1139,7 @@ input {
   color: var(--text-muted);
   border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.25s ease;
+  flex-shrink: 0;
 }
 
 .wizard-step-bullet.active {
@@ -1148,17 +1155,57 @@ input {
   border-color: rgba(52, 211, 153, 0.4);
 }
 
-.wizard-step-line {
+.wizard-step-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: color 0.2s ease;
+  user-select: none;
+}
+
+.wizard-step-node.active .wizard-step-label {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.wizard-step-node.completed .wizard-step-label {
+  color: var(--brand-primary);
+}
+
+.wizard-step-connector {
   flex: 1;
   height: 2px;
   background: rgba(255, 255, 255, 0.08);
-  margin: 0 0.5rem;
-  position: relative;
+  margin: 0 0.35rem;
   border-radius: 1px;
 }
 
-.wizard-step-line.active {
+.wizard-step-connector.active {
   background: var(--brand-primary);
+}
+
+.wizard-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.wizard-stepper-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0.2rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.wizard-steps-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  padding: 0 0.25rem;
 }
 
 /* OTP Digits Grid */
@@ -1222,6 +1269,302 @@ input {
   background: rgba(52, 211, 153, 0.12);
   color: var(--brand-primary);
   border-color: rgba(52, 211, 153, 0.35);
+}
+
+/* Beta Capacity Badge & Cards */
+.beta-capacity-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  color: var(--brand-primary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.beta-full-card {
+  text-align: center;
+  padding: 2.25rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.terms-step-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0.25rem 0;
+}
+
+.terms-card-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.75rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.terms-card-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(52, 211, 153, 0.2);
+}
+
+.terms-card-item.checked {
+  border-color: rgba(52, 211, 153, 0.4);
+  background: rgba(52, 211, 153, 0.04);
+}
+
+.terms-card-checkbox {
+  margin-top: 0.2rem;
+  width: 17px;
+  height: 17px;
+  cursor: pointer;
+  accent-color: var(--brand-primary);
+}
+
+.terms-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.terms-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.terms-card-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.terms-card-read-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--brand-primary);
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  border-radius: 9999px;
+  padding: 0.18rem 0.55rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.terms-card-read-button:hover {
+  background: rgba(52, 211, 153, 0.2);
+  color: #fff;
+  border-color: rgba(52, 211, 153, 0.45);
+  transform: translateY(-1px);
+}
+
+.terms-card-desc {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+  margin: 0;
+}
+
+.legal-document-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(10px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  animation: fadeIn 0.2s ease;
+}
+
+.legal-document-card {
+  width: 100%;
+  max-width: 720px;
+  max-height: 85vh;
+  background: #11141c;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.85);
+}
+
+.legal-document-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.legal-document-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  font-size: 0.85rem;
+  line-height: 1.65;
+  color: #cbd5e1;
+  scrollbar-width: thin;
+}
+
+.legal-document-body h3 {
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 1.25rem 0 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.legal-document-body h3:first-child {
+  margin-top: 0;
+}
+
+.legal-document-body p {
+  margin-bottom: 0.75rem;
+  color: #94a3b8;
+}
+
+.legal-document-body ul {
+  margin: 0.4rem 0 1rem 1.2rem;
+  color: #94a3b8;
+}
+
+.legal-document-body li {
+  margin-bottom: 0.35rem;
+}
+
+.legal-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.78rem;
+}
+
+.legal-table th, .legal-table td {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+}
+
+.legal-table th {
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  font-weight: 700;
+}
+
+.legal-document-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(14, 18, 25, 0.8);
+}
+
+.legal-summary-callout {
+  margin-top: 1.5rem;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.08) 0%, rgba(59, 130, 246, 0.05) 100%);
+  border: 1px solid rgba(52, 211, 153, 0.22);
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.legal-summary-callout-text {
+  flex: 1;
+}
+
+.legal-summary-callout-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.25rem;
+}
+
+.legal-summary-callout p {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.legal-summary-callout-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.95rem;
+  background: rgba(52, 211, 153, 0.18);
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  border-radius: 0.5rem;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.legal-summary-callout-btn:hover {
+  background: rgba(52, 211, 153, 0.3);
+  border-color: rgba(52, 211, 153, 0.7);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(52, 211, 153, 0.25);
+}
+
+.legal-doc-back-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.4rem;
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.legal-doc-back-pill:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+@media (max-width: 600px) {
+  .legal-summary-callout {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 

@@ -117,3 +117,28 @@
   text-align: center;
   z-index: 4;
 }
+
+.betaTagBadge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 6px;
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.4);
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  transition: all 0.2s ease;
+  z-index: 5;
+  user-select: none;
+}
+
+.betaTagBadge:hover {
+  transform: scale(1.12);
+  filter: brightness(1.25);
+  box-shadow: 0 0 14px rgba(52, 211, 153, 0.7);
+}

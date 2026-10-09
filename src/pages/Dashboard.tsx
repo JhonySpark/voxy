@@ -35,6 +35,7 @@ import { UserProfileBar } from '../features/user/components/UserProfileBar/UserP
 import { EditProfileModal } from '../features/user/components/EditProfileModal/EditProfileModal';
 import { UserProfileModal } from '../features/user/components/UserProfileModal/UserProfileModal';
 import type { UserProfileData } from '../features/user/components/UserPopout/UserPopout';
+import { BetaWelcomeModal } from '../components/BetaWelcomeModal/BetaWelcomeModal';
 import { useToast } from '../components/common/Toast/ToastContext';
 import { useDialog } from '../components/common/Dialog/DialogContext';
 import { notificationService } from '../core/services/notification.service';
@@ -181,9 +182,18 @@ export default function Dashboard() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [showBetaModal, setShowBetaModal] = useState(false);
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
   const [viewingUserOverride, setViewingUserOverride] = useState<Partial<UserProfileData> | null>(null);
   const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTabEnum>(SettingsTabEnum.VOICE);
+
+  // Exibe automaticamente o modal informativo da fase beta para novos usuários
+  useEffect(() => {
+    const hasSeenBeta = localStorage.getItem(StorageKeys.BETA_WELCOME_SEEN);
+    if (!hasSeenBeta) {
+      setShowBetaModal(true);
+    }
+  }, []);
 
   // Dispositivos de Áudio
   const [selectedAudioInput, setSelectedAudioInput] = useState<string>(
@@ -713,6 +723,7 @@ export default function Dashboard() {
         }}
         onOpenCreateServerModal={() => setShowServerModal(true)}
         onLeaveServer={handleLeaveServer}
+        onOpenBetaModal={() => setShowBetaModal(true)}
       />
 
       {/* 2. Barra de Navegação Interna (Amigos ou Canais do Servidor) */}
@@ -1134,6 +1145,12 @@ export default function Dashboard() {
           }}
         />
       )}
+
+      {/* Modal Informativo e Artístico da Fase Beta */}
+      <BetaWelcomeModal
+        isOpen={showBetaModal}
+        onClose={() => setShowBetaModal(false)}
+      />
     </div>
   );
 }

@@ -68,6 +68,8 @@ const resources = {
       "errors.AUTH_INVALID_USERNAME": "Username must be 3-32 characters (letters, numbers, _ and -).",
       "errors.AUTH_WEAK_PASSWORD": "Password does not meet security requirements.",
       "errors.AUTH_INVALID_CREDENTIALS": "Invalid email or password.",
+      "errors.AUTH_BETA_LIMIT_REACHED": "The closed beta capacity limit (50 users) has been reached. New spots will open soon!",
+      "errors.AUTH_TERMS_NOT_ACCEPTED": "You must accept the Terms of Service, Privacy Policy and ANPD Guidelines to sign up.",
 
       // Sidebar & Navigation
       "sidebar.search": "Find or start a conversation",
@@ -318,6 +320,8 @@ const resources = {
       "errors.AUTH_INVALID_USERNAME": "O nome de usuário deve ter entre 3 e 32 caracteres (apenas letras, números, _ e -).",
       "errors.AUTH_WEAK_PASSWORD": "A senha não atende aos requisitos de segurança.",
       "errors.AUTH_INVALID_CREDENTIALS": "E-mail ou senha inválidos.",
+      "errors.AUTH_BETA_LIMIT_REACHED": "O limite de vagas para o Beta Fechado (50 usuários) foi atingido. Novas vagas serão abertas em breve!",
+      "errors.AUTH_TERMS_NOT_ACCEPTED": "Você precisa aceitar os Termos de Uso, Política de Privacidade e Diretrizes da ANPD para se cadastrar.",
 
       // Sidebar & Navigation
       "sidebar.search": "Encontre ou inicie uma conversa",
