@@ -13,7 +13,18 @@ import { IpcChannels, AutoUpdaterEvents, AppUpdateStatus } from '../src/core/enu
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
-let nativeStreamProcess: ChildProcess | null = null
+// Garante instância única: se o app já estiver em execução (inclusive em segundo plano),
+// a nova execução apenas restaura e foca a janela existente em vez de criar um processo duplicado.
+const gotTheLock = app.requestSingleInstanceLock()
+
+if (!gotTheLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    showMainWindow()
+  })
+
+  let nativeStreamProcess: ChildProcess | null = null
 
 // Eleva a prioridade de agendamento do processo no Windows para que o jogo 3D não congele as threads de captura e WebRTC
 try {
@@ -485,3 +496,4 @@ app.on('activate', () => {
     createWindow()
   }
 })
+}
