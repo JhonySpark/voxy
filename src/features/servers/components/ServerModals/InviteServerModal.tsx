@@ -127,13 +127,6 @@ export const InviteServerModal: React.FC<InviteServerModalProps> = ({
         serverName: server.name,
         userIds: addedIds,
       });
-      for (const targetUserId of addedIds) {
-        realtimeClient.emit(RealtimeEvents.SERVER_MEMBER_ACTION, {
-          serverId: server.id,
-          serverName: server.name,
-          targetUserId,
-        });
-      }
 
       onMembersUpdated?.();
     } catch (err: any) {

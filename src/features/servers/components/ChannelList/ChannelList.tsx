@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styles from './ChannelList.module.css';
-import { Hash, Volume2, VolumeX, Plus, UserPlus, Search, ChevronDown, Mic, MicOff, Settings, Pencil, Trash2, ShieldAlert } from 'lucide-react';
+import { Hash, Volume2, VolumeX, Plus, UserPlus, Search, ChevronDown, Mic, MicOff, Settings, Pencil, Trash2, ShieldAlert, LogOut } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import * as Slider from '@radix-ui/react-slider';
@@ -47,6 +47,7 @@ interface ChannelListProps {
   onViewUserProfile?: (userId: string) => void;
   onDeleteChannel?: (channel: ChannelItem) => void;
   onRenameChannel?: (channel: ChannelItem) => void;
+  onLeaveServer?: () => void;
 }
 
 interface ChannelActionsProps {
@@ -132,6 +133,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
   onViewUserProfile,
   onDeleteChannel,
   onRenameChannel,
+  onLeaveServer,
   permissions,
 }) => {
   const { t } = useTranslation();
@@ -249,6 +251,20 @@ export const ChannelList: React.FC<ChannelListProps> = ({
               <ShieldAlert size={15} />
               <span>Denunciar Servidor</span>
             </button>
+
+            {!isOwner && onLeaveServer && (
+              <button
+                type="button"
+                className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
+                onClick={() => {
+                  setIsServerMenuOpen(false);
+                  onLeaveServer();
+                }}
+              >
+                <LogOut size={15} />
+                <span>{t('server.leaveServer', 'Sair do Servidor')}</span>
+              </button>
+            )}
           </div>
         )}
       </div>

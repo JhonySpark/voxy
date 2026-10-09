@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, Volume2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -157,6 +157,9 @@ export default function Dashboard() {
   const [userStatuses, setUserStatuses] = useState<
     Record<string, { status: UserStatusEnum | string; customStatus?: string }>
   >({});
+
+  // Guarda timestamps para evitar toasts duplicados de entrada em servidor
+  const lastNotifiedServerRef = useRef<Map<string, number>>(new Map());
 
   // Sincroniza estado de call de voz para bloquear som de notificação se estiver em conferência
   useEffect(() => {
@@ -517,8 +520,13 @@ export default function Dashboard() {
 
     const onServerMembershipChanged = (data?: { serverId: string; serverName?: string }) => {
       fetchServers();
-      if (data?.serverName) {
-        toast.info(`Você foi adicionado ao servidor ${data.serverName}!`);
+      if (data?.serverId && data?.serverName) {
+        const now = Date.now();
+        const lastNotified = lastNotifiedServerRef.current.get(data.serverId) || 0;
+        if (now - lastNotified > 3000) {
+          lastNotifiedServerRef.current.set(data.serverId, now);
+          toast.info(`Você foi adicionado ao servidor ${data.serverName}!`);
+        }
       }
     };
 
@@ -628,6 +636,47 @@ export default function Dashboard() {
     return undefined;
   }, [viewingUserId, viewingUserOverride, friends, serverVoiceStates, messages, myId, currentUserProfile]);
 
+  const handleLeaveServer = async (serverToLeave: ServerItem) => {
+    if (serverToLeave.ownerId === myId) {
+      toast.error(t('server.ownerCannotLeave', 'O proprietário não pode sair do servidor. Transfira a posse ou exclua o servidor nas configurações.'));
+      return;
+    }
+
+    const ok = await confirm({
+      title: t('server.leaveTitle', 'Sair do Servidor'),
+      message: t(
+        'server.leaveConfirmMessage',
+        `Tem certeza de que deseja sair de "${serverToLeave.name}"? Você não terá mais acesso aos canais ou mensagens a menos que receba um novo convite.`,
+        { name: serverToLeave.name }
+      ),
+      confirmText: t('server.leaveServer', 'Sair do Servidor'),
+      variant: 'danger',
+    });
+    if (!ok) return;
+
+    try {
+      await httpClient.post(`${ApiRoutes.SERVERS}/${serverToLeave.id}/leave`);
+      realtimeClient.emit(RealtimeEvents.LEAVE_SERVER, { serverId: serverToLeave.id });
+      realtimeClient.emit(RealtimeEvents.SERVER_MEMBERS_UPDATED, { serverId: serverToLeave.id });
+
+      if (connectedVoiceChannel?.serverId === serverToLeave.id) {
+        setConnectedVoiceChannel(null);
+        setIsVoiceMuted(false);
+      }
+
+      if (activeServer?.id === serverToLeave.id) {
+        setActiveView(DashboardView.DM);
+        setActiveServer(null);
+        setActiveChannel(null);
+      }
+
+      await fetchServers();
+      toast.success(t('server.leftSuccess', `Você saiu de "${serverToLeave.name}".`, { name: serverToLeave.name }));
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || t('server.leaveError', 'Erro ao sair do servidor.'));
+    }
+  };
+
   if (initialLoading) {
     return (
       <div className={styles.loadingContainer}>
@@ -646,6 +695,7 @@ export default function Dashboard() {
         activeChannel={activeChannel}
         totalUnreadDMs={totalUnreadDMs}
         unreadChannels={unreadChannels}
+        myId={myId}
         onSelectDMView={() => {
           setActiveView(DashboardView.DM);
           setActiveServer(null);
@@ -662,6 +712,7 @@ export default function Dashboard() {
           realtimeClient.emit(RealtimeEvents.JOIN_SERVER, { serverId: server.id });
         }}
         onOpenCreateServerModal={() => setShowServerModal(true)}
+        onLeaveServer={handleLeaveServer}
       />
 
       {/* 2. Barra de Navegação Interna (Amigos ou Canais do Servidor) */}
@@ -750,6 +801,7 @@ export default function Dashboard() {
                 toast.error(error.response?.data?.message || 'Não foi possível excluir o canal.');
               }
             }}
+            onLeaveServer={() => handleLeaveServer(activeServer)}
           />
         ) : null}
 

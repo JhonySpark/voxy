@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import styles from './Toast.module.css';
 import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 import { ToastTypeEnum } from '../../../core/enums';
@@ -100,16 +100,19 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [removeToast]
   );
 
-  const toast = {
-    success: (message: string, title?: string, avatarUrl?: string | null) =>
-      showToast({ type: 'success', message, title: title || 'Sucesso', avatarUrl }),
-    error: (message: string, title?: string) =>
-      showToast({ type: 'error', message, title: title || 'Atenção' }),
-    warning: (message: string, title?: string, avatarUrl?: string | null) =>
-      showToast({ type: 'warning', message, title: title || 'Aviso', avatarUrl }),
-    info: (message: string, title?: string, avatarUrl?: string | null) =>
-      showToast({ type: 'info', message, title: title || 'Informação', avatarUrl }),
-  };
+  const toast = useMemo(
+    () => ({
+      success: (message: string, title?: string, avatarUrl?: string | null) =>
+        showToast({ type: 'success', message, title: title || 'Sucesso', avatarUrl }),
+      error: (message: string, title?: string) =>
+        showToast({ type: 'error', message, title: title || 'Atenção' }),
+      warning: (message: string, title?: string, avatarUrl?: string | null) =>
+        showToast({ type: 'warning', message, title: title || 'Aviso', avatarUrl }),
+      info: (message: string, title?: string, avatarUrl?: string | null) =>
+        showToast({ type: 'info', message, title: title || 'Informação', avatarUrl }),
+    }),
+    [showToast]
+  );
 
   return (
     <ToastContext.Provider value={{ showToast, toast }}>

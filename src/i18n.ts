@@ -128,6 +128,11 @@ const resources = {
       "server.createdSuccess": "Server \"{{name}}\" created successfully!",
       "server.joinedSuccess": "You joined the server successfully!",
       "server.invalidInvite": "Invalid or expired invite code.",
+      "server.leaveServer": "Leave Server",
+      "server.leaveTitle": "Leave Server",
+      "server.leaveConfirmMessage": "Are you sure you want to leave \"{{name}}\"? You will not be able to rejoin unless you receive a new invite.",
+      "server.leftSuccess": "You left \"{{name}}\".",
+      "server.ownerCannotLeave": "The owner cannot leave the server. Transfer ownership or delete the server in settings.",
 
       // Channels
       "channel.textChannels": "TEXT CHANNELS",
@@ -373,6 +378,11 @@ const resources = {
       "server.createdSuccess": "Servidor \"{{name}}\" criado com sucesso!",
       "server.joinedSuccess": "Você entrou no servidor com sucesso!",
       "server.invalidInvite": "Código de convite inválido ou expirado.",
+      "server.leaveServer": "Sair do Servidor",
+      "server.leaveTitle": "Sair do Servidor",
+      "server.leaveConfirmMessage": "Tem certeza de que deseja sair de \"{{name}}\"? Você precisará de um novo convite para entrar novamente.",
+      "server.leftSuccess": "Você saiu de \"{{name}}\".",
+      "server.ownerCannotLeave": "O proprietário não pode sair do servidor. Transfira a posse ou exclua o servidor nas configurações.",
 
       // Channels
       "channel.textChannels": "CANAIS DE TEXTO",
@@ -618,6 +628,11 @@ const resources = {
       "server.createdSuccess": "¡Servidor \"{{name}}\" creado con éxito!",
       "server.joinedSuccess": "¡Te has unido al servidor con éxito!",
       "server.invalidInvite": "Código de invitación inválido o expirado.",
+      "server.leaveServer": "Salir del Servidor",
+      "server.leaveTitle": "Salir del Servidor",
+      "server.leaveConfirmMessage": "¿Estás seguro de que deseas salir de \"{{name}}\"? Necesitarás una nueva invitación para volver a unirte.",
+      "server.leftSuccess": "Has salido de \"{{name}}\".",
+      "server.ownerCannotLeave": "El propietario no puede salir del servidor. Transfiere la propiedad o elimina el servidor en la configuración.",
 
       // Channels
       "channel.textChannels": "CANALES DE TEXTO",

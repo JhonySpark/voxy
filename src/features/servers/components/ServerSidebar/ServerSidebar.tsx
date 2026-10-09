@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import styles from './ServerSidebar.module.css';
 import heroLogo from '../../../../assets/logo.png';
-import { Plus, ShieldAlert } from 'lucide-react';
+import { Plus, ShieldAlert, LogOut } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import { getMediaUrl, handleMediaError } from '../../../../core/utils/media.util';
@@ -33,9 +33,11 @@ interface ServerSidebarProps {
   activeChannel: ChannelItem | null;
   totalUnreadDMs: number;
   unreadChannels: Record<string, number>;
+  myId?: string;
   onSelectDMView: () => void;
   onSelectServer: (server: ServerItem) => void;
   onOpenCreateServerModal: () => void;
+  onLeaveServer?: (server: ServerItem) => void;
 }
 
 export const ServerSidebar: React.FC<ServerSidebarProps> = ({
@@ -45,9 +47,11 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({
   activeChannel,
   totalUnreadDMs,
   unreadChannels,
+  myId,
   onSelectDMView,
   onSelectServer,
   onOpenCreateServerModal,
+  onLeaveServer,
 }) => {
   const { t } = useTranslation();
   const [failedIcons, setFailedIcons] = useState<Record<string, boolean>>({});
@@ -189,6 +193,16 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({
                       <ShieldAlert size={14} color="#f87171" />
                       <span>Denunciar Servidor</span>
                     </ContextMenu.Item>
+                    {server.ownerId !== myId && onLeaveServer && (
+                      <ContextMenu.Item
+                        className="context-menu-item context-menu-item-danger"
+                        onClick={() => onLeaveServer(server)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                      >
+                        <LogOut size={14} color="#f87171" />
+                        <span>{t('server.leaveServer', 'Sair do Servidor')}</span>
+                      </ContextMenu.Item>
+                    )}
                   </ContextMenu.Content>
                 </ContextMenu.Portal>
               </ContextMenu.Root>
