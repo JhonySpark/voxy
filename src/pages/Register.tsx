@@ -1400,7 +1400,7 @@ export default function Register() {
 
                     <h3>5. Seus Direitos como Titular (Art. 18 da LGPD)</h3>
                     <p>
-                      Você tem o direito de solicitar a confirmação, o acesso, a retificação de dados incorretos ou a eliminação definitiva de sua conta a qualquer momento pelo e-mail do Encarregado de Dados (DPO): <code>dpo@voxy.app</code>.
+                      Você tem o direito de solicitar a confirmação, o acesso, a retificação de dados incorretos ou a eliminação definitiva de sua conta a qualquer momento pelo e-mail do Encarregado de Dados (DPO): <code>dpo@voxychat.com.br</code>.
                     </p>
                   </>
                 )
