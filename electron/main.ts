@@ -9,11 +9,12 @@ import {
   nativeImage,
   Notification,
   shell,
+  safeStorage,
 } from "electron";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn, ChildProcess } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { autoUpdater } from "electron-updater";
 import { getCategorizedSources } from "./gameDetector";
@@ -116,6 +117,73 @@ function saveBackgroundSettings(keepRunningInBackground: boolean) {
     console.error("[Background] Falha ao salvar configurações:", err);
   }
   refreshTrayMenu();
+}
+
+type StoredCredentials = {
+  email?: string;
+  password?: string;
+  token?: string;
+  rememberMe?: boolean;
+  savedAt?: string;
+};
+
+const credentialsPath = () =>
+  join(app.getPath("userData"), "session_vault.enc");
+
+function saveStoredCredentials(data: StoredCredentials): boolean {
+  try {
+    const raw = JSON.stringify({
+      ...data,
+      savedAt: new Date().toISOString(),
+    });
+    if (safeStorage.isEncryptionAvailable()) {
+      const encrypted = safeStorage.encryptString(raw);
+      writeFileSync(credentialsPath(), encrypted);
+    } else {
+      writeFileSync(
+        credentialsPath(),
+        Buffer.from(raw, "utf8").toString("base64"),
+        "utf8",
+      );
+    }
+    return true;
+  } catch (err) {
+    console.error("[Credentials] Falha ao salvar cofre de credenciais:", err);
+    return false;
+  }
+}
+
+function getStoredCredentials(): StoredCredentials | null {
+  try {
+    const p = credentialsPath();
+    if (!existsSync(p)) return null;
+
+    if (safeStorage.isEncryptionAvailable()) {
+      const buffer = readFileSync(p);
+      const decrypted = safeStorage.decryptString(buffer);
+      return JSON.parse(decrypted);
+    } else {
+      const content = readFileSync(p, "utf8");
+      const decrypted = Buffer.from(content, "base64").toString("utf8");
+      return JSON.parse(decrypted);
+    }
+  } catch (err) {
+    console.warn("[Credentials] Falha ao ler cofre de credenciais:", err);
+    return null;
+  }
+}
+
+function clearStoredCredentials(): boolean {
+  try {
+    const p = credentialsPath();
+    if (existsSync(p)) {
+      unlinkSync(p);
+    }
+    return true;
+  } catch (err) {
+    console.error("[Credentials] Falha ao limpar cofre de credenciais:", err);
+    return false;
+  }
 }
 
 function showMainWindow() {
@@ -338,6 +406,20 @@ app.whenReady().then(() => {
   );
   ipcMain.on(IpcChannels.SET_BACKGROUND_MODE, (_event, enabled: boolean) => {
     saveBackgroundSettings(enabled === true);
+  });
+
+  // IPC para cofre seguro de credenciais e persistência de sessão nativa
+  ipcMain.handle(
+    IpcChannels.SAVE_CREDENTIALS,
+    (_event, creds: StoredCredentials) => {
+      return saveStoredCredentials(creds);
+    },
+  );
+  ipcMain.handle(IpcChannels.GET_SAVED_CREDENTIALS, () => {
+    return getStoredCredentials();
+  });
+  ipcMain.handle(IpcChannels.CLEAR_SAVED_CREDENTIALS, () => {
+    return clearStoredCredentials();
   });
 
   // Retorna fontes categorizadas (Jogos detectados, Janelas/Apps e Telas com ícones)

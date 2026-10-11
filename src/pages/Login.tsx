@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../api";
 import { Eye, EyeOff, ShieldAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { ApiRoutes, AppRoutes, StorageKeys } from "../core/enums";
+import { ApiRoutes, AppRoutes, StorageKeys, IpcChannels } from "../core/enums";
 import { getApiErrorMessage } from "../core/utils/error.util";
 import heroLogo from "../assets/logo.png";
 import { logger } from "../core/services/logger.service";
@@ -19,6 +19,41 @@ export default function Login() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Carrega credenciais salvas para reentrada instantânea
+  useEffect(() => {
+    const loadSavedCredentials = async () => {
+      const ipcRenderer =
+        typeof window !== "undefined" && window.require
+          ? window.require("electron").ipcRenderer
+          : null;
+
+      if (ipcRenderer) {
+        try {
+          const creds = await ipcRenderer.invoke(IpcChannels.GET_SAVED_CREDENTIALS);
+          if (creds && (creds.email || creds.password)) {
+            if (creds.email) setEmail(creds.email);
+            if (creds.password) setPassword(creds.password);
+            setRememberMe(creds.rememberMe !== false);
+            return;
+          }
+        } catch (_) {}
+      }
+
+      // Fallback para localStorage caso não esteja no Electron ou não haja cofre nativo
+      const savedEmail = localStorage.getItem(StorageKeys.SAVED_EMAIL);
+      const savedPassword = localStorage.getItem(StorageKeys.SAVED_PASSWORD);
+      const savedRemember = localStorage.getItem(StorageKeys.REMEMBER_ME);
+
+      if (savedEmail) setEmail(savedEmail);
+      if (savedPassword) setPassword(savedPassword);
+      if (savedRemember !== null) {
+        setRememberMe(savedRemember === "true");
+      }
+    };
+
+    loadSavedCredentials();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,9 +76,38 @@ export default function Login() {
         typeof window !== "undefined" && window.require
           ? window.require("electron").ipcRenderer
           : null;
+
+      // Salva ou limpa as credenciais para reentrada com base no "Lembrar de mim"
+      if (rememberMe) {
+        localStorage.setItem(StorageKeys.REMEMBER_ME, "true");
+        localStorage.setItem(StorageKeys.SAVED_EMAIL, email.trim());
+        localStorage.setItem(StorageKeys.SAVED_PASSWORD, password);
+
+        if (ipcRenderer) {
+          try {
+            await ipcRenderer.invoke(IpcChannels.SAVE_CREDENTIALS, {
+              email: email.trim(),
+              password,
+              token: res.data.access_token,
+              rememberMe: true,
+            });
+          } catch (_) {}
+        }
+      } else {
+        localStorage.removeItem(StorageKeys.REMEMBER_ME);
+        localStorage.removeItem(StorageKeys.SAVED_EMAIL);
+        localStorage.removeItem(StorageKeys.SAVED_PASSWORD);
+
+        if (ipcRenderer) {
+          try {
+            await ipcRenderer.invoke(IpcChannels.CLEAR_SAVED_CREDENTIALS);
+          } catch (_) {}
+        }
+      }
+
       if (ipcRenderer) {
         try {
-          const ageSignal = await ipcRenderer.invoke("GET_OS_AGE_SIGNAL");
+          const ageSignal = await ipcRenderer.invoke(IpcChannels.GET_OS_AGE_SIGNAL);
           const syncRes = await api.post(
             ApiRoutes.AUTH_SYNC_AGE_SIGNAL,
             ageSignal,
@@ -54,6 +118,9 @@ export default function Login() {
 
           if (syncRes.data?.user?.ageClassification === "CHILD") {
             localStorage.removeItem(StorageKeys.AUTH_TOKEN);
+            if (ipcRenderer) {
+              await ipcRenderer.invoke(IpcChannels.CLEAR_SAVED_CREDENTIALS);
+            }
             setError(
               "Acesso bloqueado: Esta conta foi classificada pelo sistema operacional como menor de 13 anos (CHILD).",
             );

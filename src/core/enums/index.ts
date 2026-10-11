@@ -42,6 +42,9 @@ export const StorageKeys = {
   GAME_PRESENCE: 'voxy-game-presence',
   LANGUAGE: 'voxy-language',
   BETA_WELCOME_SEEN: 'voxy_beta_welcome_dismissed',
+  REMEMBER_ME: 'voxy_remember_me',
+  SAVED_EMAIL: 'voxy_saved_email',
+  SAVED_PASSWORD: 'voxy_saved_password',
 } as const;
 export type StorageKeys = (typeof StorageKeys)[keyof typeof StorageKeys];
 
@@ -251,6 +254,9 @@ export const IpcChannels = {
   SHOW_DESKTOP_NOTIFICATION: 'SHOW_DESKTOP_NOTIFICATION',
   FLASH_FRAME: 'FLASH_FRAME',
   OPEN_EXTERNAL_URL: 'OPEN_EXTERNAL_URL',
+  SAVE_CREDENTIALS: 'SAVE_CREDENTIALS',
+  GET_SAVED_CREDENTIALS: 'GET_SAVED_CREDENTIALS',
+  CLEAR_SAVED_CREDENTIALS: 'CLEAR_SAVED_CREDENTIALS',
 } as const;
 export type IpcChannels = (typeof IpcChannels)[keyof typeof IpcChannels];
 

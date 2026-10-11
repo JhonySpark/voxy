@@ -15,6 +15,7 @@ import {
   SettingsTabEnum,
   ApiRoutes,
   UserStatusEnum,
+  IpcChannels,
 } from '../core/enums';
 import { httpClient } from '../infrastructure/adapters/http/http-client.adapter';
 import { preloadMedia } from '../core/utils/media.util';
@@ -579,6 +580,27 @@ export default function Dashboard() {
   const handleLogout = () => {
     logger.logEvent('USER_LOGOUT', { myId, myUsername });
     localStorage.removeItem(StorageKeys.AUTH_TOKEN);
+
+    const ipcRenderer =
+      typeof window !== 'undefined' && window.require
+        ? window.require('electron').ipcRenderer
+        : null;
+    if (ipcRenderer) {
+      ipcRenderer
+        .invoke(IpcChannels.GET_SAVED_CREDENTIALS)
+        .then((creds: any) => {
+          if (creds && creds.rememberMe) {
+            ipcRenderer.invoke(IpcChannels.SAVE_CREDENTIALS, {
+              ...creds,
+              token: undefined,
+            });
+          } else {
+            ipcRenderer.invoke(IpcChannels.CLEAR_SAVED_CREDENTIALS);
+          }
+        })
+        .catch(() => {});
+    }
+
     navigate(AppRoutes.LOGIN);
   };
 
