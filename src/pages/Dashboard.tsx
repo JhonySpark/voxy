@@ -249,7 +249,40 @@ export default function Dashboard() {
 
     initData();
 
+    // Renovação contínua da sessão (Sliding Session)
+    const refreshSession = () => {
+      httpClient
+        .post<{ access_token: string }>(ApiRoutes.AUTH_REFRESH)
+        .then((res) => {
+          if (res?.access_token) {
+            localStorage.setItem(StorageKeys.AUTH_TOKEN, res.access_token);
+            const ipcRenderer =
+              typeof window !== 'undefined' && window.require
+                ? window.require('electron').ipcRenderer
+                : null;
+            if (ipcRenderer) {
+              ipcRenderer
+                .invoke(IpcChannels.GET_SAVED_CREDENTIALS)
+                .then((creds: any) => {
+                  if (creds && creds.rememberMe) {
+                    ipcRenderer.invoke(IpcChannels.SAVE_CREDENTIALS, {
+                      ...creds,
+                      token: res.access_token,
+                    });
+                  }
+                })
+                .catch(() => {});
+            }
+          }
+        })
+        .catch(() => {});
+    };
+
+    refreshSession();
+    const refreshTimer = setInterval(refreshSession, 12 * 60 * 60 * 1000); // A cada 12 horas
+
     return () => {
+      clearInterval(refreshTimer);
       realtimeClient.disconnect();
     };
   }, [navigate, fetchFriends, fetchServers]);
