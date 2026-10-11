@@ -1125,6 +1125,30 @@
   color: #c7d2fe;
 }
 
+/* Links Ativos no Chat */
+.chatLink {
+  color: #38bdf8;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  word-break: break-all;
+  cursor: pointer;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.chatLink:hover {
+  color: #7dd3fc;
+  text-decoration: underline;
+  opacity: 0.9;
+}
+
+.myBubble .chatLink {
+  color: #67e8f9;
+}
+
+.myBubble .chatLink:hover {
+  color: #a5f3fc;
+}
+
 .mentionedRow {
   /* Mantém o fluxo natural das mensagens sem bordas amarelas pesadas */
   position: relative;

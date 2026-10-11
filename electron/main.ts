@@ -8,6 +8,7 @@ import {
   dialog,
   nativeImage,
   Notification,
+  shell,
 } from "electron";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -32,10 +33,11 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Define o nome da aplicação e o Application User Model ID (AUMID) no Windows.
-// Isso garante que as notificações Toast exibam "Voxy" no cabeçalho em vez de "Electron".
+// Deve ser exatamente idêntico ao appId configurado no electron-builder ("br.com.d4rkside.voxy")
+// para que a barra de tarefas do Windows e as notificações agrupem corretamente com o atalho e ícone oficial.
 app.name = "Voxy";
 if (process.platform === "win32") {
-  app.setAppUserModelId("Voxy");
+  app.setAppUserModelId("br.com.d4rkside.voxy");
 }
 
 // Em desenvolvimento, permite abrir uma 2ª instância simultânea com pasta de sessão isolada.
@@ -164,34 +166,18 @@ function refreshTrayMenu() {
   tray.setContextMenu(Menu.buildFromTemplate(menuItems));
 }
 
-function getTrayIcon(): nativeImage {
-  const devPath = join(process.cwd(), "build/icon.ico");
-  const unpackedPath = join(
-    process.resourcesPath,
-    "app.asar.unpacked/build/icon.ico",
-  );
-  const asarPath = join(app.getAppPath(), "build/icon.ico");
-
-  const candidates = [devPath, unpackedPath, asarPath];
-  for (const p of candidates) {
-    if (existsSync(p)) {
-      const img = nativeImage.createFromPath(p);
-      if (!img.isEmpty()) return img;
-    }
-  }
-  return nativeImage.createFromPath(asarPath);
-}
-
-function getVoxyLogoIcon(): nativeImage {
+function getAppIcon(): nativeImage {
   const candidates = [
-    join(process.cwd(), "build/icon_resized.png"),
-    join(process.cwd(), "build/icon.png"),
+    join(process.resourcesPath, "app.asar.unpacked/build/icon.ico"),
+    join(app.getAppPath(), "build/icon.ico"),
+    join(__dirname, "../build/icon.ico"),
+    join(process.cwd(), "build/icon.ico"),
     join(process.resourcesPath, "app.asar.unpacked/build/icon_resized.png"),
     join(process.resourcesPath, "app.asar.unpacked/build/icon.png"),
     join(app.getAppPath(), "build/icon_resized.png"),
     join(app.getAppPath(), "build/icon.png"),
-    join(process.cwd(), "build/icon.ico"),
-    join(app.getAppPath(), "build/icon.ico"),
+    join(__dirname, "../build/icon.png"),
+    join(process.cwd(), "build/icon.png"),
   ];
 
   for (const p of candidates) {
@@ -200,7 +186,15 @@ function getVoxyLogoIcon(): nativeImage {
       if (!img.isEmpty()) return img;
     }
   }
-  return getTrayIcon();
+  return nativeImage.createFromPath(join(app.getAppPath(), "build/icon.ico"));
+}
+
+function getTrayIcon(): nativeImage {
+  return getAppIcon();
+}
+
+function getVoxyLogoIcon(): nativeImage {
+  return getAppIcon();
 }
 
 async function resolveNotificationIcon(iconUrl?: string): Promise<nativeImage> {
@@ -253,8 +247,11 @@ function createTray() {
 }
 
 async function createWindow() {
+  const icon = getAppIcon();
+
   win = new BrowserWindow({
     title: "Voxy",
+    icon: !icon.isEmpty() ? icon : undefined,
     width: 1280,
     height: 800,
     autoHideMenuBar: true,
@@ -264,6 +261,9 @@ async function createWindow() {
       backgroundThrottling: false,
     },
   });
+  if (!icon.isEmpty()) {
+    win.setIcon(icon);
+  }
   win.removeMenu();
   win.maximize();
 
@@ -271,6 +271,34 @@ async function createWindow() {
     if (!isQuitting && getBackgroundSettings().keepRunningInBackground) {
       event.preventDefault();
       win?.hide();
+    }
+  });
+
+  // Intercepta qualquer tentativa de abrir novas janelas ou links externos
+  // garantindo que abram sempre no navegador padrão do Sistema Operacional
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (
+      url.startsWith("http://") ||
+      url.startsWith("https://") ||
+      url.startsWith("mailto:")
+    ) {
+      void shell.openExternal(url);
+    }
+    return { action: "deny" };
+  });
+
+  win.webContents.on("will-navigate", (event, url) => {
+    const isDevUrl =
+      process.env.VITE_DEV_SERVER_URL &&
+      url.startsWith(process.env.VITE_DEV_SERVER_URL);
+    if (
+      !isDevUrl &&
+      (url.startsWith("http://") ||
+        url.startsWith("https://") ||
+        url.startsWith("mailto:"))
+    ) {
+      event.preventDefault();
+      void shell.openExternal(url);
     }
   });
 
@@ -364,6 +392,20 @@ app.whenReady().then(() => {
     if (win && !win.isFocused()) {
       win.flashFrame(flag !== false);
     }
+  });
+
+  // IPC para abertura segura de links externos no navegador padrão do OS
+  ipcMain.handle(IpcChannels.OPEN_EXTERNAL_URL, async (_event, url: string) => {
+    if (
+      typeof url === "string" &&
+      (url.startsWith("http://") ||
+        url.startsWith("https://") ||
+        url.startsWith("mailto:"))
+    ) {
+      await shell.openExternal(url);
+      return true;
+    }
+    return false;
   });
 
   // IPC para o Pipeline Nativo C++

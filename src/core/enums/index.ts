@@ -250,6 +250,7 @@ export const IpcChannels = {
   APP_UPDATE_ERROR: 'app-update-error',
   SHOW_DESKTOP_NOTIFICATION: 'SHOW_DESKTOP_NOTIFICATION',
   FLASH_FRAME: 'FLASH_FRAME',
+  OPEN_EXTERNAL_URL: 'OPEN_EXTERNAL_URL',
 } as const;
 export type IpcChannels = (typeof IpcChannels)[keyof typeof IpcChannels];
 

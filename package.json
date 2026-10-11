@@ -1,7 +1,7 @@
 {
   "name": "voxy",
   "private": true,
-  "version": "0.5.15",
+  "version": "0.5.16",
   "type": "module",
   "main": "dist-electron/main.js",
   "author": "D4rk Side",
@@ -24,7 +24,8 @@
       "output": "release/"
     },
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
