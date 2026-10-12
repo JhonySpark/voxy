@@ -32,6 +32,7 @@ interface ParticipantCardProps {
   streamVolume: number;
   isWatching: boolean;
   canAccess18Plus?: boolean;
+  canAccessDiagnostics?: boolean;
   onToggleMaximize: () => void;
   onToggleWatchStream: () => void;
   onStreamVolumeChange: (vol: number) => void;
@@ -45,6 +46,7 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
   streamVolume,
   isWatching,
   canAccess18Plus = false,
+  canAccessDiagnostics = false,
   onToggleMaximize,
   onToggleWatchStream,
   onStreamVolumeChange,
@@ -53,6 +55,7 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
   const { t } = useTranslation();
   const isSpeaking = useIsSpeaking(p.lkParticipant);
   const [showSettings, setShowSettings] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [isReportingStream, setIsReportingStream] = useState(false);
   const [avatarFailed, setAvatarFailed] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -111,7 +114,15 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
               18+
             </div>
           )}
-          {import.meta.env.DEV && p.track && <DevStreamDiagnostics track={p.track} nativeTelemetry={p.nativeTelemetry} />}
+          {canAccessDiagnostics && p.track && (
+            <DevStreamDiagnostics
+              track={p.track}
+              nativeTelemetry={p.nativeTelemetry}
+              isOpen={showDiagnostics}
+              onToggle={setShowDiagnostics}
+              canAccessDiagnostics={canAccessDiagnostics}
+            />
+          )}
         </div>
       ) : p.isStreaming ? (
         p.is18Plus && !canAccess18Plus ? (
@@ -222,7 +233,7 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
 
         <div className={styles.topActions}>
           {/* Botão de configuração de stream visível mesmo no card minimizado */}
-          {!p.isLocal && p.isStreaming && (
+          {(!p.isLocal || canAccessDiagnostics) && p.isStreaming && (
             <button
               type="button"
               className={styles.iconBtn}
@@ -296,6 +307,9 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
         onToggleWatch={onToggleWatchStream}
         onClose={() => setShowSettings(false)}
         onReport={!p.isLocal ? () => setIsReportingStream(true) : undefined}
+        showDiagnosticsOption={canAccessDiagnostics && !!p.track}
+        isDiagnosticsOpen={showDiagnostics}
+        onToggleDiagnostics={() => setShowDiagnostics((prev) => !prev)}
       />
 
       <ReportModal

@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import styles from "./MaximizedStreamView.module.css";
-import { Settings, Fullscreen, Minimize, X } from "lucide-react";
+import { Settings, Fullscreen, Minimize, X, Activity } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { VideoRenderer } from "../VideoRenderer/VideoRenderer";
 import { StreamSettingsMenu } from "../StreamSettingsMenu/StreamSettingsMenu";
@@ -26,6 +26,7 @@ interface MaximizedStreamViewProps {
   };
   isWatching: boolean;
   streamVolume: number;
+  canAccessDiagnostics?: boolean;
   onStreamVolumeChange: (val: number) => void;
   onToggleWatchStream: () => void;
   onRestoreGrid: () => void;
@@ -35,6 +36,7 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
   participant,
   isWatching,
   streamVolume,
+  canAccessDiagnostics = false,
   onStreamVolumeChange,
   onToggleWatchStream,
   onRestoreGrid,
@@ -44,6 +46,7 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [isReportingStream, setIsReportingStream] = useState(false);
   const [avatarFailed, setAvatarFailed] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -104,10 +107,13 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
               track={participant.track}
               className={styles.videoElement}
             />
-            {import.meta.env.DEV && participant.track && (
+            {canAccessDiagnostics && participant.track && (
               <DevStreamDiagnostics
                 track={participant.track}
                 nativeTelemetry={participant.nativeTelemetry}
+                isOpen={showDiagnostics}
+                onToggle={setShowDiagnostics}
+                canAccessDiagnostics={canAccessDiagnostics}
               />
             )}
           </>
@@ -169,13 +175,24 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
             </button>
           )}
 
-          {!participant.isLocal && participant.isStreaming && (
+          {(!participant.isLocal || canAccessDiagnostics) && participant.isStreaming && (
             <button
               onClick={() => setShowSettings(!showSettings)}
               className={styles.controlButton}
               title={t("voice.streamSettings", "Configurações da Transmissão")}
             >
               <Settings size={20} />
+            </button>
+          )}
+
+          {canAccessDiagnostics && (
+            <button
+              onClick={() => setShowDiagnostics((prev) => !prev)}
+              className={styles.controlButton}
+              title="Diagnóstico da Transmissão (F8)"
+              style={showDiagnostics ? { color: '#38bdf8' } : undefined}
+            >
+              <Activity size={20} />
             </button>
           )}
 
@@ -209,6 +226,9 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
           onToggleWatch={onToggleWatchStream}
           onClose={() => setShowSettings(false)}
           onReport={!participant.isLocal ? () => setIsReportingStream(true) : undefined}
+          showDiagnosticsOption={canAccessDiagnostics && !!participant.track}
+          isDiagnosticsOpen={showDiagnostics}
+          onToggleDiagnostics={() => setShowDiagnostics((prev) => !prev)}
         />
       </div>
 

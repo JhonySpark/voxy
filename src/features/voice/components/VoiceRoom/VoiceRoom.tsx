@@ -71,6 +71,7 @@ export interface VoiceRoomProps {
   serverId: string;
   myId: string;
   myUsername: string;
+  userRole?: string;
   userAgeClassification?: 'UNKNOWN' | 'CHILD' | 'TEEN' | 'ADULT';
   isMuted?: boolean;
   onDisconnect: () => void;
@@ -220,9 +221,12 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
   livekitUrl,
   channelId,
   userAgeClassification,
+  userRole,
   onViewUserProfile,
   isMuted: isMutedProp,
 }) => {
+  const isSuperAdmin = userRole === 'SUPERADMIN';
+  const canAccessDiagnostics = import.meta.env.DEV || isSuperAdmin;
   const { t } = useTranslation();
   const room = useRoomContext();
   const participants = useParticipants();
@@ -267,7 +271,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
   }, []);
 
   useEffect(() => {
-    if (!import.meta.env.DEV) return;
+    if (!canAccessDiagnostics) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.key !== 'F8' && event.code !== 'F8' && event.keyCode !== 119) || event.repeat) return;
@@ -277,7 +281,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
 
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, []);
+  }, [canAccessDiagnostics]);
 
   // Escuta telemetria do Pipeline Nativo C++ (WGC + NVENC + LiveKit C++)
   useEffect(() => {
@@ -891,6 +895,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
             participant={maximizedParticipant}
             isWatching={maximizedParticipant.isWatching}
             streamVolume={streamVolumes[maximizedParticipant.id] ?? 100}
+            canAccessDiagnostics={canAccessDiagnostics}
             onStreamVolumeChange={(val) =>
               setStreamVolumes((prev) => ({ ...prev, [maximizedParticipant.id]: val }))
             }
@@ -910,6 +915,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
                   streamVolume={streamVolumes[p.id] ?? 100}
                   isWatching={p.isWatching}
                   canAccess18Plus={userAgeClassification === 'ADULT'}
+                  canAccessDiagnostics={canAccessDiagnostics}
                   onToggleMaximize={() => setMaximizedId(p.id)}
                   onToggleWatchStream={() => toggleWatchStream(p.id)}
                   onStreamVolumeChange={(val) =>
@@ -931,6 +937,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
                 streamVolume={streamVolumes[p.id] ?? 100}
                 isWatching={p.isWatching}
                 canAccess18Plus={userAgeClassification === 'ADULT'}
+                canAccessDiagnostics={canAccessDiagnostics}
                 onToggleMaximize={() => setMaximizedId(p.id)}
                 onToggleWatchStream={() => toggleWatchStream(p.id)}
                 onStreamVolumeChange={(val) =>
@@ -944,7 +951,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
       )}
 
       {/* Floating HUD for Native Streamer */}
-      {import.meta.env.DEV && showDevDiagnostics && isNativeStreaming && (
+      {canAccessDiagnostics && showDevDiagnostics && isNativeStreaming && (
         <div style={{
           position: 'absolute',
           top: 12,

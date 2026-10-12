@@ -58,6 +58,7 @@ export default function Dashboard() {
   // Autenticação e Usuário
   const [myId, setMyId] = useState('');
   const [myUsername, setMyUsername] = useState('');
+  const [myRole, setMyRole] = useState<'USER' | 'MODERATOR' | 'ADMIN' | 'SUPERADMIN'>('USER');
   const [currentUserProfile, setCurrentUserProfile] = useState<UserProfileData | null>(null);
 
   useEffect(() => {
@@ -219,6 +220,9 @@ export default function Dashboard() {
       const payload = JSON.parse(atob(token.split('.')[1]));
       setMyId(payload.sub);
       setMyUsername(payload.username);
+      if (payload.role) {
+        setMyRole(payload.role);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -903,6 +907,7 @@ export default function Dashboard() {
             serverId={connectedVoiceChannel.serverId}
             myId={myId}
             myUsername={myUsername}
+            userRole={currentUserProfile?.role || myRole}
             userAgeClassification={currentUserProfile?.ageClassification}
             isMuted={isVoiceMuted}
             onDisconnect={() => {

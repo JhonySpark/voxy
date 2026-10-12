@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from './StreamSettingsMenu.module.css';
-import { Volume2, VolumeX, Eye, EyeOff, ShieldAlert } from 'lucide-react';
+import { Volume2, VolumeX, Eye, EyeOff, ShieldAlert, Activity } from 'lucide-react';
 import * as Slider from '@radix-ui/react-slider';
 import { useClickOutside } from '../../../../hooks/useClickOutside';
 
@@ -13,6 +13,9 @@ interface StreamSettingsMenuProps {
   onToggleWatch: () => void;
   onClose: () => void;
   onReport?: () => void;
+  showDiagnosticsOption?: boolean;
+  isDiagnosticsOpen?: boolean;
+  onToggleDiagnostics?: () => void;
 }
 
 export const StreamSettingsMenu: React.FC<StreamSettingsMenuProps> = ({
@@ -23,6 +26,9 @@ export const StreamSettingsMenu: React.FC<StreamSettingsMenuProps> = ({
   onToggleWatch,
   onClose,
   onReport,
+  showDiagnosticsOption,
+  isDiagnosticsOpen,
+  onToggleDiagnostics,
 }) => {
   const menuRef = useClickOutside<HTMLDivElement>(onClose, isOpen);
 
@@ -75,6 +81,21 @@ export const StreamSettingsMenu: React.FC<StreamSettingsMenuProps> = ({
         {isWatching ? <EyeOff size={16} /> : <Eye size={16} />}
         <span>{isWatching ? 'Parar de Assistir' : 'Assistir Transmissão'}</span>
       </button>
+
+      {showDiagnosticsOption && onToggleDiagnostics && (
+        <button
+          type="button"
+          className={styles.diagnosticsButton}
+          onClick={() => {
+            onToggleDiagnostics();
+            onClose();
+          }}
+          title="Alternar painel de diagnóstico avançado (F8)"
+        >
+          <Activity size={16} />
+          <span>{isDiagnosticsOpen ? 'Ocultar Diagnóstico (F8)' : 'Diagnóstico da Transmissão (F8)'}</span>
+        </button>
+      )}
 
       {onReport && (
         <button

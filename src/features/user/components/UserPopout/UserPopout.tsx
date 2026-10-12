@@ -11,6 +11,7 @@ export interface UserProfileData {
   id: string;
   username: string;
   email?: string;
+  role?: 'USER' | 'MODERATOR' | 'ADMIN' | 'SUPERADMIN';
   displayName?: string | null;
   bio?: string | null;
   avatarUrl?: string | null;

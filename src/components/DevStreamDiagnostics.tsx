@@ -12,6 +12,9 @@ interface PreviousSample {
 export function DevStreamDiagnostics({
   track,
   nativeTelemetry,
+  isOpen,
+  onToggle,
+  canAccessDiagnostics = false,
 }: {
   track: any;
   nativeTelemetry?: {
@@ -22,12 +25,25 @@ export function DevStreamDiagnostics({
     width?: number;
     height?: number;
   } | null;
+  isOpen?: boolean;
+  onToggle?: (open: boolean) => void;
+  canAccessDiagnostics?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = isOpen !== undefined ? isOpen : internalOpen;
+  const isAllowed = import.meta.env.DEV || canAccessDiagnostics;
   const [values, setValues] = useState<Values>({});
 
+  const setOpen = (updater: boolean | ((visible: boolean) => boolean)) => {
+    const nextVal = typeof updater === 'function' ? updater(open) : updater;
+    if (onToggle) {
+      onToggle(nextVal);
+    }
+    setInternalOpen(nextVal);
+  };
+
   useEffect(() => {
-    if (!import.meta.env.DEV) return;
+    if (!isAllowed) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.key !== 'F8' && event.code !== 'F8' && event.keyCode !== 119) || event.repeat) return;
@@ -37,7 +53,7 @@ export function DevStreamDiagnostics({
 
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, []);
+  }, [isAllowed, open]);
 
   useEffect(() => {
     if (!open || typeof track?.getRTCStatsReport !== 'function') return;
@@ -116,11 +132,13 @@ export function DevStreamDiagnostics({
   if (!open) return null;
 
   return <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 50, maxWidth: 'calc(100% - 16px)' }}>
-    <button type="button" onClick={() => setOpen(value => !value)} style={{ background: '#111e', color: '#fff', border: '1px solid #ffffff33', borderRadius: 4, padding: '4px 8px', cursor: 'pointer' }}>
-      {open ? 'Fechar diagnóstico' : 'Diagnóstico'}
+    <button type="button" onClick={() => setOpen(value => !value)} style={{ background: '#111e', color: '#fff', border: '1px solid #ffffff33', borderRadius: 4, padding: '4px 8px', cursor: 'pointer', fontSize: 12 }}>
+      {open ? 'Fechar diagnóstico (F8)' : 'Diagnóstico (F8)'}
     </button>
-    {open && <div style={{ background: '#111f', color: '#fff', marginTop: 4, padding: 10, fontSize: 12, lineHeight: 1.45, borderRadius: 6, border: '1px solid #ffffff22' }}>
-      <div style={{ marginBottom: 6, fontWeight: 'bold', color: '#38bdf8' }}>Somente desenvolvimento local</div>
+    {open && <div style={{ background: 'rgba(15, 23, 42, 0.95)', color: '#fff', marginTop: 4, padding: 10, fontSize: 12, lineHeight: 1.45, borderRadius: 6, border: '1px solid #ffffff22', maxHeight: '340px', overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
+      <div style={{ marginBottom: 6, fontWeight: 'bold', color: '#38bdf8' }}>
+        {import.meta.env.DEV ? 'Diagnóstico da Transmissão (Desenvolvimento)' : 'Diagnóstico da Transmissão (Superadmin)'}
+      </div>
       {nativeTelemetry && (
         <div style={{ marginBottom: 10, paddingBottom: 8, borderBottom: '1px solid #ffffff22' }}>
           <div style={{ color: '#10b981', fontWeight: 'bold', marginBottom: 4 }}>
