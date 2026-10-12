@@ -8,7 +8,8 @@ import { DevStreamDiagnostics } from "../../../../components/DevStreamDiagnostic
 import { ReportModal } from "../../../moderation/components/ReportModal/ReportModal";
 import { ReportTargetTypeEnum } from "../../../../core/enums";
 
-import { getMediaUrl } from '../../../../core/utils/media.util';
+import { getMediaUrl } from "../../../../core/utils/media.util";
+import { StreamQualityBadge } from "../StreamQualityBadge/StreamQualityBadge";
 
 interface MaximizedStreamViewProps {
   participant: {
@@ -123,7 +124,12 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
               <img
                 src={avatarMedia}
                 alt={participant.username}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  borderRadius: "50%",
+                }}
                 onError={() => setAvatarFailed(true)}
               />
             ) : (
@@ -148,6 +154,18 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
           </button>
         )} */}
 
+        {participant.isStreaming && participant.hasVideo && !showDiagnostics && (
+          <div
+            className={styles.streamQualityWrapper}
+            style={{ opacity: showControls ? 1 : 0 }}
+          >
+            <StreamQualityBadge
+              track={participant.track}
+              nativeTelemetry={participant.nativeTelemetry}
+            />
+          </div>
+        )}
+
         <div
           className={styles.userBadge}
           style={{ opacity: showControls ? 1 : 0 }}
@@ -162,35 +180,42 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
             pointerEvents: showControls ? "auto" : "none",
           }}
         >
-          {participant.isLocal && participant.isStreaming && participant.canToggleWatch && isWatching && (
-            <button
-              onClick={() => {
-                onToggleWatchStream();
-                onRestoreGrid();
-              }}
-              className={styles.controlButton}
-              title="Fechar prévia"
-            >
-              <X size={20} />
-            </button>
-          )}
+          {participant.isLocal &&
+            participant.isStreaming &&
+            participant.canToggleWatch &&
+            isWatching && (
+              <button
+                onClick={() => {
+                  onToggleWatchStream();
+                  onRestoreGrid();
+                }}
+                className={styles.controlButton}
+                title="Fechar prévia"
+              >
+                <X size={20} />
+              </button>
+            )}
 
-          {(!participant.isLocal || canAccessDiagnostics) && participant.isStreaming && (
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              className={styles.controlButton}
-              title={t("voice.streamSettings", "Configurações da Transmissão")}
-            >
-              <Settings size={20} />
-            </button>
-          )}
+          {(!participant.isLocal || canAccessDiagnostics) &&
+            participant.isStreaming && (
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                className={styles.controlButton}
+                title={t(
+                  "voice.streamSettings",
+                  "Configurações da Transmissão",
+                )}
+              >
+                <Settings size={20} />
+              </button>
+            )}
 
           {canAccessDiagnostics && (
             <button
               onClick={() => setShowDiagnostics((prev) => !prev)}
               className={styles.controlButton}
               title="Diagnóstico da Transmissão (F8)"
-              style={showDiagnostics ? { color: '#38bdf8' } : undefined}
+              style={showDiagnostics ? { color: "#38bdf8" } : undefined}
             >
               <Activity size={20} />
             </button>
@@ -225,7 +250,9 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
           onVolumeChange={onStreamVolumeChange}
           onToggleWatch={onToggleWatchStream}
           onClose={() => setShowSettings(false)}
-          onReport={!participant.isLocal ? () => setIsReportingStream(true) : undefined}
+          onReport={
+            !participant.isLocal ? () => setIsReportingStream(true) : undefined
+          }
           showDiagnosticsOption={canAccessDiagnostics && !!participant.track}
           isDiagnosticsOpen={showDiagnostics}
           onToggleDiagnostics={() => setShowDiagnostics((prev) => !prev)}

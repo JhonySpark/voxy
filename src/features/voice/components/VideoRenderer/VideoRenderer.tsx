@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from "react";
 
 interface VideoRendererProps {
   track: any;
@@ -6,7 +6,11 @@ interface VideoRendererProps {
   className?: string;
 }
 
-export const VideoRenderer: React.FC<VideoRendererProps> = ({ track, style, className }) => {
+export const VideoRenderer: React.FC<VideoRendererProps> = ({
+  track,
+  style,
+  className,
+}) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -18,5 +22,14 @@ export const VideoRenderer: React.FC<VideoRendererProps> = ({ track, style, clas
     };
   }, [track]);
 
-  return <video ref={videoRef} autoPlay playsInline muted style={style} className={className} />;
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      muted
+      style={style}
+      className={className}
+    />
+  );
 };

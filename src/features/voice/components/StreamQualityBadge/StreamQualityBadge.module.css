@@ -1,0 +1,26 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background-color: var(--brand-primary, #34d399);
+  color: #04241a;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  padding: 2px 6.5px;
+  border-radius: 4px;
+  line-height: 1.25;
+  user-select: none;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35), 0 0 8px rgba(52, 211, 153, 0.2);
+  pointer-events: auto;
+  cursor: default;
+}
+
+.liveDot {
+  width: 4.5px;
+  height: 4.5px;
+  border-radius: 50%;
+  background-color: #04241a;
+  opacity: 0.85;
+}
