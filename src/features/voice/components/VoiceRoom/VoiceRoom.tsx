@@ -84,9 +84,10 @@ export interface VoiceRoomProps {
   onSpeakersChange?: (speakers: string[]) => void;
   livekitUrl?: string;
   onViewUserProfile?: (userId: string) => void;
+  maxBitrateKbps?: number;
 }
 
-// Global hook in RTCPeerConnection to inject high bitrate floor and ceiling in SDP WebRTC
+// Global hook in RTCPeerConnection to inject bitrate ceiling in SDP WebRTC
 if (typeof window !== 'undefined' && window.RTCPeerConnection && !(window as any).__voxy_sdp_hooked) {
   (window as any).__voxy_sdp_hooked = true;
   const origSetLocalDescription = window.RTCPeerConnection.prototype.setLocalDescription;
@@ -94,8 +95,11 @@ if (typeof window !== 'undefined' && window.RTCPeerConnection && !(window as any
     if (desc && desc.sdp && (desc.type === 'offer' || desc.type === 'answer')) {
       try {
         let sdp = desc.sdp;
+        const maxKbps = Number((window as any).__voxy_max_bitrate_kbps) || 2500;
+        const maxBps = maxKbps * 1000;
         // Injeta limite de bandwidth na seção de vídeo de forma segura sem quebrar o BUNDLE
-        sdp = sdp.replace(/(m=video\s+\d+\s+[^\r\n]*)/gi, `$1\r\nb=AS:16000\r\nb=TIAS:16000000`);
+        sdp = sdp.replace(/\r\nb=AS:\d+/gi, '').replace(/\r\nb=TIAS:\d+/gi, '');
+        sdp = sdp.replace(/(m=video\s+\d+\s+[^\r\n]*)/gi, `$1\r\nb=AS:${maxKbps}\r\nb=TIAS:${maxBps}`);
         desc = new RTCSessionDescription({ type: desc.type, sdp }) as any;
       } catch (err) {
         console.warn('[Voxy WebRTC] Erro ao otimizar SDP:', err);
@@ -109,25 +113,29 @@ export const VoiceRoom: React.FC<VoiceRoomProps> = (props) => {
   const { t } = useTranslation();
   const [token, setToken] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [maxBitrateKbps, setMaxBitrateKbps] = useState<number>(() => {
+    return Number(props.maxBitrateKbps) || Number((window as any).__voxy_max_bitrate_kbps) || 2500;
+  });
 
   const livekitUrl = import.meta.env.VITE_LIVEKIT_URL || 'wss://voxy-livekit.d4rkside.com.br';
 
   const roomOptions = useMemo(() => {
+    const limitBps = (maxBitrateKbps || 2500) * 1000;
     return {
-      adaptiveStream: false,
-      dynacast: false,
+      adaptiveStream: true,
+      dynacast: true,
       publishDefaults: {
         videoCodec: 'vp8' as const,
         degradationPreference: 'maintain-framerate' as RTCDegradationPreference,
         simulcast: false,
         screenShareEncoding: {
-          maxBitrate: 12_000_000,
+          maxBitrate: limitBps,
           maxFramerate: 60,
           priority: 'high' as const,
         },
       },
     };
-  }, []);
+  }, [maxBitrateKbps]);
 
   useEffect(() => {
     let mounted = true;
@@ -144,9 +152,23 @@ export const VoiceRoom: React.FC<VoiceRoomProps> = (props) => {
 
     const fetchToken = async () => {
       try {
+        try {
+          const configRes = await api.get(ApiRoutes.CONFIG_APP_STATUS);
+          if (configRes.data?.maxScreenShareBitrateKbps) {
+            const kbps = Number(configRes.data.maxScreenShareBitrateKbps);
+            if (mounted) setMaxBitrateKbps(kbps);
+            (window as any).__voxy_max_bitrate_kbps = kbps;
+          }
+        } catch (_) {}
+
         const res = await api.post(`${ApiRoutes.CHANNELS}/${props.channelId}/voice-token`);
         if (mounted) {
           setToken(res.data.token);
+          if (res.data.maxScreenShareBitrateKbps) {
+            const kbps = Number(res.data.maxScreenShareBitrateKbps);
+            setMaxBitrateKbps(kbps);
+            (window as any).__voxy_max_bitrate_kbps = kbps;
+          }
         }
       } catch (err: any) {
         if (mounted) {
@@ -207,12 +229,12 @@ export const VoiceRoom: React.FC<VoiceRoomProps> = (props) => {
       data-lk-theme="default"
       style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
     >
-      <VoiceRoomInner {...props} livekitUrl={livekitUrl} />
+      <VoiceRoomInner {...props} maxBitrateKbps={maxBitrateKbps} livekitUrl={livekitUrl} />
     </LiveKitRoom>
   );
 };
 
-const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
+const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = ({
   onDisconnect,
   onParticipantsChange,
   onMuteChange,
@@ -224,6 +246,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
   userRole,
   onViewUserProfile,
   isMuted: isMutedProp,
+  maxBitrateKbps = 2500,
 }) => {
   const isSuperAdmin = userRole === 'SUPERADMIN';
   const canAccessDiagnostics = import.meta.env.DEV || isSuperAdmin;
@@ -516,6 +539,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
           (vTrack as any).contentHint = 'motion';
         }
 
+        const limitBps = (maxBitrateKbps || 2500) * 1000;
         const lkTrack = new LocalVideoTrack(vTrack);
         await localParticipant.publishTrack(lkTrack, {
           name: 'screen_share',
@@ -525,12 +549,12 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
           // @ts-ignore
           degradationPreference: 'maintain-framerate',
           screenShareEncoding: {
-            maxBitrate: 12000000,
+            maxBitrate: limitBps,
             maxFramerate: 60,
             priority: 'high',
           },
           videoEncoding: {
-            maxBitrate: 12000000,
+            maxBitrate: limitBps,
             maxFramerate: 60,
             priority: 'high',
           },
@@ -541,8 +565,8 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
           try {
             const params = lkTrack.sender.getParameters();
             if (params.encodings && params.encodings.length > 0) {
-              params.encodings[0].maxBitrate = 12000000;
-              (params.encodings[0] as any).minBitrate = 6000000;
+              params.encodings[0].maxBitrate = limitBps;
+              (params.encodings[0] as any).minBitrate = Math.min(limitBps, Math.floor(limitBps * 0.5));
               params.encodings[0].maxFramerate = 60;
               params.encodings[0].scaleResolutionDownBy = 1.0;
               if ('networkPriority' in params.encodings[0]) {
@@ -610,12 +634,17 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         const hwnd = hwndMatch[1];
         const targetWidth = is1080 ? 1920 : 1280;
         const targetHeight = is1080 ? 1080 : 720;
-        const targetBitrate = is1080 ? (targetFps === 60 ? 15000000 : 10000000) : (targetFps === 60 ? 10000000 : 8000000);
+        const limitBps = (maxBitrateKbps || 2500) * 1000;
+        const desiredBitrate = is1080 ? (targetFps === 60 ? 15000000 : 10000000) : (targetFps === 60 ? 10000000 : 8000000);
+        const targetBitrate = Math.min(desiredBitrate, limitBps);
 
         try {
           console.log('[Voxy Stream] Solicitando token de tela no backend...');
           const res = await api.post(`${ApiRoutes.CHANNELS}/${channelId}/voice-token?screen=true`);
           const streamToken = res.data.token;
+          if (res.data.maxScreenShareBitrateKbps) {
+            (window as any).__voxy_max_bitrate_kbps = res.data.maxScreenShareBitrateKbps;
+          }
           console.log('[Voxy Stream] Token recebido com sucesso. Disparando voxy_native_streamer...');
 
           await ipcRenderer.invoke('START_NATIVE_STREAM', {
@@ -695,10 +724,12 @@ const VoiceRoomInner: React.FC<VoiceRoomProps> = ({
         (vTrack as any).contentHint = 'motion';
       }
 
+      const limitBps = (maxBitrateKbps || 2500) * 1000;
       const lkTrack = new LocalVideoTrack(vTrack);
       lkTrack.source = Track.Source.ScreenShare;
-      const targetBitrate = is1080 ? (targetFps === 60 ? 12000000 : 8000000) : (targetFps === 60 ? 7000000 : 5000000);
-      const minBitrate = is1080 ? (targetFps === 60 ? 6000000 : 4000000) : (targetFps === 60 ? 3500000 : 2500000);
+      const desiredBitrate = is1080 ? (targetFps === 60 ? 12000000 : 8000000) : (targetFps === 60 ? 7000000 : 5000000);
+      const targetBitrate = Math.min(desiredBitrate, limitBps);
+      const minBitrate = Math.min(Math.floor(targetBitrate * 0.5), 1500000);
 
       await localParticipant.publishTrack(lkTrack, {
         name: 'screen_share',
