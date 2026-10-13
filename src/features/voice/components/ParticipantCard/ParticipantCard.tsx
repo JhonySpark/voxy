@@ -37,6 +37,7 @@ interface ParticipantCardProps {
     avatarUrl?: string | null;
     displayName?: string | null;
     nativeTelemetry?: any;
+    streamViewersCount?: number;
   };
   isMaximized: boolean;
   isHorizontal?: boolean;
@@ -352,12 +353,20 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
         >
           {p.displayName || p.username}
         </span>
-        {p.isStreaming && isWatching && p.hasVideo && (
-          <StreamQualityBadge
-            track={p.track}
-            nativeTelemetry={p.nativeTelemetry}
-          />
-        )}
+        <div className={styles.bottomActions}>
+          {p.isLocal && p.isStreaming && typeof p.streamViewersCount === "number" && (
+            <div className={styles.viewerBadge} title={`${p.streamViewersCount} assistindo`}>
+              <Eye size={12} />
+              <span>{p.streamViewersCount}</span>
+            </div>
+          )}
+          {p.isStreaming && isWatching && p.hasVideo && (
+            <StreamQualityBadge
+              track={p.track}
+              nativeTelemetry={p.nativeTelemetry}
+            />
+          )}
+        </div>
       </div>
 
       {/* Menu flutuante de configurações da transmissão */}

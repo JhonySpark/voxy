@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import styles from "./MaximizedStreamView.module.css";
-import { Settings, Fullscreen, Minimize, X, Activity } from "lucide-react";
+import { Settings, Fullscreen, Minimize, X, Activity, Eye } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { VideoRenderer } from "../VideoRenderer/VideoRenderer";
 import { StreamSettingsMenu } from "../StreamSettingsMenu/StreamSettingsMenu";
@@ -24,6 +24,7 @@ interface MaximizedStreamViewProps {
     avatarUrl?: string | null;
     displayName?: string | null;
     nativeTelemetry?: any;
+    streamViewersCount?: number;
   };
   isWatching: boolean;
   streamVolume: number;
@@ -154,15 +155,23 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
           </button>
         )} */}
 
-        {participant.isStreaming && participant.hasVideo && !showDiagnostics && (
+        {participant.isStreaming && !showDiagnostics && (participant.hasVideo || (participant.isLocal && typeof participant.streamViewersCount === "number")) && (
           <div
-            className={styles.streamQualityWrapper}
+            className={styles.streamTopBadges}
             style={{ opacity: showControls ? 1 : 0 }}
           >
-            <StreamQualityBadge
-              track={participant.track}
-              nativeTelemetry={participant.nativeTelemetry}
-            />
+            {participant.isLocal && typeof participant.streamViewersCount === "number" && (
+              <div className={styles.viewerBadge} title={`${participant.streamViewersCount} assistindo`}>
+                <Eye size={13} />
+                <span>{participant.streamViewersCount}</span>
+              </div>
+            )}
+            {participant.hasVideo && (
+              <StreamQualityBadge
+                track={participant.track}
+                nativeTelemetry={participant.nativeTelemetry}
+              />
+            )}
           </div>
         )}
 

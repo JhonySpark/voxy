@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import {
   LiveKitRoom,
   useParticipants,
@@ -280,6 +280,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
   const [showDevDiagnostics, setShowDevDiagnostics] = useState(false);
   const [streamVolumes, setStreamVolumes] = useState<Record<string, number>>({});
   const [watchingStreams, setWatchingStreams] = useState<Set<string>>(new Set());
+  const [streamViewers, setStreamViewers] = useState<Set<string>>(new Set());
   const [maximizedId, setMaximizedId] = useState<string | null>(null);
 
   const prevParticipantsCount = useRef(0);
@@ -423,6 +424,21 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
     });
   }, [participants, watchingStreams]);
 
+  const notifyWatch = useCallback((streamerId: string, isWatching: boolean) => {
+    if (!room?.localParticipant) return;
+    try {
+      const encoder = new TextEncoder();
+      const payload = encoder.encode(JSON.stringify({
+        action: isWatching ? 'WATCH' : 'UNWATCH',
+        streamerId,
+      }));
+      room.localParticipant.publishData(payload, {
+        reliable: true,
+        topic: 'stream_watch',
+      }).catch(() => undefined);
+    } catch (_) {}
+  }, [room]);
+
   // "Assistir" vale somente para a publicação atual. Se o streamer cair, a
   // publicação de tela some e removemos a intenção salva; quando o emissor
   // iniciar outra live, cada espectador deverá clicar novamente para assistir.
@@ -439,22 +455,84 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
 
     setWatchingStreams((previous) => {
       const next = new Set([...previous].filter((id) => activeStreamOwners.has(id)));
+      previous.forEach((id) => {
+        if (!activeStreamOwners.has(id)) {
+          notifyWatch(id, false);
+        }
+      });
       return next.size === previous.size ? previous : next;
     });
     setMaximizedId((current) => current && !activeStreamOwners.has(current) ? null : current);
-  }, [participants]);
+  }, [participants, notifyWatch]);
+
+  useEffect(() => {
+    if (!room) return;
+
+    const handleDataReceived = (payload: Uint8Array, participant?: any, _kind?: any, topic?: string) => {
+      if (topic !== 'stream_watch' || !participant) return;
+      try {
+        const text = new TextDecoder().decode(payload);
+        const data = JSON.parse(text);
+        const baseId = participant.identity.endsWith('#screen')
+          ? participant.identity.slice(0, -'#screen'.length)
+          : participant.identity;
+
+        if (data.action === 'PING' && data.streamerId) {
+          if (watchingStreams.has(data.streamerId)) {
+            notifyWatch(data.streamerId, true);
+          }
+          return;
+        }
+
+        const isMyStream = data.streamerId === localParticipant?.identity;
+        if (!isMyStream) return;
+
+        if (data.action === 'WATCH') {
+          setStreamViewers((prev) => new Set(prev).add(baseId));
+        } else if (data.action === 'UNWATCH') {
+          setStreamViewers((prev) => {
+            const next = new Set(prev);
+            next.delete(baseId);
+            return next;
+          });
+        }
+      } catch (_) {}
+    };
+
+    const handleParticipantDisconnected = (p: any) => {
+      const baseId = p.identity.endsWith('#screen')
+        ? p.identity.slice(0, -'#screen'.length)
+        : p.identity;
+      setStreamViewers((prev) => {
+        if (!prev.has(baseId)) return prev;
+        const next = new Set(prev);
+        next.delete(baseId);
+        return next;
+      });
+    };
+
+    room.on(RoomEvent.DataReceived, handleDataReceived);
+    room.on(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected);
+
+    return () => {
+      room.off(RoomEvent.DataReceived, handleDataReceived);
+      room.off(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected);
+    };
+  }, [room, localParticipant, watchingStreams, notifyWatch]);
 
   const toggleWatchStream = (id: string) => {
     setWatchingStreams((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) {
+      const willWatch = !next.has(id);
+      if (willWatch) {
+        next.add(id);
+      } else {
         next.delete(id);
         if (maximizedId === id) {
           setMaximizedId(null);
         }
-      } else {
-        next.add(id);
       }
+      notifyWatch(id, willWatch);
       return next;
     });
   };
@@ -506,6 +584,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
       setIsNativeStreaming(false);
       setNativeTelemetry(null);
       setStreamPreviewThumbnail(null);
+      setStreamViewers(new Set());
       return;
     }
 
@@ -517,6 +596,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
         console.error('Error stopping screen share', err);
       }
       setScreenTrack(null);
+      setStreamViewers(new Set());
       return;
     }
 
@@ -819,6 +899,24 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
     }
   });
 
+  const isLocalStreaming = !!screenTrack || isNativeStreaming;
+
+  const activeViewerCount = useMemo(() => {
+    if (!isLocalStreaming) return 0;
+    const realIds = new Set(
+      participants
+        .filter((p) => !p.identity.endsWith('#screen') && p.identity !== localParticipant?.identity)
+        .map((p) => p.identity)
+    );
+    let count = 0;
+    streamViewers.forEach((id) => {
+      if (realIds.has(id)) {
+        count++;
+      }
+    });
+    return count;
+  }, [isLocalStreaming, participants, localParticipant, streamViewers]);
+
   const allParticipants = participants
     .filter((p) => !p.identity.endsWith('#screen'))
     .map((p) => {
@@ -895,6 +993,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
         isMuted: p.isLocal ? isMuted : !p.isMicrophoneEnabled,
         lkParticipant: p,
         nativeTelemetry: p.isLocal ? nativeTelemetry : null,
+        streamViewersCount: p.isLocal && isStreaming ? activeViewerCount : undefined,
       };
     });
 
@@ -1014,7 +1113,8 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
       {/* Control Bar */}
       <VoiceControlBar
         isMuted={isMuted}
-        isSharingScreen={!!screenTrack || isNativeStreaming}
+        isSharingScreen={isLocalStreaming}
+        streamViewersCount={isLocalStreaming ? activeViewerCount : undefined}
         onToggleMute={toggleMute}
         onToggleScreenShare={toggleScreenShare}
         onDisconnect={onDisconnect}

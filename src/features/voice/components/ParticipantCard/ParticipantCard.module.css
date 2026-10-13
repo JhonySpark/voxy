@@ -211,3 +211,27 @@
   min-width: 0;
   flex: 1;
 }
+
+.bottomActions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.viewerBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background-color: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  color: var(--brand-primary, #34d399);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 6.5px;
+  border-radius: 4px;
+  line-height: 1.2;
+  user-select: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+

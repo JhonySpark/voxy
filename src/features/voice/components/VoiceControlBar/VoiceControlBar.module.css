@@ -39,6 +39,13 @@
   background-color: rgba(239, 68, 68, 0.1);
 }
 
+.screenButtonWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .screenButton {
   background-color: #1a2233;
   color: #f8fafc;
@@ -49,6 +56,26 @@
   background-color: var(--brand-primary, #34d399);
   color: #05140d;
   box-shadow: 0 0 16px rgba(52, 211, 153, 0.4);
+}
+
+.screenViewersBadge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  background-color: #0b1120;
+  color: var(--brand-primary, #34d399);
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  z-index: 5;
+  user-select: none;
 }
 
 .disconnectButton {

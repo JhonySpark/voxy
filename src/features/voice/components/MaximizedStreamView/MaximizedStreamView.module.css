@@ -117,12 +117,34 @@
   transform: translateY(-1px);
 }
 
-.streamQualityWrapper {
+.streamQualityWrapper,
+.streamTopBadges {
   position: absolute;
   top: 1rem;
   left: 1rem;
   z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   transition: opacity 0.25s ease;
   pointer-events: none;
 }
+
+.viewerBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background-color: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  color: var(--brand-primary, #34d399);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  line-height: 1.25;
+  user-select: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  pointer-events: auto;
+}
+
 
