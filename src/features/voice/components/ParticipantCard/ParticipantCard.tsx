@@ -144,7 +144,7 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
           <div
             className={styles.streamPlaceholder}
             style={{ cursor: "not-allowed", background: "#1c1924" }}
-            title="Transmissão restrita para maiores de 18 anos"
+            title={t("voice.streamRestricted18Plus")}
           >
             <ShieldAlert size={40} color="#ef4444" />
             <div
@@ -175,10 +175,10 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
                   color: "#f87171",
                 }}
               >
-                Transmissão +18
+                {t("voice.stream18Plus")}
               </span>
               <span style={{ fontSize: "0.74rem", color: "#94a3b8" }}>
-                Restrito para maiores de idade
+                {t("voice.adultsOnly")}
               </span>
             </div>
           </div>
@@ -215,7 +215,7 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
                 <img
                   className={styles.streamPreviewImage}
                   src={p.streamPreviewThumbnail}
-                  alt="Prévia da transmissão"
+                  alt={t("voice.streamPreview")}
                 />
                 <div className={styles.streamPreviewShade} />
               </>
@@ -249,7 +249,7 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
                 onViewUserProfile(p.id);
               }
             }}
-            title={`Ver perfil de ${p.username}`}
+            title={t("user.viewProfileOf", { name: p.username })}
           >
             {avatarMedia && !avatarFailed ? (
               <img
@@ -301,7 +301,7 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
             <button
               type="button"
               className={styles.iconBtn}
-              title="Fechar prévia"
+              title={t("voice.closePreview")}
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleWatchStream();
@@ -338,13 +338,13 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
               onViewUserProfile(p.id);
             }
           }}
-          title={`Ver perfil de ${p.username}`}
+          title={t("user.viewProfileOf", { name: p.username })}
         >
           {p.displayName || p.username}
         </span>
         <div className={styles.bottomActions}>
           {p.isLocal && p.isStreaming && typeof p.streamViewersCount === "number" && (
-            <div className={styles.viewerBadge} title={`${p.streamViewersCount} assistindo`}>
+            <div className={styles.viewerBadge} title={t("voice.watchersCount", { count: p.streamViewersCount })}>
               <Eye size={12} />
               <span>{p.streamViewersCount}</span>
             </div>

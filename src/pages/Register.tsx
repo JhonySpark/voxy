@@ -27,6 +27,7 @@ import { ApiRoutes, AppRoutes, StorageKeys, IpcChannels } from '../core/enums';
 import { getApiErrorMessage, getApiCodeMessage } from '../core/utils/error.util';
 import heroLogo from '../assets/logo.png';
 import styles from './Register.module.css';
+import { LegalDocumentContent } from '../components/LegalDocuments/LegalDocumentContent';
 
 declare const window: any;
 const ipcRenderer = typeof window !== 'undefined' && window.require ? window.require('electron').ipcRenderer : null;
@@ -112,7 +113,7 @@ export default function Register() {
       setEmail(verifyEmailParam);
       setStep(4);
       if (searchParams.get('from') === 'login') {
-        setVerificationMsg('Código de confirmação enviado para seu e-mail!');
+        setVerificationMsg(t('auth.register.otpSentMessage'));
       }
     }
   }, [searchParams]);
@@ -211,11 +212,11 @@ export default function Register() {
   const handleNextToStep2 = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isEmailValid) {
-      setError('Por favor, informe um endereço de e-mail válido.');
+      setError(t('errors.AUTH_INVALID_EMAIL'));
       return;
     }
     if (usernameStatus !== 'available') {
-      setError(usernameMsg || 'Escolha um nome de usuário disponível.');
+      setError(usernameMsg || t('errors.AUTH_INVALID_USERNAME'));
       return;
     }
     setError('');
@@ -228,7 +229,7 @@ export default function Register() {
   const handleNextToStep3 = (e: React.FormEvent) => {
     e.preventDefault();
     if (!birthDate) {
-      setError('Por favor, informe sua data de nascimento.');
+      setError(t('auth.register.errorBirthDateRequired'));
       return;
     }
     if (isChild) {
@@ -236,7 +237,7 @@ export default function Register() {
       return;
     }
     if (!isPasswordValid) {
-      setError('A senha deve atender a todos os requisitos de segurança.');
+      setError(t('errors.AUTH_WEAK_PASSWORD'));
       return;
     }
     if (password !== confirmPassword) {
@@ -251,7 +252,7 @@ export default function Register() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!acceptTerms || !acceptPrivacy || !acceptSafety) {
-      setError('É necessário aceitar todos os termos, política de privacidade e diretrizes legais para continuar.');
+      setError(t('auth.register.errorTermsRequired'));
       return;
     }
 
@@ -271,7 +272,7 @@ export default function Register() {
       setResendCooldown(60);
 
       if (res.data?.requireEmailVerification !== false) {
-        setVerificationMsg('Código de confirmação enviado para seu e-mail!');
+        setVerificationMsg(t('auth.register.otpSentMessage'));
         setStep(4);
       } else {
         const loginRes = await api.post(ApiRoutes.AUTH_LOGIN, { email: email.trim(), password });
@@ -375,7 +376,7 @@ export default function Register() {
         navigate(AppRoutes.APP);
       }
     } catch (err: any) {
-      setError(getApiErrorMessage(err, 'Código inválido ou expirado. Tente novamente.'));
+      setError(getApiErrorMessage(err, t('errors.AUTH_INVALID_VERIFICATION_CODE')));
     } finally {
       setIsVerifying(false);
     }
@@ -387,11 +388,11 @@ export default function Register() {
     try {
       await api.post(ApiRoutes.AUTH_RESEND_CODE, { email: targetEmail });
       setResendCooldown(60);
-      setVerificationMsg('Um novo código de 6 dígitos foi enviado para o seu e-mail.');
+      setVerificationMsg(t('auth.register.otpResentSuccess'));
       setOtpDigits(['', '', '', '', '', '']);
       otpRefs.current[0]?.focus();
     } catch (err: any) {
-      setError(getApiErrorMessage(err, 'Não foi possível reenviar o código.'));
+      setError(getApiErrorMessage(err, t('auth.register.otpResendFailed')));
     }
   };
 
@@ -415,24 +416,24 @@ export default function Register() {
             </div>
 
             <div className={styles.capacityBadge}>
-              <span>Vagas Esgotadas ({betaStatus?.currentUsers ?? 50}/{betaStatus?.maxUsers ?? 50})</span>
+              <span>{t('auth.register.betaFullBadge', { current: betaStatus?.currentUsers ?? 50, max: betaStatus?.maxUsers ?? 50 })}</span>
             </div>
 
             <div>
               <h1 className={`${styles.title} ${styles.warningTitle}`}>
-                Beta Fechado Lotado
+                {t('auth.register.betaFullTitle')}
               </h1>
               <p className={styles.subtitle}>
-                Para garantir a melhor latência de áudio e máxima estabilidade de conexão durante os primeiros testes, limitamos o acesso inicial a <strong>{betaStatus?.maxUsers ?? 50} usuários</strong>.
+                {t('auth.register.betaFullDesc1', { max: betaStatus?.maxUsers ?? 50 })}
               </p>
               <p className={`${styles.subtitle} ${styles.mutedSubtitle}`}>
-                Todas as vagas foram preenchidas no momento. Fique atento às nossas atualizações para a próxima abertura de vagas!
+                {t('auth.register.betaFullDesc2')}
               </p>
             </div>
 
             <div className={`${styles.actionsRow} ${styles.fullWidthRow}`}>
               <Link to={AppRoutes.LOGIN} className={`btn-primary ${styles.fullWidthLink}`}>
-                Já possui conta? Fazer Login
+                {t('auth.register.betaFullLoginLink')}
               </Link>
             </div>
           </div>
@@ -555,7 +556,7 @@ export default function Register() {
             className={`btn-primary ${styles.fullWidthSubmitBtn}`}
             disabled={isVerifying || fullOtp.length !== 6}
           >
-            {isVerifying ? <span className="btn-spinner" /> : 'Confirmar e Acessar'}
+            {isVerifying ? <span className="btn-spinner" /> : t('auth.register.otpConfirmAndAccess')}
           </button>
 
           <div className={styles.header}>
@@ -568,8 +569,8 @@ export default function Register() {
               <RefreshCw size={13} />
               <span>
                 {resendCooldown > 0
-                  ? `Reenviar código em ${resendCooldown}s`
-                  : 'Não recebeu o código? Clique para reenviar'}
+                  ? t('auth.register.resendInSeconds', { seconds: resendCooldown })
+                  : t('auth.register.resendPrompt')}
               </span>
             </button>
 
@@ -585,7 +586,7 @@ export default function Register() {
               }}
               className={`${styles.link} ${styles.linkBtn}`}
             >
-              {isFromLogin ? '← Voltar para o Login' : '← Corrigir e-mail ou dados'}
+              {isFromLogin ? t('auth.register.backToLogin') : t('auth.register.backToEdit')}
             </button>
           </div>
         </div>
@@ -608,14 +609,14 @@ export default function Register() {
           />
           <div className={styles.headerContent}>
             <h1 className={styles.titleLeft}>
-              {step === 1 && 'Criar sua conta'}
-              {step === 2 && 'Segurança & Idade'}
-              {step === 3 && 'Termos & Privacidade'}
+              {step === 1 && t('auth.register.step1Title')}
+              {step === 2 && t('auth.register.step2Title')}
+              {step === 3 && t('auth.register.step3Title')}
             </h1>
             <p className={styles.subtitleLeft}>
-              {step === 1 && 'Informe seu e-mail e escolha seu nome de usuário'}
-              {step === 2 && 'Defina sua data de nascimento e senha de acesso'}
-              {step === 3 && 'Consentimento legal e salvaguardas (ANPD/LGPD)'}
+              {step === 1 && t('auth.register.step1Subtitle')}
+              {step === 2 && t('auth.register.step2Subtitle')}
+              {step === 3 && t('auth.register.step3Subtitle')}
             </p>
           </div>
         </div>
@@ -660,7 +661,11 @@ export default function Register() {
             <div className={styles.capacityBadge}>
               <Sparkles size={12} />
               <span>
-                Beta Fechado: {betaStatus.currentUsers}/{betaStatus.maxUsers} vagas preenchidas ({betaStatus.remainingSlots} restantes)
+                {t('auth.register.betaSlotsFilled', {
+                  current: betaStatus.currentUsers,
+                  max: betaStatus.maxUsers,
+                  remaining: betaStatus.remainingSlots,
+                })}
               </span>
             </div>
           </div>
@@ -779,19 +784,19 @@ export default function Register() {
 
               <div className="pwd-badges-row">
                 <span className={`pwd-badge ${reqMinChars ? 'active' : ''}`}>
-                  {reqMinChars && <Check size={10} />} 8+ chars
+                  {reqMinChars && <Check size={10} />} {t('auth.register.badgeMinChars')}
                 </span>
                 <span className={`pwd-badge ${reqUpper ? 'active' : ''}`}>
-                  {reqUpper && <Check size={10} />} Maiúscula
+                  {reqUpper && <Check size={10} />} {t('auth.register.badgeUppercase')}
                 </span>
                 <span className={`pwd-badge ${reqLower ? 'active' : ''}`}>
-                  {reqLower && <Check size={10} />} Minúscula
+                  {reqLower && <Check size={10} />} {t('auth.register.badgeLowercase')}
                 </span>
                 <span className={`pwd-badge ${reqNumber ? 'active' : ''}`}>
-                  {reqNumber && <Check size={10} />} Número
+                  {reqNumber && <Check size={10} />} {t('auth.register.badgeNumber')}
                 </span>
                 <span className={`pwd-badge ${reqSpecial ? 'active' : ''}`}>
-                  {reqSpecial && <Check size={10} />} Símbolo
+                  {reqSpecial && <Check size={10} />} {t('auth.register.badgeSpecial')}
                 </span>
               </div>
             </div>
@@ -1030,321 +1035,25 @@ export default function Register() {
                 {viewingDoc === 'terms' && <FileText size={18} color="#34d399" />}
                 {viewingDoc === 'privacy' && <Lock size={18} color="#60a5fa" />}
                 {viewingDoc === 'safety' && <HeartHandshake size={18} color="#c084fc" />}
-                {viewingDoc === 'terms' && 'Termos de Serviço do Voxy'}
-                {viewingDoc === 'privacy' && 'Política de Privacidade & ANPD / LGPD'}
-                {viewingDoc === 'safety' && 'Segurança Infantil & ECA Digital'}
+                {viewingDoc === 'terms' && t('auth.terms.modalTitleTerms')}
+                {viewingDoc === 'privacy' && t('auth.terms.modalTitlePrivacy')}
+                {viewingDoc === 'safety' && t('auth.terms.modalTitleSafety')}
               </h2>
               <button
                 onClick={() => { setViewingDoc(null); setDocViewMode('summary'); }}
                 className={styles.modalCloseBtn}
-                aria-label="Fechar"
+                aria-label={t('common.close')}
               >
                 <X size={20} />
               </button>
             </div>
 
             <div className="legal-document-body">
-              {/* TERMOS DE USO */}
-              {viewingDoc === 'terms' && (
-                docViewMode === 'summary' ? (
-                  <>
-                    <h3>1. Aceite e Elegibilidade</h3>
-                    <p>
-                      Ao utilizar o Voxy, você declara ter pelo menos 13 anos completos e concordar com estes Termos de Serviço. Menores de 13 anos não podem criar conta em nossa plataforma.
-                    </p>
-                    <h3>2. Diretrizes de Conduta da Comunidade</h3>
-                    <p>
-                      É estritamente vedada a prática de assédio, perseguição digital, propagação de discurso de ódio, conteúdo com exploração ou abuso de menores, doxxing ou disseminação de arquivos maliciosos.
-                    </p>
-                    <h3>3. Servidores e Comunidades</h3>
-                    <p>
-                      Os donos de servidor são os primeiros responsáveis pela moderação de suas respectivas salas e canais. O Voxy reserva-se o direito de intervir e aplicar suspensões cautelares em caso de risco iminente à integridade física ou psicológica de usuários.
-                    </p>
-
-                    <div className="legal-summary-callout">
-                      <div className="legal-summary-callout-text">
-                        <div className="legal-summary-callout-title">
-                          <BookOpen size={15} color="#34d399" />
-                          <span>Deseja consultar o termo completo na íntegra?</span>
-                        </div>
-                        <p>
-                          Acesse o texto jurídico oficial com todos os artigos, bases legais e direitos do usuário.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        className="legal-summary-callout-btn"
-                        onClick={() => setDocViewMode('full')}
-                      >
-                        Ler termo completo →
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className={styles.legalDocFullHeader}>
-                      <div>
-                        <h2 className={styles.legalDocTitle}>Termos de Uso da Plataforma Voxy</h2>
-                        <span className={styles.legalDocVersion}>Versão 1.0 • Atualizada em Março de 2026 • Legislação Brasileira</span>
-                      </div>
-                      <button
-                        type="button"
-                        className="legal-doc-back-pill"
-                        onClick={() => setDocViewMode('summary')}
-                      >
-                        ← Voltar ao resumo
-                      </button>
-                    </div>
-
-                    <p>
-                      Estes Termos de Uso ("Termos") regem o acesso e a utilização dos serviços, aplicativos para desktop e web, canais de voz de baixa latência, salas de bate-papo e streaming de jogos oferecidos pela plataforma <strong>Voxy</strong>. Ao criar uma conta ou utilizar o serviço, você declara expressamente que leu, compreendeu e concorda com as disposições abaixo.
-                    </p>
-
-                    <h3>1. Elegibilidade e Idade Mínima Obrigatória</h3>
-                    <p>
-                      <strong>1.1. Proibição a menores de 13 anos:</strong> O Voxy não é destinado a crianças menores de 13 (treze) anos. O cadastro é tecnologicamente restrito e bloqueado na raiz da aplicação em cumprimento à legislação brasileira de proteção de dados.
-                    </p>
-                    <p>
-                      <strong>1.2. Contas Jovens (13 a 17 anos):</strong> Adolescentes podem utilizar os recursos sociais com salvaguardas ativas de segurança por design, incluindo restrição de captura de telas genéricas e bloqueio automático de entrada em ambientes marcados como +18.
-                    </p>
-                    <p>
-                      <strong>1.3. Maiores de 18 Anos:</strong> A criação de servidores com conteúdo adulto e a transmissão de jogos categorizados como maduros é restrita exclusivamente a usuários com classificação etária confirmada como adultos (ADULT).
-                    </p>
-
-                    <h3>2. Cadastro, Conta e Segurança das Credenciais</h3>
-                    <p>
-                      <strong>2.1. Validação de E-mail Obrigatória:</strong> Todas as novas contas devem validar a posse do endereço de e-mail por meio de token transacional de 6 dígitos antes da liberação dos canais sociais.
-                    </p>
-                    <p>
-                      <strong>2.2. Guarda de Senha:</strong> O usuário é o único responsável pela guarda e confidencialidade de suas credenciais de acesso. Atividades realizadas a partir de sua conta serão atribuídas ao respectivo titular.
-                    </p>
-                    <p>
-                      <strong>2.3. Pessoal e Intransferível:</strong> É vedada a venda, locação ou cessão de contas a terceiros.
-                    </p>
-
-                    <h3>3. Diretrizes de Conduta e Usos Expressamente Proibidos</h3>
-                    <p>Ao utilizar o Voxy, o usuário se compromete solenemente a <strong>NÃO</strong>:</p>
-                    <ul>
-                      <li>Praticar qualquer conduta que coloque em risco crianças ou adolescentes, incluindo aliciamento (grooming), envio de material inadequado ou compartilhamento de pornografia infantil;</li>
-                      <li>Praticar assédio, perseguição digital (cyberstalking), ameaças de violência ou discurso de ódio baseado em raça, gênero, religião ou orientação sexual;</li>
-                      <li>Transmitir conteúdo sexual explícito, pornografia, nudez não consentida ou violência gráfica excessiva;</li>
-                      <li>Praticar doxxing, expondo dados pessoais, documentos ou endereços de terceiros sem autorização;</li>
-                      <li>Disseminar vírus, malwares, keyloggers ou links fraudulentos de phishing;</li>
-                      <li>Utilizar automações abusivas, sobrecarregar os servidores ou realizar ataques de negação de serviço.</li>
-                    </ul>
-
-                    <h3>4. Transmissão de Tela e Streaming de Jogos</h3>
-                    <p>
-                      <strong>4.1. Foco em Gameplay:</strong> A tecnologia de transmissão do Voxy é primariamente orientada à captura de janelas de processos de jogos detectados.
-                    </p>
-                    <p>
-                      <strong>4.2. Efemeridade:</strong> O Voxy não grava nem armazena em disco fluxos de áudio de chamadas de voz ou vídeo de transmissões. Todas as mídias são efêmeras em tempo real via WebRTC.
-                    </p>
-
-                    <h3>5. Responsabilidade dos Donos e Moderadores de Servidores</h3>
-                    <p>
-                      Os criadores e moderadores de servidores são responsáveis pela harmonia e moderação diária de suas comunidades, devendo utilizar as ferramentas de silenciamento, expulsão e banimento contra infratores. O Voxy reserva-se o direito de intervir e aplicar suspensões preventivas a servidores que violem as leis brasileiras.
-                    </p>
-
-                    <h3>6. Foro e Resolução de Disputas</h3>
-                    <p>
-                      Estes Termos são regidos pelo ordenamento jurídico brasileiro (Marco Civil da Internet, LGPD e Código de Defesa do Consumidor). Fica eleito o Foro da Comarca do domicílio do Usuário para dirimir eventuais controvérsias.
-                    </p>
-                  </>
-                )
-              )}
-
-              {/* POLÍTICA DE PRIVACIDADE & ANPD */}
-              {viewingDoc === 'privacy' && (
-                docViewMode === 'summary' ? (
-                  <>
-                    <h3>1. Compromisso com a Privacidade (LGPD & ANPD)</h3>
-                    <p>
-                      O Voxy opera sob princípios de <strong>minimização de dados</strong> e <strong>efemeridade</strong>. Não vendemos dados pessoais e não veiculamos publicidade rastreadora.
-                    </p>
-                    <h3>2. Transmissões de Áudio e Vídeo em Tempo Real</h3>
-                    <p>
-                      As transmissões de voz (WebRTC) e captura de tela de jogos são fluxos efêmeros em tempo real. <strong>O Voxy não grava nem armazena em disco o conteúdo de áudio ou vídeo das suas chamadas.</strong>
-                    </p>
-                    <h3>3. Tratamento de Dados de Menores</h3>
-                    <p>
-                      O tratamento de dados de adolescentes entre 13 e 17 anos é efetuado em estrita observância ao seu melhor interesse (Art. 14 da LGPD), sem criação de perfis comportamentais.
-                    </p>
-
-                    <div className="legal-summary-callout">
-                      <div className="legal-summary-callout-text">
-                        <div className="legal-summary-callout-title">
-                          <BookOpen size={15} color="#60a5fa" />
-                          <span>Deseja consultar a política completa na íntegra?</span>
-                        </div>
-                        <p>
-                          Acesse a íntegra em conformidade com a LGPD (Lei nº 13.709/2018), bases legais da ANPD e canal do DPO.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        className="legal-summary-callout-btn"
-                        onClick={() => setDocViewMode('full')}
-                      >
-                        Ler política completa →
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className={styles.legalDocFullHeader}>
-                      <div>
-                        <h2 className={styles.legalDocTitle}>Política de Privacidade e Proteção de Dados (LGPD)</h2>
-                        <span className={styles.legalDocVersion}>Conformidade com a Lei nº 13.709/2018 (LGPD) e Orientações da ANPD • Versão 1.0</span>
-                      </div>
-                      <button
-                        type="button"
-                        className="legal-doc-back-pill"
-                        onClick={() => setDocViewMode('summary')}
-                      >
-                        ← Voltar ao resumo
-                      </button>
-                    </div>
-
-                    <p>
-                      O Voxy adota o princípio da <strong>privacidade por padrão</strong> (Privacy by Design). Não vendemos seus dados para corretores de dados, não exibimos anúncios comportamentais e coletamos apenas o estritamente indispensável para conectar você aos seus amigos.
-                    </p>
-
-                    <h3>1. Categorias de Dados Pessoais Coletados</h3>
-                    <table className="legal-table">
-                      <thead>
-                        <tr>
-                          <th>Dado</th>
-                          <th>Finalidade</th>
-                          <th>Base Legal (LGPD)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td>E-mail, Nickname e Senha</td>
-                          <td>Autenticação e segurança da conta</td>
-                          <td>Execução de Contrato (Art. 7º, V)</td>
-                        </tr>
-                        <tr>
-                          <td>Data de Nascimento Declarada</td>
-                          <td>Salvaguarda etária e proteção de menores</td>
-                          <td>Obrigação Legal e Art. 14</td>
-                        </tr>
-                        <tr>
-                          <td>Registros de Acesso (IP e timestamps)</td>
-                          <td>Guarda obrigatória contra crimes digitais</td>
-                          <td>Art. 15 do Marco Civil da Internet</td>
-                        </tr>
-                        <tr>
-                          <td>Voz e Transmissões de Tela</td>
-                          <td>Comunicação em tempo real (não é gravada)</td>
-                          <td>Execução de Contrato (Art. 7º, V)</td>
-                        </tr>
-                      </tbody>
-                    </table>
-
-                    <h3>2. Chamadas de Voz e Vídeo são 100% Efêmeras</h3>
-                    <p>
-                      O tráfego de voz e vídeo trafega diretamente por protocolos criptografados (WebRTC com SRTP/DTLS) através de servidores de roteamento de mídia (SFU). <strong>Não gravamos, não transcrevemos e não guardamos conversas de áudio em nenhuma base de dados.</strong>
-                    </p>
-
-                    <h3>3. Proteção e Melhor Interesse de Menores (Art. 14 da LGPD)</h3>
-                    <p>
-                      O tratamento de dados de adolescentes entre 13 e 17 anos é orientado exclusivamente ao seu melhor interesse. Não é realizado rastreamento para anúncios e contas jovens possuem restrições ativas contra exposições indevidas.
-                    </p>
-
-                    <h3>4. Compartilhamento Estritamente Operacional</h3>
-                    <p>
-                      Seus dados nunca são comercializados. O compartilhamento ocorre exclusivamente com parceiros de infraestrutura necessários para a entrega técnica do app (Neon Inc. para banco de dados transacional, Cloudflare para armazenamento criptografado de anexos e Resend para e-mails de validação).
-                    </p>
-
-                    <h3>5. Seus Direitos como Titular (Art. 18 da LGPD)</h3>
-                    <p>
-                      Você tem o direito de solicitar a confirmação, o acesso, a retificação de dados incorretos ou a eliminação definitiva de sua conta a qualquer momento pelo e-mail do Encarregado de Dados (DPO): <code>dpo@voxychat.com.br</code>.
-                    </p>
-                  </>
-                )
-              )}
-
-              {/* SEGURANÇA INFANTIL & ECA DIGITAL */}
-              {viewingDoc === 'safety' && (
-                docViewMode === 'summary' ? (
-                  <>
-                    <h3>1. Conformidade com o ECA Digital</h3>
-                    <p>
-                      Nossa plataforma adota mecanismos de proteção por design (safety by design) para oferecer uma experiência adequada à idade.
-                    </p>
-                    <h3>2. Proteção de Contas Jovens (13 a 17 anos)</h3>
-                    <p>
-                      Adolescentes possuem restrições ativas para transmissões genéricas de tela e impedimento de acesso a comunidades marcadas como +18.
-                    </p>
-                    <h3>3. Tolerância Zero a Abusos</h3>
-                    <p>
-                      Qualquer indício ou tentativa de exploração infantil resultará no banimento imediato da conta, registro de logs de auditoria técnica e cooperação irrestrita com autoridades policiais competentes.
-                    </p>
-
-                    <div className="legal-summary-callout">
-                      <div className="legal-summary-callout-text">
-                        <div className="legal-summary-callout-title">
-                          <BookOpen size={15} color="#c084fc" />
-                          <span>Deseja consultar as diretrizes completas na íntegra?</span>
-                        </div>
-                        <p>
-                          Acesse o detalhamento completo dos mecanismos de proteção a jovens e adolescentes (ECA Digital).
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        className="legal-summary-callout-btn"
-                        onClick={() => setDocViewMode('full')}
-                      >
-                        Ler diretrizes completas →
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className={styles.legalDocFullHeader}>
-                      <div>
-                        <h2 className={styles.legalDocTitle}>Proteção à Criança e ao Adolescente (ECA Digital)</h2>
-                        <span className={styles.legalDocVersion}>Em conformidade com a Lei nº 8.069/1990 (ECA) e Diretrizes Preliminares da ANPD</span>
-                      </div>
-                      <button
-                        type="button"
-                        className="legal-doc-back-pill"
-                        onClick={() => setDocViewMode('summary')}
-                      >
-                        ← Voltar ao resumo
-                      </button>
-                    </div>
-
-                    <p>
-                      O Voxy adota uma postura de salvaguardas ativas para garantir ambientes digitais seguros, respeitosos e livres de abusos para adolescentes e jovens.
-                    </p>
-
-                    <h3>1. Modelo em Camadas de Proteção Etária</h3>
-                    <p>
-                      • <strong>Crianças (menores de 13 anos):</strong> Cadastro tecnologicamente proibido e bloqueado.
-                    </p>
-                    <p>
-                      • <strong>Adolescentes (13 a 17 anos):</strong> Podem se comunicar em voz e texto e transmitir gameplay de jogos reconhecidos. Não podem compartilhar telas inteiras ou janelas genéricas do sistema operacional, e são impedidos de visualizar ou ingressar em comunidades +18.
-                    </p>
-                    <p>
-                      • <strong>Adultos (18+ anos):</strong> Possuem permissão para criar ambientes adultos e transmitir qualquer janela.
-                    </p>
-
-                    <h3>2. Tolerância Zero com Abuso e Exploração Sexual Infantil</h3>
-                    <p>
-                      A plataforma mantém política de tolerância zero com material de exploração sexual infantil (CSAM/CSAE) e aliciamento (grooming). Qualquer incidente resulta no encerramento imediato da conta, registro de logs de auditoria e envio das informações às autoridades policiais competentes.
-                    </p>
-
-                    <h3>3. Ferramentas Nativas de Defesa do Usuário</h3>
-                    <p>
-                      Todos os usuários possuem acesso fácil a botões de denúncia (Report), bloqueio de contato (Block), mutação e expulsão em servidores, além de canais de auditoria contra abusos.
-                    </p>
-                  </>
-                )
-              )}
+              <LegalDocumentContent
+                doc={viewingDoc}
+                mode={docViewMode}
+                onSwitchMode={setDocViewMode}
+              />
             </div>
 
             <div className="legal-document-footer">
@@ -1359,7 +1068,7 @@ export default function Register() {
                   setDocViewMode('summary');
                 }}
               >
-                Concordar e Fechar
+                {t('auth.terms.agreeAndClose')}
               </button>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './MessageReactionsModal.module.css';
 import { X, Smile } from 'lucide-react';
 import { getMediaUrl } from '../../../../core/utils/media.util';
@@ -28,6 +29,7 @@ export const MessageReactionsModal: React.FC<MessageReactionsModalProps> = ({
   onClose,
   onRemoveReaction,
 }) => {
+  const { t } = useTranslation();
   const [selectedTab, setSelectedTab] = useState<string>('ALL');
 
   useEffect(() => {
@@ -61,7 +63,9 @@ export const MessageReactionsModal: React.FC<MessageReactionsModalProps> = ({
         {/* Header */}
         <div className={styles.header}>
           <h3>
-            {reactions.length} {reactions.length === 1 ? 'reação' : 'reações'}
+            {reactions.length === 1
+              ? t('chat.reactionCountSingular', { count: reactions.length })
+              : t('chat.reactionCountPlural', { count: reactions.length })}
           </h3>
           <button type="button" className={styles.closeBtn} onClick={onClose}>
             <X size={18} />
@@ -74,7 +78,7 @@ export const MessageReactionsModal: React.FC<MessageReactionsModalProps> = ({
             type="button"
             className={`${styles.tabBtn} ${selectedTab === 'ALL' ? styles.activeTab : ''}`}
             onClick={() => setSelectedTab('ALL')}
-            title="Todas as reações"
+            title={t('chat.allReactions')}
           >
             <Smile size={16} />
             <span className={styles.tabCount}>{reactions.length}</span>
@@ -97,9 +101,9 @@ export const MessageReactionsModal: React.FC<MessageReactionsModalProps> = ({
           {filteredReactions.map((r) => {
             const isMe = r.userId === myId;
             const name = isMe
-              ? 'Você'
-              : (r.user?.displayName || r.user?.username || 'Usuário');
-            const subtitle = isMe ? 'Clique para remover' : `@${r.user?.username || ''}`;
+              ? t('chat.you', 'Você')
+              : (r.user?.displayName || r.user?.username || t('voice.remoteUser', 'Usuário'));
+            const subtitle = isMe ? t('chat.clickToRemove') : `@${r.user?.username || ''}`;
             const avatarUrl = getMediaUrl(r.user?.avatarUrl);
 
             return (
@@ -112,7 +116,7 @@ export const MessageReactionsModal: React.FC<MessageReactionsModalProps> = ({
                     onClose();
                   }
                 }}
-                title={isMe ? 'Clique para remover sua reação' : undefined}
+                title={isMe ? t('chat.clickToRemoveReaction') : undefined}
               >
                 <div className={styles.userInfo}>
                   <div className={styles.avatar}>

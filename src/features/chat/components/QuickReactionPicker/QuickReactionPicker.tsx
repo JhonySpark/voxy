@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import styles from './QuickReactionPicker.module.css';
 import { Plus } from 'lucide-react';
 
@@ -20,6 +21,7 @@ export const QuickReactionPicker: React.FC<QuickReactionPickerProps> = ({
   currentReaction,
   anchorRect,
 }) => {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(() => {
@@ -113,7 +115,7 @@ export const QuickReactionPicker: React.FC<QuickReactionPickerProps> = ({
                 onSelectEmoji(emoji);
                 onClose();
               }}
-              title={isActive ? 'Remover reação' : `Reagir com ${emoji}`}
+              title={isActive ? t('chat.removeReaction') : t('chat.reactWith', { emoji })}
             >
               {emoji}
             </button>
@@ -125,7 +127,7 @@ export const QuickReactionPicker: React.FC<QuickReactionPickerProps> = ({
           onClick={() => {
             onOpenFullPicker();
           }}
-          title="Mais reações"
+          title={t('chat.moreReactions')}
         >
           <Plus size={16} />
         </button>

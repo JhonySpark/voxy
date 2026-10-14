@@ -999,7 +999,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                               setActiveFullReactionMsgId(null);
                               setActiveQuickReactionMsgId((prev) => (prev === msg.id ? null : msg.id));
                             }}
-                            title="Adicionar reação"
+                            title={t('chat.addReaction')}
                           >
                             <Smile size={15} />
                           </button>
@@ -1060,7 +1060,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                               setActiveFullReactionMsgId(null);
                               setActiveMenuMessageId((prev) => (prev === msg.id ? null : msg.id));
                             }}
-                            title="Opções da mensagem"
+                            title={t('chat.messageOptions')}
                           >
                             <MoreVertical size={15} />
                           </button>
@@ -1161,7 +1161,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                               <div
                                 className={styles.quotedMessage}
                                 onClick={() => scrollToMessage(msg.replyTo!.id)}
-                                title="Clique para ir até a mensagem original"
+                                title={t('chat.jumpToOriginal')}
                               >
                                 <div className={styles.quotedContent}>
                                   <span className={styles.quotedAuthor}>
@@ -1170,7 +1170,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                                       : (msg.replyTo.sender?.displayName || msg.replyTo.sender?.username || t('voice.remoteUser', 'Usuário'))}
                                   </span>
                                   <p className={styles.quotedSnippet}>
-                                    {msg.replyTo.content || (msg.replyTo.attachments && msg.replyTo.attachments.length > 0 ? '📷 Anexo' : 'Mensagem')}
+                                    {msg.replyTo.content || (msg.replyTo.attachments && msg.replyTo.attachments.length > 0 ? `📷 ${t('chat.attachment')}` : t('chat.message'))}
                                   </p>
                                 </div>
                               </div>
@@ -1263,7 +1263,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                                     e.stopPropagation();
                                     setViewingReactionsMsg(msg);
                                   }}
-                                  title="Ver quem reagiu"
+                                  title={t('chat.viewReactions')}
                                 >
                                   <div className={styles.reactionsBadgeEmojis}>
                                     {top3.map(({ emoji }) => (
@@ -1333,14 +1333,14 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 </span>
               </div>
               <p className={styles.replyBannerSnippet}>
-                {replyingTo.content || (replyingTo.attachments && replyingTo.attachments.length > 0 ? '📷 Anexo' : 'Mensagem')}
+                {replyingTo.content || (replyingTo.attachments && replyingTo.attachments.length > 0 ? `📷 ${t('chat.attachment')}` : t('chat.message'))}
               </p>
             </div>
             <button
               type="button"
               className={styles.replyBannerCloseBtn}
               onClick={() => setReplyingTo(null)}
-              title="Cancelar resposta"
+              title={t('chat.cancelReply')}
             >
               <X size={15} />
             </button>
@@ -1371,7 +1371,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               type="button"
               className={styles.cancelStagedBtn}
               onClick={handleCancelStagedAttachment}
-              title="Remover anexo"
+              title={t('chat.removeAttachment')}
             >
               <X size={16} />
             </button>
@@ -1536,7 +1536,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             <button
               type="button"
               className={`${styles.actionButton} ${stagedAttachment ? styles.activeActionButton : ''}`}
-              title="Anexar arquivo"
+              title={t('chat.attachFile')}
               onClick={() => fileInputRef.current?.click()}
             >
               <Paperclip size={18} />
@@ -1545,7 +1545,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             <button
               type="button"
               className={`${styles.actionButton} ${showEmojiPicker ? styles.activeActionButton : ''}`}
-              title="Inserir emoji"
+              title={t('chat.insertEmoji')}
               onClick={() => setShowEmojiPicker((prev) => !prev)}
             >
               <Smile size={18} />
@@ -1555,7 +1555,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               type="submit"
               className={styles.sendButton}
               disabled={(!newMessage.trim() && !stagedAttachment) || isUploading}
-              title="Enviar"
+              title={t('chat.send')}
             >
               <Send size={16} />
             </button>
