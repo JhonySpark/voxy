@@ -268,16 +268,15 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
                 ref={fileInputRef}
                 onChange={handleIconChange}
                 accept="image/*"
-                style={{ display: 'none' }}
+                className={styles.hiddenInput}
               />
               <div
-                className={styles.avatarWrapper}
+                className={`${styles.avatarWrapper} ${isDragging ? styles.isDragging : ''}`}
                 onClick={() => fileInputRef.current?.click()}
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 title={t('server.uploadIcon', 'Escolher ícone do servidor')}
-                style={{ transform: isDragging ? 'scale(1.06)' : undefined }}
               >
                 <div className={styles.avatarRing}>
                   {iconPreview ? (

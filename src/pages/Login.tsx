@@ -7,6 +7,9 @@ import { ApiRoutes, AppRoutes, StorageKeys, IpcChannels } from "../core/enums";
 import { getApiErrorMessage } from "../core/utils/error.util";
 import heroLogo from "../assets/logo.png";
 import { logger } from "../core/services/logger.service";
+import { Button } from "../components/common/Button";
+import { Input } from "../components/common/Input";
+import styles from "./Login.module.css";
 
 export default function Login() {
   const { t } = useTranslation();
@@ -140,161 +143,100 @@ export default function Login() {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            marginBottom: "0.25rem",
-          }}
-        >
-          <img
-            src={heroLogo}
-            alt="Voxy Logo"
-            style={{
-              width: "110px",
-              marginTop: "-1.5rem",
-              marginBottom: "0.25rem",
-              filter: "drop-shadow(0 0 12px rgba(52, 211, 153, 0.2))",
-            }}
-          />
-          <h1 className="auth-title" style={{ marginTop: "-0.25rem" }}>
-            {t("auth.login.title")}
-          </h1>
-          <p className="auth-subtitle">{t("auth.login.subtitle")}</p>
+    <div className={styles.container}>
+      <div className={styles.card}>
+        <div className={styles.header}>
+          <img src={heroLogo} alt="Voxy Logo" className={styles.logo} />
+          <h1 className={styles.title}>{t("auth.login.title")}</h1>
+          <p className={styles.subtitle}>{t("auth.login.subtitle")}</p>
         </div>
 
-        {error && (
-          error.toLowerCase().includes('suspens') ? (
-            <div
-              style={{
-                backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                border: '1px solid rgba(239, 68, 68, 0.35)',
-                borderRadius: '8px',
-                padding: '0.85rem',
-                textAlign: 'left',
-                display: 'flex',
-                gap: '0.75rem',
-                alignItems: 'flex-start',
-              }}
-            >
-              <ShieldAlert size={22} color="#ef4444" style={{ flexShrink: 0, marginTop: '2px' }} />
+        {error &&
+          (error.toLowerCase().includes("suspens") ? (
+            <div className={styles.suspendedAlert}>
+              <ShieldAlert size={22} className={styles.suspendedIcon} />
               <div>
-                <strong style={{ color: '#ef4444', fontSize: '0.85rem', display: 'block', marginBottom: '0.2rem' }}>
-                  Conta Suspensa
-                </strong>
-                <p style={{ color: '#fca5a5', fontSize: '0.8rem', lineHeight: 1.4, margin: '0 0 0.35rem 0' }}>
-                  {error}
-                </p>
-                <span style={{ color: '#94a3b8', fontSize: '0.7rem', display: 'block' }}>
+                <strong className={styles.suspendedTitle}>Conta Suspensa</strong>
+                <p className={styles.suspendedDesc}>{error}</p>
+                <span className={styles.suspendedFootnote}>
                   Em conformidade com as diretrizes da ANPD e ECA. Para contestar ou solicitar revisão, contate o suporte.
                 </span>
               </div>
             </div>
           ) : (
-            <div
-              style={{
-                color: "var(--danger)",
-                fontSize: "0.9rem",
-                textAlign: "center",
-              }}
-            >
-              {error}
-            </div>
-          )
-        )}
+            <div className={styles.errorText}>{error}</div>
+          ))}
 
-        <form
-          onSubmit={handleLogin}
-          style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
-        >
-          <div className="input-group">
-            <label className="input-label">{t("auth.login.email")}</label>
-            <input
-              type="email"
-              className="text-input"
-              placeholder={t("auth.login.emailPlaceholder")}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
+        <form onSubmit={handleLogin} className={styles.form}>
+          <Input
+            type="email"
+            label={t("auth.login.email")}
+            placeholder={t("auth.login.emailPlaceholder")}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            fullWidth
+          />
 
-          <div className="input-group">
-            <div className="input-header">
-              <label className="input-label">{t("auth.login.password")}</label>
+          <div>
+            <div className={styles.passwordHeader}>
+              <label className={styles.passwordLabel}>
+                {t("auth.login.password")}
+              </label>
               <a
                 href="#"
-                className="forgot-password"
+                className={styles.forgotPassword}
                 onClick={(e) => e.preventDefault()}
               >
                 {t("auth.login.forgotPassword")}
               </a>
             </div>
-            <div className="password-input-wrapper">
-              <input
+            <div className={styles.passwordWrapper}>
+              <Input
                 type={showPassword ? "text" : "password"}
-                className="text-input"
                 placeholder="............"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                fullWidth
+                rightIcon={
+                  <button
+                    type="button"
+                    className={styles.passwordToggle}
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                }
               />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
             </div>
           </div>
 
-          <label className="remember-me">
+          <label className={styles.rememberMe}>
             <input
               type="checkbox"
-              className="custom-checkbox"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
             />
             {t("auth.login.rememberMe")}
           </label>
 
-          <button
+          <Button
             type="submit"
-            className="btn-primary"
-            disabled={isLoading}
-            style={{ marginTop: "0.5rem", padding: "0.85rem" }}
+            variant="primary"
+            size="lg"
+            isLoading={isLoading}
+            fullWidth
+            className={styles.submitBtn}
           >
-            {isLoading ? (
-              <span className="btn-spinner" />
-            ) : (
-              t("auth.login.button")
-            )}
-          </button>
+            {t("auth.login.button")}
+          </Button>
         </form>
 
-        <div
-          className="auth-footer"
-          style={{
-            textAlign: "center",
-            fontSize: "0.9rem",
-            color: "var(--text-secondary)",
-            marginTop: "1.5rem",
-          }}
-        >
+        <div className={styles.footer}>
           {t("auth.login.noAccount")}{" "}
-          <Link
-            to={AppRoutes.REGISTER}
-            style={{
-              color: "var(--brand-primary)",
-              fontWeight: 600,
-              textDecoration: "none",
-            }}
-          >
+          <Link to={AppRoutes.REGISTER} className={styles.registerLink}>
             {t("auth.login.register")}
           </Link>
         </div>

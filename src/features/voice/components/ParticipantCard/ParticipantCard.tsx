@@ -242,17 +242,12 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
         /* Avatar Fallback */
         <div className={styles.avatarFallback}>
           <div
-            className={styles.avatarCircle}
+            className={`${styles.avatarCircle} ${onViewUserProfile ? styles.clickable : ''}`}
             onClick={(e) => {
               if (onViewUserProfile) {
                 e.stopPropagation();
                 onViewUserProfile(p.id);
               }
-            }}
-            style={{
-              cursor: onViewUserProfile ? "pointer" : "default",
-              overflow: "hidden",
-              position: "relative",
             }}
             title={`Ver perfil de ${p.username}`}
           >
@@ -260,16 +255,11 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
               <img
                 src={avatarMedia}
                 alt={p.username}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  borderRadius: "50%",
-                }}
+                className={styles.avatarImg}
                 onError={() => setAvatarFailed(true)}
               />
             ) : (
-              <span style={{ fontSize: "1.25rem", fontWeight: 700 }}>
+              <span className={styles.avatarInitials}>
                 {p.username === t("chat.you")
                   ? "ME"
                   : p.username.charAt(0).toUpperCase()}
@@ -341,14 +331,13 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
       {/* Bottom Name Bar */}
       <div className={styles.bottomBar}>
         <span
-          className={styles.participantName}
+          className={`${styles.participantName} ${onViewUserProfile ? styles.clickable : ''}`}
           onClick={(e) => {
             if (onViewUserProfile) {
               e.stopPropagation();
               onViewUserProfile(p.id);
             }
           }}
-          style={{ cursor: onViewUserProfile ? "pointer" : "default" }}
           title={`Ver perfil de ${p.username}`}
         >
           {p.displayName || p.username}

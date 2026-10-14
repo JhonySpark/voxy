@@ -15,33 +15,39 @@ rules:
     - Nunca use estilos inline (style={{ ... }}) no meio do código JSX/TSX. Todo estilo visual deve estar em arquivos de estilo dedicados.
     - O padrão primário de estilização para novos componentes e refatorações é CSS Modules (<ComponentName>.module.css) localizado no mesmo diretório do componente.
     - Para componentes legados ou globais que usam classes CSS regulares (<ComponentName>.css), respeite as classes sem injetar regras CSS inline arbitrárias.
-    - A única exceção admitida para style={{}} são valores numéricos contínuos calculados estritamente em runtime (ex: coordenadas dinâmicas de drag-and-drop a 60fps ou largura percentual de VU meter de áudio em tempo real), e mesmo nesses casos dê preferência à passagem de CSS variables (--valor) via style inline.
+    - "A única exceção admitida para style={{}} são valores numéricos contínuos calculados estritamente em runtime (ex: coordenadas dinâmicas de drag-and-drop a 60fps ou largura percentual de VU meter de áudio em tempo real), e mesmo nesses casos dê preferência à passagem de CSS variables (--valor) via style inline."
 
     # --- Tema Oficial e Paleta de Cores (Obsidian Mint) ---
-    - É estritamente obrigatório seguir a paleta oficial e o design system definido no :root de src/index.css. Nunca utilize cores hexadecimais ou RGB arbitrárias (como #fff, #000, red, blue soltos) no CSS dos componentes.
-    - Cores de Fundo (Canvas & Elevação):
+    - "É estritamente obrigatório seguir a paleta oficial e o design system definido no :root de src/index.css. Nunca utilize cores hexadecimais ou RGB arbitrárias (como #fff, #000, red, blue soltos) no CSS dos componentes."
+    - |
+      Cores de Fundo (Canvas & Elevação):
         • --bg-primary (#0b0f17): Fundo principal do aplicativo (Obsidian Base Canvas profundo).
         • --bg-secondary (rgba(15, 23, 42, 0.65)): Superfícies translúcidas e cards secundários (Surface Glass).
         • --bg-tertiary (rgba(30, 41, 59, 0.45)): Elevação de painéis, listas e agrupamentos.
         • --bg-accent (#1e293b): Fundo de elementos interativos, cartões internos e badges.
         • --glass-bg (rgba(17, 24, 39, 0.75)): Modais e popovers com backdrop blur.
-    - Tipografia e Contraste de Texto:
+    - |
+      Tipografia e Contraste de Texto:
         • --text-primary (#f8fafc): Texto principal, títulos e elementos de alta ênfase.
         • --text-secondary (#94a3b8): Rótulos de campos, subtítulos e descrições secundárias.
         • --text-muted (#475569): Placeholders, timestamps e estados desabilitados.
-    - Cores de Destaque e Ação (Luminous Emerald):
+    - |
+      Cores de Destaque e Ação (Luminous Emerald):
         • --brand-primary (#34d399): Cor principal de destaque da marca Voxy (verde esmeralda luminoso) para botões de ação (CTA), estados ativos, switches e badges de destaque.
         • --brand-hover (#059669): Estado hover e foco de elementos de marca.
-    - Cores de Feedback e Estado:
+    - |
+      Cores de Feedback e Estado:
         • --danger (#ffb4ab): Alertas de erro, ações destrutivas e desconexão.
         • --success (#34d399): Conexões ativas, confirmações e status online.
-    - Bordas, Sombras e Efeitos Visuais:
+    - |
+      Bordas, Sombras e Efeitos Visuais:
         • --border-subtle (rgba(255, 255, 255, 0.08)): Bordas e divisores suaves em toda a UI.
         • --shadow-sm (inset 0 1px 0 rgba(255, 255, 255, 0.08)): Realce sutil em botões e inputs.
         • --shadow-md (0 0 12px rgba(52, 211, 153, 0.3)): Brilho de neon bloom para ações em destaque.
         • --shadow-lg (0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 1px 1px rgba(255, 255, 255, 0.12)): Elevação de modais e menus suspensos.
         • Glassmorphism: aplicar backdrop-filter: blur(20px a 28px) ou a classe utilitária .glass-panel para criar profundidade.
-    - Tipografia Obrigatória do Projeto:
+    - |
+      Tipografia Obrigatória do Projeto:
         • Títulos e cabeçalhos (h1-h6, títulos de modais, títulos de seções): usar a fonte 'Space Grotesk', sans-serif com letter-spacing: -0.01em.
         • Corpo de texto, formulários, chat e botões: usar a fonte 'Inter', sans-serif.
 
@@ -49,13 +55,13 @@ rules:
     - Todas as strings de texto visíveis ao usuário no JSX devem obrigatoriamente usar a função t('chave') de internacionalização (src/i18n.ts), mantendo sincronizadas as traduções em Português (pt), Inglês (en) e Espanhol (es).
 
     # --- Qualidade de Código, Componentização e TypeScript ---
-    - Tipagem TypeScript estrita: todas as props de componentes devem ter sua própria interface ou type explicitamente declarado (ex: interface ComponentNameProps). Proibido o uso desnecessário de 'any'.
-    - Componentização limpa (Single Responsibility Principle): cada componente deve ter uma única responsabilidade. Componentes com mais de 250 linhas devem ser decompostos em subcomponentes menores e hooks dedicados.
-    - Separação entre Apresentação e Regra de Negócio: efeitos colaterais complexos, chamadas de rede, listeners de eventos e IPC do Electron devem ser extraídos para Custom Hooks (use<FeatureName>), deixando o componente JSX declarativo.
-    - Organização por Features: o código de domínios específicos reside em src/features/<feature_name>/ (contendo components/ e hooks/). Utilitários e contratos globais residem em src/core/, componentes reutilizáveis em src/components/common/, e I/O / integrações externas em src/infrastructure/.
-    - Limpeza de recursos (Cleanup): todo useEffect que registra listeners (IPC, window events, websockets, áudio/vídeo streams, timers) DEVE ter sua respectiva função de cleanup para evitar vazamentos de memória (memory leaks).
-    - Compatibilidade Desktop/Store: o código deve tratar com segurança a presença ou ausência de APIs do Electron (ipcRenderer) e respeitar o ambiente da Microsoft Store (process.windowsStore), não exibindo avisos ou atualizadores incompatíveis com a loja.
-    - Manter e respeitar os padrões estabelecidos do projeto (Clean Code, SOLID, KISS, YAGNI, DRY). Nunca criar padrões paralelos sem alinhamento prévio.
+    - "Tipagem TypeScript estrita: todas as props de componentes devem ter sua própria interface ou type explicitamente declarado (ex: interface ComponentNameProps). Proibido o uso desnecessário de 'any'."
+    - "Componentização limpa (Single Responsibility Principle): cada componente deve ter uma única responsabilidade. Componentes com mais de 250 linhas devem ser decompostos em subcomponentes menores e hooks dedicados."
+    - "Separação entre Apresentação e Regra de Negócio: efeitos colaterais complexos, chamadas de rede, listeners de eventos e IPC do Electron devem ser extraídos para Custom Hooks (use<FeatureName>), deixando o componente JSX declarativo."
+    - "Organização por Features: o código de domínios específicos reside em src/features/<feature_name>/ (contendo components/ e hooks/). Utilitários e contratos globais residem em src/core/, componentes reutilizáveis em src/components/common/, e I/O / integrações externas em src/infrastructure/."
+    - "Limpeza de recursos (Cleanup): todo useEffect que registra listeners (IPC, window events, websockets, áudio/vídeo streams, timers) DEVE ter sua respectiva função de cleanup para evitar vazamentos de memória (memory leaks)."
+    - "Compatibilidade Desktop/Store: o código deve tratar com segurança a presença ou ausência de APIs do Electron (ipcRenderer) e respeitar o ambiente da Microsoft Store (process.windowsStore), não exibindo avisos ou atualizadores incompatíveis com a loja."
+    - "Manter e respeitar os padrões estabelecidos do projeto (Clean Code, SOLID, KISS, YAGNI, DRY). Nunca criar padrões paralelos sem alinhamento prévio."
 
   # Regras para artefatos do OpenSpec
   proposal:
@@ -72,7 +78,7 @@ rules:
     - Declarar o comportamento responsivo e as classes de glassmorphism aplicadas.
 
   tasks:
-    - Dividir tarefas priorizando: 1) Criação de contratos/tipos, 2) Custom Hooks e lógica, 3) Componentes e CSS Modules, 4) Integração e i18n, 5) Validação e build.
+    - "Dividir tarefas priorizando: 1) Criação de contratos/tipos, 2) Custom Hooks e lógica, 3) Componentes e CSS Modules, 4) Integração e i18n, 5) Validação e build."
     - Incluir tarefas explícitas de verificação de build (npm run build) e integridade visual sem estilos inline e com tokens de tema.
 
 # Orientações operacionais

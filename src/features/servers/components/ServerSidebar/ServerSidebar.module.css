@@ -88,6 +88,32 @@
   object-fit: cover;
 }
 
+.heroLogoImg {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
+.serverIcon.suspended {
+  opacity: 0.6;
+  filter: grayscale(60%);
+}
+
+.badgeSuspended {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background-color: var(--danger-hover);
+  color: #fff;
+  font-size: 0.55rem;
+  font-weight: 900;
+  padding: 1px 3px;
+  border-radius: var(--radius-xs);
+  border: 1.5px solid var(--bg-primary);
+  z-index: 2;
+  line-height: 1;
+}
+
 .serverIcon.add:hover {
   background-color: rgba(52, 211, 153, 0.16);
   color: var(--brand-primary, #34d399);
@@ -142,3 +168,34 @@
   filter: brightness(1.25);
   box-shadow: 0 0 14px rgba(52, 211, 153, 0.7);
 }
+
+.badge18Plus {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background-color: var(--danger);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 1px 3px;
+  border-radius: var(--radius-xs);
+  border: 2px solid var(--bg-primary);
+  z-index: 2;
+  line-height: 1;
+}
+
+.contextMenuContent {
+  z-index: 9999;
+}
+
+.contextMenuLabel {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.contextMenuItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+

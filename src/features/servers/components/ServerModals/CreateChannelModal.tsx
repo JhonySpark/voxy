@@ -71,7 +71,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
             <option value={ChannelTypeEnum.VOICE}>{t('channel.typeVoice')}</option>
           </select>
 
-          <label className={styles.label} style={{ marginTop: '0.5rem' }}>
+          <label className={`${styles.label} ${styles.labelMarginTop}`}>
             {t('channel.channelName')}
           </label>
           <input

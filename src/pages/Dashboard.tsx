@@ -187,7 +187,7 @@ export default function Dashboard() {
   const [showBetaModal, setShowBetaModal] = useState(false);
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
   const [viewingUserOverride, setViewingUserOverride] = useState<Partial<UserProfileData> | null>(null);
-  const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTabEnum>(SettingsTabEnum.VOICE);
+  const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTabEnum>(SettingsTabEnum.ACCOUNT);
 
   // Exibe automaticamente o modal informativo da fase beta para novos usuários
   useEffect(() => {
@@ -886,7 +886,7 @@ export default function Dashboard() {
             setIsVoiceMuted(false);
           }}
           onOpenSettings={(tab) => {
-            setSettingsInitialTab(tab || SettingsTabEnum.VOICE);
+            setSettingsInitialTab(tab || SettingsTabEnum.ACCOUNT);
             setShowSettingsModal(true);
           }}
           onOpenEditProfile={() => setShowEditProfileModal(true)}
@@ -900,7 +900,7 @@ export default function Dashboard() {
       {/* 3. Área Principal */}
       <div className="main-content chat-area">
         {connectedVoiceChannel && (
-          <div style={{ display: isViewingConnectedVoice ? 'contents' : 'none' }}>
+          <div className={isViewingConnectedVoice ? styles.voiceContainerVisible : styles.voiceContainerHidden}>
           <VoiceRoom
             key={connectedVoiceChannel.channelId}
             channelId={connectedVoiceChannel.channelId}
@@ -978,7 +978,7 @@ export default function Dashboard() {
               </div>
             )
           ) : (
-            <div style={{ display: 'flex', flex: 1, minHeight: 0, minWidth: 0, width: '100%', height: '100%' }}>
+            <div className={styles.mainWorkspace}>
               <ChatArea
                 type="CHANNEL"
                 target={activeChannel}

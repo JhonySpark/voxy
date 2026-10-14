@@ -188,6 +188,10 @@
   margin-bottom: 1.25rem;
 }
 
+.hiddenInput {
+  display: none;
+}
+
 .avatarWrapper {
   position: relative;
   width: 88px;
@@ -195,6 +199,10 @@
   border-radius: 50%;
   cursor: pointer;
   transition: all 0.25s ease;
+}
+
+.avatarWrapper.isDragging {
+  transform: scale(1.06);
 }
 
 .avatarRing {

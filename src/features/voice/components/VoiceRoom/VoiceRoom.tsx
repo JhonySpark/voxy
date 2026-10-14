@@ -193,7 +193,7 @@ export const VoiceRoom: React.FC<VoiceRoomProps> = (props) => {
   if (error) {
     return (
       <div className={styles.connectingOverlay}>
-        <p style={{ color: '#ef4444' }}>{error}</p>
+        <p className={styles.errorText}>{error}</p>
         <button className="btn-primary" onClick={props.onDisconnect}>
           {t('voice.cancel')}
         </button>
@@ -204,7 +204,7 @@ export const VoiceRoom: React.FC<VoiceRoomProps> = (props) => {
   if (!token) {
     return (
       <div className={styles.connectingOverlay}>
-        <div className="btn-spinner" style={{ width: '32px', height: '32px' }} />
+        <div className={`btn-spinner ${styles.connectingSpinner}`} />
         <p>{t('voice.connecting')}</p>
       </div>
     );
@@ -227,7 +227,7 @@ export const VoiceRoom: React.FC<VoiceRoomProps> = (props) => {
       options={roomOptions}
       onDisconnected={handleDisconnected}
       data-lk-theme="default"
-      style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
+      className={styles.livekitRoomWrapper}
     >
       <VoiceRoomInner {...props} maxBitrateKbps={maxBitrateKbps} livekitUrl={livekitUrl} />
     </LiveKitRoom>
@@ -1020,7 +1020,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
       />
 
       {maximizedParticipant ? (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
+        <div className={styles.stageWrapper}>
           <MaximizedStreamView
             participant={maximizedParticipant}
             isWatching={maximizedParticipant.isWatching}
@@ -1082,28 +1082,11 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
 
       {/* Floating HUD for Native Streamer */}
       {canAccessDiagnostics && showDevDiagnostics && isNativeStreaming && (
-        <div style={{
-          position: 'absolute',
-          top: 12,
-          right: 12,
-          background: 'rgba(15, 23, 42, 0.88)',
-          border: '1px solid rgba(34, 197, 94, 0.45)',
-          borderRadius: 8,
-          padding: '6px 14px',
-          color: '#22c55e',
-          fontSize: 12,
-          fontWeight: 600,
-          zIndex: 60,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(8px)',
-        }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block', boxShadow: '0 0 8px #22c55e' }} />
+        <div className={styles.hudContainer}>
+          <span className={styles.statusDotGreen} />
           <span>GPU NVENC Nativo (Zero-Copy)</span>
           {nativeTelemetry && (
-            <span style={{ color: '#94a3b8', fontWeight: 400, borderLeft: '1px solid rgba(255,255,255,0.15)', paddingLeft: 8 }}>
+            <span className={styles.dividerSpan}>
               {nativeTelemetry.fps} FPS • {nativeTelemetry.mbps?.toFixed(1)} Mbps • {nativeTelemetry.encodeMs?.toFixed(1)}ms
             </span>
           )}

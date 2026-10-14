@@ -1,32 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap');
-/* Assuming local or standard CDN for Geist if not available on google fonts, but let's use Inter as fallback */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-:root {
-  /* Obsidian Mint Base Canvas */
-  --bg-primary: #0b0f17; 
-  --bg-secondary: rgba(15, 23, 42, 0.65); /* Surface Glass */
-  --bg-tertiary: rgba(30, 41, 59, 0.45); /* Panel Elevation */
-  --bg-accent: #1e293b;
-  
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #475569;
-  
-  /* Luminous Emerald */
-  --brand-primary: #34d399;
-  --brand-hover: #059669;
-  
-  --danger: #ffb4ab;
-  --success: #34d399;
+/* Design Tokens */
+@import './styles/tokens/colors.css';
+@import './styles/tokens/typography.css';
+@import './styles/tokens/spacing.css';
+@import './styles/tokens/elevation.css';
+@import './styles/tokens/radii.css';
 
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --glass-bg: rgba(17, 24, 39, 0.75);
-  
-  --shadow-sm: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  --shadow-md: 0 0 12px rgba(52, 211, 153, 0.3); /* Neon Bloom */
-  --shadow-lg: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 1px 1px rgba(255, 255, 255, 0.12);
-}
+/* Themes */
+@import './styles/themes/obsidian-mint.css';
 
 * {
   box-sizing: border-box;
@@ -35,7 +17,7 @@
 }
 
 body {
-  font-family: 'Inter', sans-serif; /* Fallback for Geist */
+  font-family: var(--font-body);
   background-color: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.5;
@@ -58,14 +40,7 @@ a:hover {
   color: var(--brand-hover);
 }
 
-button {
-  cursor: pointer;
-  font-family: inherit;
-  border: none;
-  outline: none;
-}
-
-input {
+button, input, select, textarea {
   font-family: inherit;
 }
 

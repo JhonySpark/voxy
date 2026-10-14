@@ -1,0 +1,24 @@
+:root {
+  /* Obsidian Base Canvas / Slate Primitives */
+  --color-slate-950: #0b0f17;
+  --color-slate-900: #0f172a;
+  --color-slate-800: #1e293b;
+  --color-slate-700: #334155;
+  --color-slate-600: #475569;
+  --color-slate-500: #64748b;
+  --color-slate-400: #94a3b8;
+  --color-slate-100: #f1f5f9;
+  --color-slate-50: #f8fafc;
+
+  /* Luminous Emerald / Mint Primitives */
+  --color-emerald-400: #34d399;
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #059669;
+  --color-emerald-700: #047857;
+
+  /* Feedback & Alert Primitives */
+  --color-rose-400: #f87171;
+  --color-rose-300: #ffb4ab;
+  --color-amber-400: #fbbf24;
+  --color-indigo-400: #818cf8;
+}

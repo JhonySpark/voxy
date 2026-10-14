@@ -41,6 +41,17 @@
   gap: 0.5rem;
 }
 
+.volumeHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.volumeValue {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
 .label {
   font-size: 0.8rem;
   color: #94a3b8;

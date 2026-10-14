@@ -43,9 +43,9 @@ export const StreamSettingsMenu: React.FC<StreamSettingsMenuProps> = ({
       </div>
 
       <div className={styles.volumeSection}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className={styles.volumeHeader}>
           <label className={styles.label}>Volume da Transmissão</label>
-          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{streamVolume}%</span>
+          <span className={styles.volumeValue}>{streamVolume}%</span>
         </div>
         <Slider.Root
           className="slider-root"

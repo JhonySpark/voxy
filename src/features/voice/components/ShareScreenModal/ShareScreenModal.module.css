@@ -304,3 +304,72 @@
   background-color: #2a3347;
   color: #ffffff;
 }
+
+.togglesContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.ageRatingToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.ageCheckbox {
+  accent-color: var(--danger);
+  width: 14px;
+  height: 14px;
+}
+
+.ageBadge {
+  background-color: var(--surface-subtle);
+  color: var(--text-primary);
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.ageBadgeActive {
+  background-color: var(--danger);
+}
+
+.teenWarning {
+  background: var(--warning-muted);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  margin: 0 20px 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--warning);
+}
+
+.shrinkIcon {
+  flex-shrink: 0;
+}
+
+.emptyIcon {
+  opacity: 0.3;
+}
+
+.emptyText {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.appIconImg {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-xs);
+}
+

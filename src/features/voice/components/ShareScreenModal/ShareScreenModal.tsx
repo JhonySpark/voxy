@@ -88,26 +88,19 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
             </div>
             <div>
               <h2 className={styles.title}>{t('voice.shareModalTitle')}</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+              <div className={styles.togglesContainer}>
                 <label className={styles.audioToggle}>
                   <input type="checkbox" checked={shareAudio} onChange={(event) => onShareAudioChange(event.target.checked)} />
                   <span>Compartilhar áudio do jogo/aplicativo</span>
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#94a3b8', cursor: 'pointer', userSelect: 'none' }}>
+                <label className={styles.ageRatingToggle}>
                   <input
                     type="checkbox"
                     checked={is18Plus}
                     onChange={(e) => setIs18Plus(e.target.checked)}
-                    style={{ accentColor: '#ef4444', width: 14, height: 14 }}
+                    className={styles.ageCheckbox}
                   />
-                  <span style={{
-                    backgroundColor: is18Plus ? '#ef4444' : '#334155',
-                    color: '#fff',
-                    padding: '1px 5px',
-                    borderRadius: '3px',
-                    fontSize: '0.68rem',
-                    fontWeight: 700
-                  }}>18+</span>
+                  <span className={`${styles.ageBadge} ${is18Plus ? styles.ageBadgeActive : ''}`}>18+</span>
                   <span>Conteúdo +18 (Usuários menores de idade não conseguirão assistir)</span>
                 </label>
               </div>
@@ -142,26 +135,15 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
         </div>
 
         {isTeenOnly && (
-          <div style={{
-            background: 'rgba(234, 179, 8, 0.1)',
-            border: '1px solid rgba(234, 179, 8, 0.3)',
-            borderRadius: '8px',
-            padding: '8px 12px',
-            margin: '0 20px 10px 20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '0.82rem',
-            color: '#facc15'
-          }}>
-            <ShieldAlert size={16} style={{ flexShrink: 0 }} />
+          <div className={styles.teenWarning}>
+            <ShieldAlert size={16} className={styles.shrinkIcon} />
             <span>Perfil Jovem (TEEN): Compartilhamento restrito a jogos detectados. Telas e janelas genéricas ficam desativadas por segurança.</span>
           </div>
         )}
 
         {streamFps === '60' && (
           <div className={styles.experimentalNotice}>
-            <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+            <AlertTriangle size={15} className={styles.shrinkIcon} />
             <span>O compartilhamento em 60 FPS ainda está em fase de testes e pode apresentar instabilidade.</span>
           </div>
         )}
@@ -221,13 +203,13 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
           {currentList.length === 0 ? (
             <div className={styles.emptyState}>
               {activeTab === 'games' ? (
-                <Gamepad2 size={42} style={{ opacity: 0.3 }} />
+                <Gamepad2 size={42} className={styles.emptyIcon} />
               ) : activeTab === 'windows' ? (
-                <AppWindow size={42} style={{ opacity: 0.3 }} />
+                <AppWindow size={42} className={styles.emptyIcon} />
               ) : (
-                <Monitor size={42} style={{ opacity: 0.3 }} />
+                <Monitor size={42} className={styles.emptyIcon} />
               )}
-              <p style={{ margin: 0, fontSize: '0.95rem' }}>
+              <p className={styles.emptyText}>
                 {activeTab === 'games' && isTeenOnly 
                   ? 'Nenhum jogo em execução detectado. Inicie um jogo para transmitir.' 
                   : t('voice.noSources')}
@@ -246,7 +228,7 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
                 </div>
                 <div className={styles.cardFooter}>
                   {s.appIcon ? (
-                    <img src={s.appIcon} alt="" style={{ width: 18, height: 18, borderRadius: 3 }} />
+                    <img src={s.appIcon} alt="" className={styles.appIconImg} />
                   ) : s.isGame ? (
                     <Gamepad2 size={16} color="var(--brand-primary, #34d399)" />
                   ) : activeTab === 'screens' ? (

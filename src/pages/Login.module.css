@@ -1,0 +1,188 @@
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100vw;
+  background-color: var(--bg-primary);
+  padding: var(--space-4);
+  position: relative;
+  overflow: hidden;
+}
+
+.card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur-lg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-8);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  z-index: 1;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: var(--space-1);
+}
+
+.logo {
+  width: 110px;
+  margin-top: -1.5rem;
+  margin-bottom: var(--space-1);
+  filter: drop-shadow(0 0 12px rgba(52, 211, 153, 0.25));
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  letter-spacing: var(--letter-spacing-tight);
+  text-align: center;
+}
+
+.subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  text-align: center;
+  margin-top: 2px;
+}
+
+.suspendedAlert {
+  background-color: var(--danger-muted);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  text-align: left;
+}
+
+.suspendedIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--danger-hover);
+}
+
+.suspendedTitle {
+  color: var(--danger-hover);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  display: block;
+  margin-bottom: var(--space-1);
+}
+
+.suspendedDesc {
+  color: #fca5a5;
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
+  margin-bottom: var(--space-1);
+}
+
+.suspendedFootnote {
+  color: var(--text-secondary);
+  font-size: var(--font-size-2xs);
+  display: block;
+}
+
+.errorText {
+  color: var(--danger);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.passwordWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.passwordToggle {
+  position: absolute;
+  right: var(--space-3);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s ease;
+}
+
+.passwordToggle:hover {
+  color: var(--text-primary);
+}
+
+.passwordHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-1);
+}
+
+.passwordLabel {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-semibold);
+  margin: 0;
+}
+
+.forgotPassword {
+  font-size: var(--font-size-xs);
+  color: var(--brand-primary);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.forgotPassword:hover {
+  color: var(--brand-hover);
+  text-decoration: underline;
+}
+
+.rememberMe {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.submitBtn {
+  margin-top: var(--space-2);
+}
+
+.footer {
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-top: var(--space-4);
+}
+
+.registerLink {
+  color: var(--brand-primary);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.registerLink:hover {
+  color: var(--brand-hover);
+  text-decoration: underline;
+}

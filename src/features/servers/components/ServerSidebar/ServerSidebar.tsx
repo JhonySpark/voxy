@@ -75,7 +75,7 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({
             <img
               src={heroLogo}
               alt="Home"
-              style={{ width: '42px', height: '42px', objectFit: 'contain' }}
+              className={styles.heroLogoImg}
             />
             {onOpenBetaModal && (
               <span
@@ -128,7 +128,6 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({
                         ? `[SUSPENSO] ${server.name} - Motivo: ${server.suspendedReason || 'Violação das regras'}`
                         : server.name
                     }
-                    style={server.isSuspended ? { opacity: 0.6, filter: 'grayscale(60%)' } : undefined}
                   >
                     {iconUrl && !hasFailed ? (
                       <img
@@ -151,20 +150,7 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({
                     )}
                     {server.isSuspended && (
                       <div
-                        style={{
-                          position: 'absolute',
-                          top: -2,
-                          right: -2,
-                          background: '#dc2626',
-                          color: '#fff',
-                          fontSize: '0.55rem',
-                          fontWeight: 900,
-                          padding: '1px 3px',
-                          borderRadius: '3px',
-                          border: '1.5px solid #0f172a',
-                          zIndex: 2,
-                          lineHeight: 1,
-                        }}
+                        className={styles.badgeSuspended}
                         title="Servidor Suspenso pela Moderação"
                       >
                         !
@@ -172,20 +158,7 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({
                     )}
                     {server.is18Plus && (
                       <div
-                        style={{
-                          position: 'absolute',
-                          bottom: -2,
-                          right: -2,
-                          background: '#ef4444',
-                          color: '#fff',
-                          fontSize: '0.62rem',
-                          fontWeight: 800,
-                          padding: '1px 3px',
-                          borderRadius: '3px',
-                          border: '2px solid #0f172a',
-                          zIndex: 2,
-                          lineHeight: 1,
-                        }}
+                        className={styles.badge18Plus}
                         title="Servidor +18"
                       >
                         18+
@@ -194,24 +167,22 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({
                   </div>
                 </ContextMenu.Trigger>
                 <ContextMenu.Portal>
-                  <ContextMenu.Content className="context-menu-content" style={{ zIndex: 9999 }}>
-                    <div className="context-menu-label" style={{ fontWeight: 700, color: '#f8fafc' }}>
+                  <ContextMenu.Content className={`context-menu-content ${styles.contextMenuContent}`}>
+                    <div className={`context-menu-label ${styles.contextMenuLabel}`}>
                       {server.name}
                     </div>
                     <ContextMenu.Separator className="context-menu-separator" />
                     <ContextMenu.Item
-                      className="context-menu-item context-menu-item-danger"
+                      className={`context-menu-item context-menu-item-danger ${styles.contextMenuItem}`}
                       onClick={() => setServerToReport(server)}
-                      style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
                       <ShieldAlert size={14} color="#f87171" />
                       <span>Denunciar Servidor</span>
                     </ContextMenu.Item>
                     {server.ownerId !== myId && onLeaveServer && (
                       <ContextMenu.Item
-                        className="context-menu-item context-menu-item-danger"
+                        className={`context-menu-item context-menu-item-danger ${styles.contextMenuItem}`}
                         onClick={() => onLeaveServer(server)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                       >
                         <LogOut size={14} color="#f87171" />
                         <span>{t('server.leaveServer', 'Sair do Servidor')}</span>

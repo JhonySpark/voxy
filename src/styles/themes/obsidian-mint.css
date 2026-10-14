@@ -1,0 +1,35 @@
+:root,
+[data-theme="obsidian-mint"] {
+  /* Canvas & Elevation Backgrounds */
+  --bg-primary: var(--color-slate-950); /* #0b0f17 - Deep Base Canvas */
+  --bg-secondary: rgba(15, 23, 42, 0.65); /* Surface Glass */
+  --bg-tertiary: rgba(30, 41, 59, 0.45); /* Panel Elevation */
+  --bg-accent: var(--color-slate-800); /* #1e293b - Interactive Surfaces */
+  --glass-bg: rgba(17, 24, 39, 0.75); /* Modals & Overlays */
+
+  /* Text & Contrast */
+  --text-primary: var(--color-slate-50); /* #f8fafc */
+  --text-secondary: var(--color-slate-400); /* #94a3b8 */
+  --text-muted: var(--color-slate-600); /* #475569 */
+  --text-inverse: var(--color-slate-950);
+
+  /* Luminous Emerald Brand Accent */
+  --brand-primary: var(--color-emerald-400); /* #34d399 */
+  --brand-hover: var(--color-emerald-600); /* #059669 */
+  --brand-active: var(--color-emerald-700);
+  --brand-muted: rgba(52, 211, 153, 0.15);
+  --brand-glow: var(--shadow-md);
+
+  /* Feedback & Status */
+  --danger: var(--color-rose-300); /* #ffb4ab */
+  --danger-hover: var(--color-rose-400); /* #f87171 */
+  --danger-muted: rgba(248, 113, 113, 0.15);
+  --success: var(--color-emerald-400);
+  --warning: var(--color-amber-400);
+
+  /* Borders & Dividers */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-medium: rgba(255, 255, 255, 0.15);
+  --border-focus: var(--brand-primary);
+  --glass-border: var(--border-subtle);
+}

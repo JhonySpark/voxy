@@ -26,6 +26,7 @@ import { useTranslation } from 'react-i18next';
 import { ApiRoutes, AppRoutes, StorageKeys, IpcChannels } from '../core/enums';
 import { getApiErrorMessage, getApiCodeMessage } from '../core/utils/error.util';
 import heroLogo from '../assets/logo.png';
+import styles from './Register.module.css';
 
 declare const window: any;
 const ipcRenderer = typeof window !== 'undefined' && window.require ? window.require('electron').ipcRenderer : null;
@@ -406,41 +407,31 @@ export default function Register() {
   // =========================================================================
   if (step === 'beta_full') {
     return (
-      <div className="auth-container">
-        <div className="auth-card-wizard">
-          <div className="beta-full-card">
-            <div style={{
-              width: 68,
-              height: 68,
-              borderRadius: '50%',
-              backgroundColor: 'rgba(245, 158, 11, 0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#f59e0b',
-              boxShadow: '0 0 25px rgba(245, 158, 11, 0.25)',
-            }}>
+      <div className={styles.container}>
+        <div className={styles.card}>
+          <div className={styles.header}>
+            <div className={styles.warningIcon}>
               <Users size={36} />
             </div>
 
-            <div className="beta-capacity-badge" style={{ background: 'rgba(245, 158, 11, 0.12)', borderColor: 'rgba(245, 158, 11, 0.3)', color: '#fbbf24' }}>
+            <div className={styles.capacityBadge}>
               <span>Vagas Esgotadas ({betaStatus?.currentUsers ?? 50}/{betaStatus?.maxUsers ?? 50})</span>
             </div>
 
             <div>
-              <h1 className="auth-title" style={{ fontSize: '1.4rem', color: '#fbbf24', margin: 0 }}>
+              <h1 className={`${styles.title} ${styles.warningTitle}`}>
                 Beta Fechado Lotado
               </h1>
-              <p className="auth-subtitle" style={{ marginTop: '0.6rem', fontSize: '0.85rem', lineHeight: '1.5' }}>
+              <p className={styles.subtitle}>
                 Para garantir a melhor latência de áudio e máxima estabilidade de conexão durante os primeiros testes, limitamos o acesso inicial a <strong>{betaStatus?.maxUsers ?? 50} usuários</strong>.
               </p>
-              <p className="auth-subtitle" style={{ marginTop: '0.4rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+              <p className={`${styles.subtitle} ${styles.mutedSubtitle}`}>
                 Todas as vagas foram preenchidas no momento. Fique atento às nossas atualizações para a próxima abertura de vagas!
               </p>
             </div>
 
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.5rem' }}>
-              <Link to={AppRoutes.LOGIN} className="btn-primary" style={{ textDecoration: 'none', padding: '0.75rem' }}>
+            <div className={`${styles.actionsRow} ${styles.fullWidthRow}`}>
+              <Link to={AppRoutes.LOGIN} className={`btn-primary ${styles.fullWidthLink}`}>
                 Já possui conta? Fazer Login
               </Link>
             </div>
@@ -455,28 +446,19 @@ export default function Register() {
   // =========================================================================
   if (step === 'child_blocked') {
     return (
-      <div className="auth-container">
-        <div className="auth-card-wizard" style={{ textAlign: 'center', padding: '2.5rem 2rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
-            <div style={{
-              width: 64,
-              height: 64,
-              borderRadius: '50%',
-              backgroundColor: 'rgba(239, 68, 68, 0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#ef4444',
-            }}>
+      <div className={styles.container}>
+        <div className={`${styles.card} ${styles.cardCentered}`}>
+          <div className={styles.centerRow}>
+            <div className={styles.blockedIcon}>
               <ShieldAlert size={36} />
             </div>
           </div>
-          <h1 className="auth-title" style={{ color: '#ef4444' }}>Acesso Restrito</h1>
-          <p className="auth-subtitle" style={{ marginTop: '0.75rem', lineHeight: '1.6' }}>
+          <h1 className={styles.blockedTitle}>Acesso Restrito</h1>
+          <p className={styles.subtitle}>
             De acordo com o Estatuto da Criança e do Adolescente (ECA Digital) e leis de proteção de dados (LGPD Art. 14), o cadastro é restrito para usuários a partir de 13 anos.
           </p>
-          <div style={{ marginTop: '2rem' }}>
-            <Link to={AppRoutes.LOGIN} className="btn-primary" style={{ display: 'inline-block', textDecoration: 'none', padding: '0.75rem 1.5rem' }}>
+          <div className={styles.mt6}>
+            <Link to={AppRoutes.LOGIN} className={`btn-primary ${styles.centerLink}`}>
               Voltar ao Início
             </Link>
           </div>
@@ -491,38 +473,27 @@ export default function Register() {
   if (step === 4) {
     const fullOtp = otpDigits.join('');
     return (
-      <div className="auth-container">
-        <div className="auth-card-wizard">
-          {/* Cabeçalho de Confirmação (EM CIMA) */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginTop: '0.25rem' }}>
-            <div style={{
-              width: 52,
-              height: 52,
-              borderRadius: '50%',
-              backgroundColor: 'rgba(52, 211, 153, 0.12)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--brand-primary)',
-              marginBottom: '0.6rem',
-              boxShadow: '0 0 20px rgba(52, 211, 153, 0.2)'
-            }}>
+      <div className={styles.container}>
+        <div className={styles.card}>
+          {/* Cabeçalho de Confirmação */}
+          <div className={styles.header}>
+            <div className={styles.mailIconWrapper}>
               <Mail size={26} />
             </div>
-            <h1 className="auth-title" style={{ fontSize: '1.35rem', marginBottom: '0.25rem' }}>
+            <h1 className={styles.title}>
               {isFromLogin ? 'Verifique seu e-mail para acessar' : 'Confirme seu e-mail'}
             </h1>
-            <p className="auth-subtitle" style={{ fontSize: '0.85rem', lineHeight: '1.4' }}>
+            <p className={styles.subtitle}>
               {isFromLogin
                 ? 'Sua conta ainda não foi confirmada. Insira o código de 6 dígitos que enviamos para:'
                 : 'Insira o código de 6 dígitos que enviamos para:'} <br />
-              <strong style={{ color: 'var(--text-primary)' }}>{targetEmail}</strong>
+              <strong>{targetEmail}</strong>
             </p>
           </div>
 
-          {/* Stepper dos Passos (EM BAIXO DO TÍTULO) */}
+          {/* Stepper dos Passos */}
           {!isFromLogin && (
-            <div className="wizard-stepper-bar" style={{ marginTop: '0.25rem' }}>
+            <div className="wizard-stepper-bar">
               <div className="wizard-step-node completed">
                 <div className="wizard-step-bullet completed">✓</div>
                 <span className="wizard-step-label">Identidade</span>
@@ -549,13 +520,13 @@ export default function Register() {
           )}
 
           {verificationMsg && (
-            <div style={{ color: 'var(--brand-primary)', fontSize: '0.82rem', textAlign: 'center', background: 'rgba(52, 211, 153, 0.08)', padding: '0.45rem', borderRadius: '0.5rem', border: '1px solid rgba(52, 211, 153, 0.2)' }}>
+            <div className={`${styles.alertBox} ${styles.alertSuccess}`}>
               {verificationMsg}
             </div>
           )}
 
           {error && (
-            <div style={{ color: 'var(--danger)', fontSize: '0.82rem', textAlign: 'center', background: 'rgba(239, 68, 68, 0.08)', padding: '0.45rem', borderRadius: '0.5rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+            <div className={`${styles.alertBox} ${styles.alertError}`}>
               {error}
             </div>
           )}
@@ -581,28 +552,18 @@ export default function Register() {
           <button
             type="button"
             onClick={() => triggerVerifyCode(fullOtp)}
-            className="btn-primary"
+            className={`btn-primary ${styles.fullWidthSubmitBtn}`}
             disabled={isVerifying || fullOtp.length !== 6}
-            style={{ width: '100%', padding: '0.75rem', marginTop: '0.25rem' }}
           >
             {isVerifying ? <span className="btn-spinner" /> : 'Confirmar e Acessar'}
           </button>
 
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.6rem', marginTop: '0.5rem' }}>
+          <div className={styles.header}>
             <button
               type="button"
               onClick={handleResendCode}
               disabled={resendCooldown > 0}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: resendCooldown > 0 ? 'var(--text-muted)' : 'var(--brand-primary)',
-                cursor: resendCooldown > 0 ? 'not-allowed' : 'pointer',
-                fontSize: '0.82rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-              }}
+              className={styles.resendBtn}
             >
               <RefreshCw size={13} />
               <span>
@@ -622,14 +583,7 @@ export default function Register() {
                   setStep(1);
                 }
               }}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--text-secondary)',
-                cursor: 'pointer',
-                fontSize: '0.8rem',
-                textDecoration: 'underline'
-              }}
+              className={`${styles.link} ${styles.linkBtn}`}
             >
               {isFromLogin ? '← Voltar para o Login' : '← Corrigir e-mail ou dados'}
             </button>
@@ -643,28 +597,22 @@ export default function Register() {
   // WIZARD: Passos 1, 2 e 3
   // =========================================================================
   return (
-    <div className="auth-container">
-      <div className="auth-card-wizard">
-        {/* 1. Cabeçalho com Logo e Título com Largura Total (EM CIMA) */}
+    <div className={styles.container}>
+      <div className={styles.card}>
+        {/* 1. Cabeçalho com Logo e Título com Largura Total */}
         <div className="wizard-title-row">
           <img
             src={heroLogo}
             alt="Voxy Logo"
-            style={{
-              width: '40px',
-              height: '40px',
-              objectFit: 'contain',
-              filter: 'drop-shadow(0 0 10px rgba(52, 211, 153, 0.35))',
-              flexShrink: 0,
-            }}
+            className={styles.cardHeaderLogo}
           />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 className="auth-title" style={{ fontSize: '1.25rem', textAlign: 'left', margin: 0, lineHeight: 1.2 }}>
+          <div className={styles.headerContent}>
+            <h1 className={styles.titleLeft}>
               {step === 1 && 'Criar sua conta'}
               {step === 2 && 'Segurança & Idade'}
               {step === 3 && 'Termos & Privacidade'}
             </h1>
-            <p className="auth-subtitle" style={{ fontSize: '0.8rem', textAlign: 'left', margin: '0.2rem 0 0', color: 'var(--text-secondary)' }}>
+            <p className={styles.subtitleLeft}>
               {step === 1 && 'Informe seu e-mail e escolha seu nome de usuário'}
               {step === 2 && 'Defina sua data de nascimento e senha de acesso'}
               {step === 3 && 'Consentimento legal e salvaguardas (ANPD/LGPD)'}
@@ -708,8 +656,8 @@ export default function Register() {
 
         {/* Badge Informativo de Vagas Beta */}
         {betaStatus && betaStatus.maxUsers > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <div className="beta-capacity-badge">
+          <div className={styles.centerRow}>
+            <div className={styles.capacityBadge}>
               <Sparkles size={12} />
               <span>
                 Beta Fechado: {betaStatus.currentUsers}/{betaStatus.maxUsers} vagas preenchidas ({betaStatus.remainingSlots} restantes)
@@ -719,14 +667,14 @@ export default function Register() {
         )}
 
         {error && (
-          <div style={{ color: 'var(--danger)', fontSize: '0.82rem', textAlign: 'center', background: 'rgba(239, 68, 68, 0.08)', padding: '0.45rem', borderRadius: '0.5rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+          <div className={`${styles.alertBox} ${styles.alertError}`}>
             {error}
           </div>
         )}
 
         {/* ----------------- PASSO 1: IDENTIDADE ----------------- */}
         {step === 1 && (
-          <form onSubmit={handleNextToStep2} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+          <form onSubmit={handleNextToStep2} className={styles.formColumn}>
             <div className="input-group">
               <label className="input-label">{t('auth.register.email')}</label>
               <input
@@ -760,28 +708,19 @@ export default function Register() {
                       ? 'loading'
                       : 'error'
                   }`}
-                  style={{ marginTop: '0.15rem' }}
                 >
                   {usernameStatus === 'checking' && <Loader2 size={12} className="btn-spinner" />}
                   {usernameStatus === 'available' && <Check size={13} />}
                   {(usernameStatus === 'taken' || usernameStatus === 'invalid') && <AlertCircle size={13} />}
-                  <span style={{ fontSize: '0.78rem' }}>{usernameMsg}</span>
+                  <span>{usernameMsg}</span>
                 </div>
               )}
             </div>
 
             <button
               type="submit"
-              className="btn-primary"
+              className={`btn-primary ${styles.step1SubmitBtn}`}
               disabled={!canGoToStep2}
-              style={{
-                marginTop: '0.5rem',
-                padding: '0.75rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px'
-              }}
             >
               <span>Continuar para Senha</span>
               <ArrowRight size={16} />
@@ -791,26 +730,14 @@ export default function Register() {
 
         {/* ----------------- PASSO 2: SEGURANÇA E NASCIMENTO ----------------- */}
         {step === 2 && (
-          <form onSubmit={handleNextToStep3} style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+          <form onSubmit={handleNextToStep3} className={styles.stepForm}>
             <div className="input-group">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <label className="input-label" style={{ margin: 0 }}>Data de Nascimento</label>
+              <div className={styles.birthDateHeader}>
+                <label className={`input-label ${styles.birthDateLabel}`}>Data de Nascimento</label>
                 {declaredAge !== null && (
-                  <span style={{
-                    fontSize: '0.7rem',
-                    fontWeight: 600,
-                    padding: '0.15rem 0.45rem',
-                    borderRadius: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    backgroundColor: isChild
-                      ? 'rgba(239, 68, 68, 0.15)'
-                      : isTeen
-                      ? 'rgba(59, 130, 246, 0.15)'
-                      : 'rgba(52, 211, 153, 0.15)',
-                    color: isChild ? '#ef4444' : isTeen ? '#60a5fa' : 'var(--brand-primary)',
-                  }}>
+                  <span className={`${styles.ageClassificationBadge} ${
+                    isChild ? styles.badgeChild : isTeen ? styles.badgeTeen : styles.badgeAdult
+                  }`}>
                     {isChild && <AlertCircle size={11} />}
                     {isTeen && <ShieldCheck size={11} />}
                     {isAdult && <UserCheck size={11} />}
@@ -821,12 +748,11 @@ export default function Register() {
 
               <input
                 type="date"
-                className="text-input"
+                className={`text-input ${styles.dateInputCustom}`}
                 value={birthDate}
                 max={new Date().toISOString().split('T')[0]}
                 onChange={(e) => setBirthDate(e.target.value)}
                 required
-                style={{ colorScheme: 'dark', padding: '0.65rem 0.85rem' }}
               />
             </div>
 
@@ -835,12 +761,11 @@ export default function Register() {
               <div className="password-input-wrapper">
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  className="text-input"
+                  className={`text-input ${styles.textInputPadding}`}
                   placeholder={t('auth.register.passwordPlaceholder')}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  style={{ padding: '0.65rem 0.85rem' }}
                 />
                 <button
                   type="button"
@@ -875,46 +800,34 @@ export default function Register() {
               <label className="input-label">{t('auth.register.confirmPassword')}</label>
               <input
                 type={showPassword ? 'text' : 'password'}
-                className="text-input"
                 placeholder={t('auth.register.passwordPlaceholder')}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                style={{ padding: '0.65rem 0.85rem' }}
+                className={`text-input ${styles.textInputPadding}`}
               />
               {passwordsMatch && (
-                <div className="input-feedback success" style={{ marginTop: '0.1rem' }}>
+                <div className={`input-feedback success ${styles.feedbackMargin}`}>
                   <Check size={12} />
-                  <span style={{ fontSize: '0.78rem' }}>{t('auth.register.passwordsMatch')}</span>
+                  <span className={styles.feedbackText}>{t('auth.register.passwordsMatch')}</span>
                 </div>
               )}
               {passwordsMismatch && (
-                <div className="input-feedback error" style={{ marginTop: '0.1rem' }}>
+                <div className={`input-feedback error ${styles.feedbackMargin}`}>
                   <AlertCircle size={12} />
-                  <span style={{ fontSize: '0.78rem' }}>{t('auth.register.errorPasswordMismatch')}</span>
+                  <span className={styles.feedbackText}>{t('auth.register.errorPasswordMismatch')}</span>
                 </div>
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.4rem' }}>
+            <div className={styles.stepActionsRow}>
               <button
                 type="button"
                 onClick={() => {
                   setError('');
                   setStep(1);
                 }}
-                className="btn-secondary"
-                style={{
-                  flex: '0 0 auto',
-                  padding: '0.75rem 1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  borderRadius: '0.5rem',
-                  color: 'var(--text-secondary)'
-                }}
+                className={`btn-secondary ${styles.stepBackBtn}`}
               >
                 <ArrowLeft size={15} />
                 <span>Voltar</span>
@@ -922,16 +835,8 @@ export default function Register() {
 
               <button
                 type="submit"
-                className="btn-primary"
+                className={`btn-primary ${styles.stepForwardBtn}`}
                 disabled={!canGoToStep3}
-                style={{
-                  flex: 1,
-                  padding: '0.75rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px'
-                }}
               >
                 <span>Continuar para Termos</span>
                 <ArrowRight size={16} />
@@ -942,23 +847,15 @@ export default function Register() {
 
         {/* ----------------- PASSO 3: TERMOS DE USO & PRIVACIDADE (ANPD / LGPD) ----------------- */}
         {step === 3 && (
-          <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '-0.2rem' }}>
-              <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+          <form onSubmit={handleRegister} className={styles.stepForm}>
+            <div className={styles.step3Header}>
+              <span className={styles.step3Subtitle}>
                 Selecione cada item para prosseguir:
               </span>
               <button
                 type="button"
                 onClick={handleSelectAllTerms}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--brand-primary)',
-                  fontSize: '0.74rem',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  textDecoration: 'underline'
-                }}
+                className={styles.selectAllBtn}
               >
                 {acceptTerms && acceptPrivacy && acceptSafety ? 'Desmarcar todos' : 'Aceitar todos'}
               </button>
@@ -1086,25 +983,14 @@ export default function Register() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.35rem' }}>
+            <div className={styles.stepActionsRow}>
               <button
                 type="button"
                 onClick={() => {
                   setError('');
                   setStep(2);
                 }}
-                className="btn-secondary"
-                style={{
-                  flex: '0 0 auto',
-                  padding: '0.75rem 1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  borderRadius: '0.5rem',
-                  color: 'var(--text-secondary)'
-                }}
+                className={`btn-secondary ${styles.stepBackBtn}`}
               >
                 <ArrowLeft size={15} />
                 <span>Voltar</span>
@@ -1112,16 +998,8 @@ export default function Register() {
 
               <button
                 type="submit"
-                className="btn-primary"
+                className={`btn-primary ${styles.stepForwardBtn}`}
                 disabled={isLoading || !acceptTerms || !acceptPrivacy || !acceptSafety}
-                style={{
-                  flex: 1,
-                  padding: '0.75rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px'
-                }}
               >
                 {isLoading ? <span className="btn-spinner" /> : 'Criar Conta e Confirmar'}
               </button>
@@ -1130,21 +1008,11 @@ export default function Register() {
         )}
 
         {/* Rodapé / Link para Login */}
-        <div
-          className="auth-footer"
-          style={{
-            textAlign: 'center',
-            fontSize: '0.82rem',
-            color: 'var(--text-secondary)',
-            marginTop: '0.3rem',
-            paddingTop: '0.5rem',
-            borderTop: '1px solid rgba(255, 255, 255, 0.05)',
-          }}
-        >
+        <div className={`auth-footer ${styles.authFooterBox}`}>
           {t('auth.register.hasAccount')}{' '}
           <Link
             to={AppRoutes.LOGIN}
-            style={{ color: 'var(--brand-primary)', fontWeight: 600, textDecoration: 'none' }}
+            className={styles.loginInlineLink}
           >
             {t('auth.login.button')}
           </Link>
@@ -1158,7 +1026,7 @@ export default function Register() {
         <div className="legal-document-modal" onClick={() => { setViewingDoc(null); setDocViewMode('summary'); }}>
           <div className="legal-document-card" onClick={(e) => e.stopPropagation()}>
             <div className="legal-document-header">
-              <h2 style={{ fontSize: '1.05rem', margin: 0, color: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <h2 className={styles.modalHeaderTitle}>
                 {viewingDoc === 'terms' && <FileText size={18} color="#34d399" />}
                 {viewingDoc === 'privacy' && <Lock size={18} color="#60a5fa" />}
                 {viewingDoc === 'safety' && <HeartHandshake size={18} color="#c084fc" />}
@@ -1168,15 +1036,7 @@ export default function Register() {
               </h2>
               <button
                 onClick={() => { setViewingDoc(null); setDocViewMode('summary'); }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: 4
-                }}
+                className={styles.modalCloseBtn}
                 aria-label="Fechar"
               >
                 <X size={20} />
@@ -1222,10 +1082,10 @@ export default function Register() {
                   </>
                 ) : (
                   <>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                    <div className={styles.legalDocFullHeader}>
                       <div>
-                        <h2 style={{ fontSize: '1.1rem', color: '#fff', margin: '0 0 0.25rem' }}>Termos de Uso da Plataforma Voxy</h2>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Versão 1.0 • Atualizada em Março de 2026 • Legislação Brasileira</span>
+                        <h2 className={styles.legalDocTitle}>Termos de Uso da Plataforma Voxy</h2>
+                        <span className={styles.legalDocVersion}>Versão 1.0 • Atualizada em Março de 2026 • Legislação Brasileira</span>
                       </div>
                       <button
                         type="button"
@@ -1332,10 +1192,10 @@ export default function Register() {
                   </>
                 ) : (
                   <>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                    <div className={styles.legalDocFullHeader}>
                       <div>
-                        <h2 style={{ fontSize: '1.1rem', color: '#fff', margin: '0 0 0.25rem' }}>Política de Privacidade e Proteção de Dados (LGPD)</h2>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Conformidade com a Lei nº 13.709/2018 (LGPD) e Orientações da ANPD • Versão 1.0</span>
+                        <h2 className={styles.legalDocTitle}>Política de Privacidade e Proteção de Dados (LGPD)</h2>
+                        <span className={styles.legalDocVersion}>Conformidade com a Lei nº 13.709/2018 (LGPD) e Orientações da ANPD • Versão 1.0</span>
                       </div>
                       <button
                         type="button"
@@ -1444,10 +1304,10 @@ export default function Register() {
                   </>
                 ) : (
                   <>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                    <div className={styles.legalDocFullHeader}>
                       <div>
-                        <h2 style={{ fontSize: '1.1rem', color: '#fff', margin: '0 0 0.25rem' }}>Proteção à Criança e ao Adolescente (ECA Digital)</h2>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Em conformidade com a Lei nº 8.069/1990 (ECA) e Diretrizes Preliminares da ANPD</span>
+                        <h2 className={styles.legalDocTitle}>Proteção à Criança e ao Adolescente (ECA Digital)</h2>
+                        <span className={styles.legalDocVersion}>Em conformidade com a Lei nº 8.069/1990 (ECA) e Diretrizes Preliminares da ANPD</span>
                       </div>
                       <button
                         type="button"
@@ -1490,7 +1350,7 @@ export default function Register() {
             <div className="legal-document-footer">
               <button
                 type="button"
-                className="btn-primary"
+                className={`btn-primary ${styles.modalAgreeBtn}`}
                 onClick={() => {
                   if (viewingDoc === 'terms') setAcceptTerms(true);
                   if (viewingDoc === 'privacy') setAcceptPrivacy(true);
@@ -1498,7 +1358,6 @@ export default function Register() {
                   setViewingDoc(null);
                   setDocViewMode('summary');
                 }}
-                style={{ padding: '0.6rem 1.4rem', fontSize: '0.85rem' }}
               >
                 Concordar e Fechar
               </button>
