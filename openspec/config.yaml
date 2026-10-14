@@ -1,32 +1,88 @@
 schema: spec-driven
 
-# Project context (optional)
-# Add only constraints that should guide OpenSpec artifacts and workflows.
-# Include constraints an agent cannot infer by reading the code.
-# Keep general project documentation and discoverable codebase facts out.
-# Example:
-#   context: |
-#     Designs and tasks must cover Windows, macOS, and Linux
-#     Write all artifacts in Spanish
+# Contexto do Projeto Voxy Frontend
+context: |
+  O Voxy é uma plataforma de comunicação em tempo real moderna (voz, áudio, vídeo, compartilhamento de tela em 60fps/4k, chat em tempo real, servidores, canais e amigos), construída com React 19, TypeScript, Vite e Electron (Desktop).
+  A aplicação utiliza LiveKit WebRTC para transporte de mídia de ultra baixa latência e integra-se profundamente ao Windows via Electron IPC e binários nativos C++ para captura de áudio e streaming de jogos em tempo real.
+  O app é distribuído tanto via instalador executável tradicional (NSIS) quanto via Microsoft Store (pacote MSIX).
+  O projeto possui forte foco em alto desempenho, design refinado no conceito "Obsidian Mint" (Dark Glassmorphism, Neon Bloom, microanimações) e suporte nativo a múltiplos idiomas (Português, Inglês e Espanhol).
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always state what is out of scope
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+# Regras Globais de Desenvolvimento, Estilização e Componentização
+rules:
+  # Regras fundamentais aplicáveis a todo o código do frontend
+  code_standards:
+    # --- Estilização e Zero Inline Styles ---
+    - Nunca use estilos inline (style={{ ... }}) no meio do código JSX/TSX. Todo estilo visual deve estar em arquivos de estilo dedicados.
+    - O padrão primário de estilização para novos componentes e refatorações é CSS Modules (<ComponentName>.module.css) localizado no mesmo diretório do componente.
+    - Para componentes legados ou globais que usam classes CSS regulares (<ComponentName>.css), respeite as classes sem injetar regras CSS inline arbitrárias.
+    - A única exceção admitida para style={{}} são valores numéricos contínuos calculados estritamente em runtime (ex: coordenadas dinâmicas de drag-and-drop a 60fps ou largura percentual de VU meter de áudio em tempo real), e mesmo nesses casos dê preferência à passagem de CSS variables (--valor) via style inline.
 
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+    # --- Tema Oficial e Paleta de Cores (Obsidian Mint) ---
+    - É estritamente obrigatório seguir a paleta oficial e o design system definido no :root de src/index.css. Nunca utilize cores hexadecimais ou RGB arbitrárias (como #fff, #000, red, blue soltos) no CSS dos componentes.
+    - Cores de Fundo (Canvas & Elevação):
+        • --bg-primary (#0b0f17): Fundo principal do aplicativo (Obsidian Base Canvas profundo).
+        • --bg-secondary (rgba(15, 23, 42, 0.65)): Superfícies translúcidas e cards secundários (Surface Glass).
+        • --bg-tertiary (rgba(30, 41, 59, 0.45)): Elevação de painéis, listas e agrupamentos.
+        • --bg-accent (#1e293b): Fundo de elementos interativos, cartões internos e badges.
+        • --glass-bg (rgba(17, 24, 39, 0.75)): Modais e popovers com backdrop blur.
+    - Tipografia e Contraste de Texto:
+        • --text-primary (#f8fafc): Texto principal, títulos e elementos de alta ênfase.
+        • --text-secondary (#94a3b8): Rótulos de campos, subtítulos e descrições secundárias.
+        • --text-muted (#475569): Placeholders, timestamps e estados desabilitados.
+    - Cores de Destaque e Ação (Luminous Emerald):
+        • --brand-primary (#34d399): Cor principal de destaque da marca Voxy (verde esmeralda luminoso) para botões de ação (CTA), estados ativos, switches e badges de destaque.
+        • --brand-hover (#059669): Estado hover e foco de elementos de marca.
+    - Cores de Feedback e Estado:
+        • --danger (#ffb4ab): Alertas de erro, ações destrutivas e desconexão.
+        • --success (#34d399): Conexões ativas, confirmações e status online.
+    - Bordas, Sombras e Efeitos Visuais:
+        • --border-subtle (rgba(255, 255, 255, 0.08)): Bordas e divisores suaves em toda a UI.
+        • --shadow-sm (inset 0 1px 0 rgba(255, 255, 255, 0.08)): Realce sutil em botões e inputs.
+        • --shadow-md (0 0 12px rgba(52, 211, 153, 0.3)): Brilho de neon bloom para ações em destaque.
+        • --shadow-lg (0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 1px 1px rgba(255, 255, 255, 0.12)): Elevação de modais e menus suspensos.
+        • Glassmorphism: aplicar backdrop-filter: blur(20px a 28px) ou a classe utilitária .glass-panel para criar profundidade.
+    - Tipografia Obrigatória do Projeto:
+        • Títulos e cabeçalhos (h1-h6, títulos de modais, títulos de seções): usar a fonte 'Space Grotesk', sans-serif com letter-spacing: -0.01em.
+        • Corpo de texto, formulários, chat e botões: usar a fonte 'Inter', sans-serif.
+
+    # --- Internacionalização Obrigatória ---
+    - Todas as strings de texto visíveis ao usuário no JSX devem obrigatoriamente usar a função t('chave') de internacionalização (src/i18n.ts), mantendo sincronizadas as traduções em Português (pt), Inglês (en) e Espanhol (es).
+
+    # --- Qualidade de Código, Componentização e TypeScript ---
+    - Tipagem TypeScript estrita: todas as props de componentes devem ter sua própria interface ou type explicitamente declarado (ex: interface ComponentNameProps). Proibido o uso desnecessário de 'any'.
+    - Componentização limpa (Single Responsibility Principle): cada componente deve ter uma única responsabilidade. Componentes com mais de 250 linhas devem ser decompostos em subcomponentes menores e hooks dedicados.
+    - Separação entre Apresentação e Regra de Negócio: efeitos colaterais complexos, chamadas de rede, listeners de eventos e IPC do Electron devem ser extraídos para Custom Hooks (use<FeatureName>), deixando o componente JSX declarativo.
+    - Organização por Features: o código de domínios específicos reside em src/features/<feature_name>/ (contendo components/ e hooks/). Utilitários e contratos globais residem em src/core/, componentes reutilizáveis em src/components/common/, e I/O / integrações externas em src/infrastructure/.
+    - Limpeza de recursos (Cleanup): todo useEffect que registra listeners (IPC, window events, websockets, áudio/vídeo streams, timers) DEVE ter sua respectiva função de cleanup para evitar vazamentos de memória (memory leaks).
+    - Compatibilidade Desktop/Store: o código deve tratar com segurança a presença ou ausência de APIs do Electron (ipcRenderer) e respeitar o ambiente da Microsoft Store (process.windowsStore), não exibindo avisos ou atualizadores incompatíveis com a loja.
+    - Manter e respeitar os padrões estabelecidos do projeto (Clean Code, SOLID, KISS, YAGNI, DRY). Nunca criar padrões paralelos sem alinhamento prévio.
+
+  # Regras para artefatos do OpenSpec
+  proposal:
+    - Sempre descrever o impacto na arquitetura de features (src/features/) e em arquivos de estilo (.module.css).
+    - Deixar explícito que não haverá estilos inline e como os componentes serão divididos.
+    - Confirmar aderência ao tema Obsidian Mint e aos tokens CSS do index.css.
+    - Especificar as chaves de internacionalização (i18n) necessárias em PT, EN e ES.
+    - Manter propostas claras, objetivas e focadas na solução arquitetural.
+
+  specs:
+    - Detalhar contratos de dados, interfaces TypeScript e assinaturas de Custom Hooks.
+    - Especificar a estrutura de diretórios e arquivos de componentes e estilos correspondentes (.module.css).
+    - Declarar os tokens CSS do tema (--bg-*, --text-*, --brand-*, etc.) que serão consumidos pelo componente.
+    - Declarar o comportamento responsivo e as classes de glassmorphism aplicadas.
+
+  tasks:
+    - Dividir tarefas priorizando: 1) Criação de contratos/tipos, 2) Custom Hooks e lógica, 3) Componentes e CSS Modules, 4) Integração e i18n, 5) Validação e build.
+    - Incluir tarefas explícitas de verificação de build (npm run build) e integridade visual sem estilos inline e com tokens de tema.
+
+# Orientações operacionais
+operations:
+  apply:
+    guidance:
+      - Nunca insira blocos style={{}} temporários para depois ajustar; aplique diretamente em classes do CSS Module.
+      - Ao criar novos componentes, crie a pasta correspondente contendo Componente.tsx e Componente.module.css.
+      - Utilize exclusivamente variáveis var(--token) para cores de fundo, bordas, textos e efeitos luminosos.
+      - Execute npm run build ao finalizar alterações para garantir conformidade de tipos e ausência de erros de bundling.
+  archive:
+    guidance:
+      - Registre brevemente os componentes criados ou refatorados e confirme a conformidade com as regras de CSS, tokens de tema e tipagem.
