@@ -688,11 +688,18 @@ app.whenReady().then(() => {
     return currentUpdateState;
   });
 
+  const isWindowsStore = Boolean(process.windowsStore);
+
   ipcMain.handle(IpcChannels.CHECK_FOR_UPDATES, async () => {
     if (process.env.VITE_DEV_SERVER_URL) {
       return {
         status: "dev",
         message: "Auto-update desativado em modo de desenvolvimento",
+      };
+    }
+    if (isWindowsStore) {
+      return {
+        status: "windows_store",
       };
     }
     try {
@@ -707,11 +714,13 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle(IpcChannels.RESTART_AND_INSTALL, () => {
-    autoUpdater.quitAndInstall();
+    if (!isWindowsStore) {
+      autoUpdater.quitAndInstall();
+    }
   });
 
-  // Autoupdate (somente em produção)
-  if (!process.env.VITE_DEV_SERVER_URL) {
+  // Autoupdate (somente em produção fora da Microsoft Store)
+  if (!process.env.VITE_DEV_SERVER_URL && !isWindowsStore) {
     autoUpdater.logger = console;
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;

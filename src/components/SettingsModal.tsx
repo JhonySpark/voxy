@@ -249,8 +249,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     if (!ipcRenderer) return;
     try {
       setCheckingUpdate(true);
-      setUpdateFeedback(t('settings.checkingUpdates'));
       const res = await ipcRenderer.invoke(IpcChannels.CHECK_FOR_UPDATES);
+      if (res?.status === 'windows_store') {
+        setUpdateFeedback(null);
+        return;
+      }
+      setUpdateFeedback(t('settings.checkingUpdates'));
       if (res?.status === 'ok') {
         const remoteVer = res.updateInfo?.version;
         if (remoteVer && remoteVer !== APP_VERSION.replace('v', '')) {
