@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import styles from './EmojiPicker.module.css';
 import { Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface EmojiPickerProps {
   onSelectEmoji: (emoji: string) => void;
@@ -64,6 +65,7 @@ const EMOJI_CATEGORIES: EmojiCategory[] = [
 ];
 
 export const EmojiPicker: React.FC<EmojiPickerProps> = ({ onSelectEmoji, onClose }) => {
+  const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState<string>('smileys');
   const [search, setSearch] = useState<string>('');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -114,7 +116,7 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ onSelectEmoji, onClose
             ref={inputRef}
             type="text"
             className={styles.searchInput}
-            placeholder="Pesquisar emoji..."
+            placeholder={t('chat.searchEmoji')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -154,7 +156,7 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ onSelectEmoji, onClose
             </button>
           ))
         ) : (
-          <div className={styles.emptyState}>Nenhum emoji encontrado</div>
+          <div className={styles.emptyState}>{t('chat.noEmojiFound')}</div>
         )}
       </div>
     </div>

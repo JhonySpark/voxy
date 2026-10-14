@@ -286,9 +286,9 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
                               onClick={async () => {
                                 setActiveMenuFriendId(null);
                                 const ok = await confirm({
-                                  title: t('friends.removeFriend', 'Desfazer Amizade'),
+                                  title: t('friends.removeFriend'),
                                   message: t('friends.removeFriendConfirm', { name: nameToShow }),
-                                  confirmText: t('friends.removeFriend', 'Desfazer Amizade'),
+                                  confirmText: t('friends.removeFriend'),
                                   variant: 'danger',
                                 });
                                 if (ok) {
@@ -297,7 +297,7 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
                               }}
                             >
                               <UserMinus size={14} />
-                              <span>{t('friends.removeFriend', 'Desfazer Amizade')}</span>
+                              <span>{t('friends.removeFriend')}</span>
                             </div>
                           )}
 
@@ -308,9 +308,9 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
                               onClick={async () => {
                                 setActiveMenuFriendId(null);
                                 const ok = await confirm({
-                                  title: t('friends.blockUser', 'Bloquear Usuário'),
+                                  title: t('friends.blockUser'),
                                   message: t('friends.blockUserConfirm', { name: nameToShow }),
-                                  confirmText: t('friends.blockUser', 'Bloquear Usuário'),
+                                  confirmText: t('friends.blockUser'),
                                   variant: 'danger',
                                 });
                                 if (ok) {
@@ -319,7 +319,7 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
                               }}
                             >
                               <Ban size={14} />
-                              <span>{t('friends.blockUser', 'Bloquear Usuário')}</span>
+                              <span>{t('friends.blockUser')}</span>
                             </div>
                           )}
                         </div>

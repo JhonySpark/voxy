@@ -2,6 +2,7 @@ import React from 'react';
 import styles from './StreamSettingsMenu.module.css';
 import { Volume2, VolumeX, Eye, EyeOff, ShieldAlert, Activity } from 'lucide-react';
 import * as Slider from '@radix-ui/react-slider';
+import { useTranslation } from 'react-i18next';
 import { useClickOutside } from '../../../../hooks/useClickOutside';
 
 interface StreamSettingsMenuProps {
@@ -30,6 +31,7 @@ export const StreamSettingsMenu: React.FC<StreamSettingsMenuProps> = ({
   isDiagnosticsOpen,
   onToggleDiagnostics,
 }) => {
+  const { t } = useTranslation();
   const menuRef = useClickOutside<HTMLDivElement>(onClose, isOpen);
 
   if (!isOpen) return null;
@@ -39,12 +41,12 @@ export const StreamSettingsMenu: React.FC<StreamSettingsMenuProps> = ({
   return (
     <div ref={menuRef} className={styles.menuContainer} onClick={(e) => e.stopPropagation()}>
       <div className={styles.menuHeader}>
-        <span>Configurações da Transmissão</span>
+        <span>{t('voice.streamSettings')}</span>
       </div>
 
       <div className={styles.volumeSection}>
         <div className={styles.volumeHeader}>
-          <label className={styles.label}>Volume da Transmissão</label>
+          <label className={styles.label}>{t('voice.streamVolume')}</label>
           <span className={styles.volumeValue}>{streamVolume}%</span>
         </div>
         <Slider.Root
@@ -67,7 +69,7 @@ export const StreamSettingsMenu: React.FC<StreamSettingsMenuProps> = ({
         onClick={() => onVolumeChange(isMuted ? 100 : 0)}
       >
         {isMuted ? <Volume2 size={16} /> : <VolumeX size={16} />}
-        <span>{isMuted ? 'Desmutar Transmissão' : 'Mutar Transmissão'}</span>
+        <span>{isMuted ? t('voice.unmuteStream') : t('voice.muteStream')}</span>
       </button>
 
       <button
@@ -79,7 +81,7 @@ export const StreamSettingsMenu: React.FC<StreamSettingsMenuProps> = ({
         }}
       >
         {isWatching ? <EyeOff size={16} /> : <Eye size={16} />}
-        <span>{isWatching ? 'Parar de Assistir' : 'Assistir Transmissão'}</span>
+        <span>{isWatching ? t('voice.stopWatching') : t('voice.watchStream')}</span>
       </button>
 
       {showDiagnosticsOption && onToggleDiagnostics && (
@@ -90,10 +92,10 @@ export const StreamSettingsMenu: React.FC<StreamSettingsMenuProps> = ({
             onToggleDiagnostics();
             onClose();
           }}
-          title="Alternar painel de diagnóstico avançado (F8)"
+          title={t('voice.toggleDiagnostics')}
         >
           <Activity size={16} />
-          <span>{isDiagnosticsOpen ? 'Ocultar Diagnóstico (F8)' : 'Diagnóstico da Transmissão (F8)'}</span>
+          <span>{isDiagnosticsOpen ? t('voice.hideDiagnostics') : t('voice.streamDiagnostics')}</span>
         </button>
       )}
 
@@ -107,7 +109,7 @@ export const StreamSettingsMenu: React.FC<StreamSettingsMenuProps> = ({
           }}
         >
           <ShieldAlert size={16} />
-          <span>Denunciar Transmissão</span>
+          <span>{t('moderation.reportStreamButton')}</span>
         </button>
       )}
     </div>

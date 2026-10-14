@@ -91,7 +91,7 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
               <div className={styles.togglesContainer}>
                 <label className={styles.audioToggle}>
                   <input type="checkbox" checked={shareAudio} onChange={(event) => onShareAudioChange(event.target.checked)} />
-                  <span>Compartilhar áudio do jogo/aplicativo</span>
+                  <span>{t('voice.shareAudio')}</span>
                 </label>
                 <label className={styles.ageRatingToggle}>
                   <input
@@ -101,7 +101,7 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
                     className={styles.ageCheckbox}
                   />
                   <span className={`${styles.ageBadge} ${is18Plus ? styles.ageBadgeActive : ''}`}>18+</span>
-                  <span>Conteúdo +18 (Usuários menores de idade não conseguirão assistir)</span>
+                  <span>{t('voice.content18PlusDesc')}</span>
                 </label>
               </div>
             </div>
@@ -137,14 +137,14 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
         {isTeenOnly && (
           <div className={styles.teenWarning}>
             <ShieldAlert size={16} className={styles.shrinkIcon} />
-            <span>Perfil Jovem (TEEN): Compartilhamento restrito a jogos detectados. Telas e janelas genéricas ficam desativadas por segurança.</span>
+            <span>{t('voice.teenRestrictedShare')}</span>
           </div>
         )}
 
         {streamFps === '60' && (
           <div className={styles.experimentalNotice}>
             <AlertTriangle size={15} className={styles.shrinkIcon} />
-            <span>O compartilhamento em 60 FPS ainda está em fase de testes e pode apresentar instabilidade.</span>
+            <span>{t('voice.fps60Experimental')}</span>
           </div>
         )}
 
@@ -155,7 +155,7 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
             onClick={() => setActiveTab('games')}
           >
             <Gamepad2 size={16} />
-            <span>{t('voice.games', 'Jogos')}</span>
+            <span>{t('voice.games')}</span>
             {categorizedSources.games.length > 0 && (
               <span className={styles.tabCount}>
                 {categorizedSources.games.length}
@@ -169,7 +169,7 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
             onClick={() => !isTeenOnly && setActiveTab('windows')}
             disabled={isTeenOnly}
             style={isTeenOnly ? { opacity: 0.35, cursor: 'not-allowed' } : undefined}
-            title={isTeenOnly ? 'Contas TEEN só podem transmitir jogos detectados' : undefined}
+            title={isTeenOnly ? t('voice.teenOnlyGamesTitle') : undefined}
           >
             <AppWindow size={16} />
             <span>{t('voice.applications')}</span>
@@ -186,7 +186,7 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
             onClick={() => !isTeenOnly && setActiveTab('screens')}
             disabled={isTeenOnly}
             style={isTeenOnly ? { opacity: 0.35, cursor: 'not-allowed' } : undefined}
-            title={isTeenOnly ? 'Contas TEEN só podem transmitir jogos detectados' : undefined}
+            title={isTeenOnly ? t('voice.teenOnlyGamesTitle') : undefined}
           >
             <Monitor size={16} />
             <span>{t('voice.screens')}</span>
@@ -211,7 +211,7 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
               )}
               <p className={styles.emptyText}>
                 {activeTab === 'games' && isTeenOnly 
-                  ? 'Nenhum jogo em execução detectado. Inicie um jogo para transmitir.' 
+                  ? t('voice.noGamesDetected')
                   : t('voice.noSources')}
               </p>
             </div>

@@ -46,51 +46,51 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
   const targetTitle =
     targetType === ReportTargetTypeEnum.USER
-      ? `Denunciar Usuário: @${targetName || 'usuário'}`
+      ? t('moderation.reportUserTarget', { name: targetName || 'usuário' })
       : targetType === ReportTargetTypeEnum.SERVER
-      ? `Denunciar Servidor: ${targetName || 'servidor'}`
-      : `Denunciar Transmissão ao Vivo (${targetName || 'stream'})`;
+      ? t('moderation.reportServerTarget', { name: targetName || 'servidor' })
+      : t('moderation.reportStream', { name: targetName || 'stream' });
 
   const reasons: ReasonOption[] = [
     {
       key: ReportReasonEnum.CHILD_SAFETY_EXPLOITATION,
-      label: 'Risco, Exploração ou Abuso a Criança/Adolescente',
+      label: t('moderation.reasons.childSafety'),
       icon: '🛡️',
       isChildSafety: true,
     },
     {
       key: ReportReasonEnum.HARASSMENT_BULLYING,
-      label: 'Assédio, Perseguição ou Bullying',
+      label: t('moderation.reasons.harassment'),
       icon: '🚫',
     },
     {
       key: ReportReasonEnum.HATE_SPEECH,
-      label: 'Discurso de Ódio ou Discriminação',
+      label: t('moderation.reasons.hateSpeech'),
       icon: '⚠️',
     },
     {
       key: ReportReasonEnum.SEXUAL_CONTENT,
-      label: 'Conteúdo Sexual Impróprio ou Não Solicitado',
+      label: t('moderation.reasons.sexualContent'),
       icon: '🔞',
     },
     {
       key: ReportReasonEnum.VIOLENCE_THREATS,
-      label: 'Violência Extrema ou Ameaças Graves',
+      label: t('moderation.reasons.violence'),
       icon: '⚔️',
     },
     {
       key: ReportReasonEnum.SELF_HARM,
-      label: 'Automutilação ou Incentivo ao Suicídio',
+      label: t('moderation.reasons.selfHarm'),
       icon: '💔',
     },
     {
       key: ReportReasonEnum.SPAM_SCAM,
-      label: 'Spam, Golpe ou Roubo de Dados',
+      label: t('moderation.reasons.spam'),
       icon: '📢',
     },
     {
       key: ReportReasonEnum.OTHER,
-      label: 'Outra Violação das Diretrizes',
+      label: t('moderation.reasons.other'),
       icon: '❓',
     },
   ];
@@ -98,7 +98,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (description.trim().length < 5) {
-      toast.error('Por favor, informe uma descrição com pelo menos 5 caracteres.');
+      toast.error(t('moderation.minDescription'));
       return;
     }
 
@@ -113,14 +113,12 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         description: description.trim(),
       });
 
-      toast.success(
-        'Denúncia registrada com sucesso. A equipe de moderação priorizará este caso conforme as diretrizes da ANPD.',
-      );
+      toast.success(t('moderation.reportSuccess'));
       setDescription('');
       onSuccess?.();
       onClose();
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erro ao registrar denúncia. Tente novamente.');
+      toast.error(err?.response?.data?.message || t('moderation.reportError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -137,14 +135,14 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             </div>
             <div>
               <h3 className={styles.headerTitle}>{targetTitle}</h3>
-              <p className={styles.headerSubtitle}>Moderação & Segurança da Comunidade</p>
+              <p className={styles.headerSubtitle}>{t('moderation.modalSubtitle')}</p>
             </div>
           </div>
           <button
             type="button"
             className={styles.closeButton}
             onClick={onClose}
-            title={t('common.close', 'Fechar')}
+            title={t('common.close')}
           >
             <X size={18} />
           </button>
@@ -158,18 +156,17 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               <Shield size={18} className={styles.anpdNoticeIcon} />
               <div>
                 <span className={styles.anpdNoticeTitle}>
-                  Proteção Integral à Criança e ao Adolescente (ANPD / ECA)
+                  {t('moderation.anpdTitle')}
                 </span>
                 <p className={styles.anpdNoticeText}>
-                  Denúncias envolvendo menores de idade ou conteúdo ilegal recebem encaminhamento e averiguação
-                  imediata com salvaguardas rigorosas de integridade.
+                  {t('moderation.anpdDesc')}
                 </p>
               </div>
             </div>
 
             {/* Motivo da Denúncia */}
             <div>
-              <label className={styles.sectionLabel}>Selecione o Motivo da Denúncia</label>
+              <label className={styles.sectionLabel}>{t('moderation.selectReason')}</label>
               <div className={styles.reasonsList}>
                 {reasons.map((r) => {
                   const isActive = selectedReason === r.key;
@@ -188,7 +185,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                           {r.isChildSafety && (
                             <span className={styles.priorityBadge}>
                               <span className={styles.priorityBadgeDot} />
-                              Prioridade Máxima
+                              {t('moderation.maxPriority')}
                             </span>
                           )}
                         </div>
@@ -208,10 +205,10 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
             {/* Detalhes Adicionais */}
             <div>
-              <label className={styles.sectionLabel}>Detalhes e Contexto Adicional</label>
+              <label className={styles.sectionLabel}>{t('moderation.detailsLabel')}</label>
               <textarea
                 className={styles.textarea}
-                placeholder="Explique o que aconteceu, canais envolvidos ou qualquer detalhe relevante para a apuração..."
+                placeholder={t('moderation.detailsPlaceholder')}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
@@ -228,7 +225,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               onClick={onClose}
               disabled={isSubmitting}
             >
-              Cancelar
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -238,12 +235,12 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               {isSubmitting ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
-                  <span>Enviando...</span>
+                  <span>{t('common.submitting')}</span>
                 </>
               ) : (
                 <>
                   <ShieldAlert size={16} />
-                  <span>Enviar Denúncia</span>
+                  <span>{t('moderation.submitReport')}</span>
                 </>
               )}
             </button>

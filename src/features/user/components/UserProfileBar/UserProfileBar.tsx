@@ -103,7 +103,7 @@ export const UserProfileBar: React.FC<UserProfileBarProps> = ({
         <div
           className={styles.userClickable}
           onClick={() => setIsPopoutOpen((prev) => !prev)}
-          title={t('user.viewProfile', 'Ver perfil')}
+          title={t('user.viewProfile')}
         >
           <div className={styles.avatarWrapper}>
             {avatarMedia && !avatarError ? (

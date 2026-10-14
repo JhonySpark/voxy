@@ -159,10 +159,10 @@ export const UserPopout: React.FC<UserPopoutProps> = ({
           </div>
 
         {/* Balão de Pensamento / Bio */}
-        <div className={styles.thoughtBubble} onClick={onOpenEditProfile} title="Editar pensamento">
+        <div className={styles.thoughtBubble} onClick={onOpenEditProfile} title={t('user.editThought')}>
           <span className={styles.thoughtPlus}>+</span>
           <span className={styles.thoughtText}>
-            {user.bio ? user.bio : t('user.thoughtPlaceholder', 'Pensamento de chuveiro?')}
+            {user.bio ? user.bio : t('user.thoughtPlaceholder')}
           </span>
         </div>
       </div>
@@ -187,9 +187,9 @@ export const UserPopout: React.FC<UserPopoutProps> = ({
           >
             <div className={styles.menuItemLeft}>
               <Pencil size={16} className={styles.menuIcon} />
-              <span>{t('user.editProfile', 'Editar perfil')}</span>
+              <span>{t('user.editProfile')}</span>
             </div>
-            <span className={styles.newBadge}>{t('common.new', 'NOVO')}</span>
+            <span className={styles.newBadge}>{t('common.new')}</span>
           </button>
 
           <div className={styles.divider} />
@@ -206,7 +206,7 @@ export const UserPopout: React.FC<UserPopoutProps> = ({
                 e.stopPropagation();
                 setIsStatusMenuOpen((prev) => !prev);
               }}
-              title="Alterar status de presença"
+              title={t('user.changePresenceStatus')}
             >
               <div className={styles.menuItemLeft}>
                 <StatusDot status={activeStatus} size="sm" showTitle={false} />
@@ -228,7 +228,7 @@ export const UserPopout: React.FC<UserPopoutProps> = ({
                 className={styles.statusFlyoutBalloon}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className={styles.flyoutHeader}>{t('status.chooseStatus', 'Mudar Status')}</div>
+                <div className={styles.flyoutHeader}>{t('status.chooseStatus')}</div>
                 {[
                   { key: UserStatusEnum.ONLINE, label: t('status.online') },
                   { key: UserStatusEnum.IDLE, label: t('status.idle') },
@@ -247,10 +247,10 @@ export const UserPopout: React.FC<UserPopoutProps> = ({
                       let custom = activeActivity || '';
                       if (opt.key === UserStatusEnum.PLAYING) {
                         const game = await prompt({
-                          title: t('status.playing', 'Jogando'),
-                          message: t('status.setGamePrompt', 'Qual jogo ou atividade você está executando?'),
+                          title: t('status.playing'),
+                          message: t('status.setGamePrompt'),
                           defaultValue: custom || '',
-                          placeholder: 'ex: Counter-Strike 2',
+                          placeholder: t('status.gamePlaceholder'),
                         });
                         if (game === null) return;
                         custom = game.trim();
@@ -285,7 +285,7 @@ export const UserPopout: React.FC<UserPopoutProps> = ({
           >
             <div className={styles.menuItemLeft}>
               <User size={16} className={styles.menuIcon} />
-              <span>{t('user.accountSettings', 'Configurações da conta')}</span>
+              <span>{t('user.accountSettings')}</span>
             </div>
             <ChevronRight size={16} className={styles.menuArrow} />
           </button>

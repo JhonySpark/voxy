@@ -156,10 +156,10 @@ export default function Login() {
             <div className={styles.suspendedAlert}>
               <ShieldAlert size={22} className={styles.suspendedIcon} />
               <div>
-                <strong className={styles.suspendedTitle}>Conta Suspensa</strong>
+                <strong className={styles.suspendedTitle}>{t('auth.accountSuspended')}</strong>
                 <p className={styles.suspendedDesc}>{error}</p>
                 <span className={styles.suspendedFootnote}>
-                  Em conformidade com as diretrizes da ANPD e ECA. Para contestar ou solicitar revisão, contate o suporte.
+                  {t('moderation.anpdDesc')}
                 </span>
               </div>
             </div>

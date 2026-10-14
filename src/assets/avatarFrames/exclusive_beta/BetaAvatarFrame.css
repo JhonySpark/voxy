@@ -1,0 +1,22 @@
+.voxy-beta { position: relative; display: inline-block; width: var(--voxy-size); height: var(--voxy-size); flex-shrink: 0; isolation: isolate; }
+.voxy-beta__avatar { position: absolute; width: 67%; height: 67%; left: 16.5%; top: 16.5%; object-fit: cover; border-radius: 50%; z-index: 0; }
+/* The original PNG is always rendered unchanged, above the avatar. */
+.voxy-beta__frame { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; z-index: 2; pointer-events: none; }
+.voxy-beta__aura { position: absolute; inset: 6%; border-radius: 50%; box-shadow: 0 0 calc(var(--voxy-size) * .085) rgba(170,60,255,.6), 0 0 calc(var(--voxy-size) * .16) rgba(132,25,225,.25); opacity: .5; pointer-events: none; z-index: 1; }
+.voxy-beta__gem { position: absolute; left: 48%; width: 4%; height: 5%; background: #dca3ff; border-radius: 50%; filter: blur(calc(var(--voxy-size) * .024)); opacity: .28; pointer-events: none; z-index: 3; }
+.voxy-beta__gem--top { top: 6%; }
+.voxy-beta__gem--bottom { bottom: 4%; width: 3%; height: 3%; left: 48.5%; }
+.voxy-beta__spark { position: absolute; width: 1.6%; aspect-ratio: 1; background: white; border-radius: 50%; box-shadow: 0 0 5px #fff, 0 0 11px #ab51ff; opacity: 0; pointer-events: none; z-index: 3; }
+.voxy-beta__spark--1 { top: 30%; left: 8%; }
+.voxy-beta__spark--2 { top: 54%; right: 7%; }
+.voxy-beta__spark--3 { bottom: 21%; left: 17%; }
+.voxy-beta--animated .voxy-beta__aura { animation: voxyAura 3.5s ease-in-out infinite; }
+.voxy-beta--animated .voxy-beta__gem { animation: voxyCrystal 2.8s ease-in-out infinite; }
+.voxy-beta--animated .voxy-beta__gem--bottom { animation-delay: -.9s; }
+.voxy-beta--animated .voxy-beta__spark { animation: voxyStar 5s ease-in-out infinite; }
+.voxy-beta--animated .voxy-beta__spark--2 { animation-delay: -1.7s; }
+.voxy-beta--animated .voxy-beta__spark--3 { animation-delay: -3.3s; }
+@keyframes voxyAura { 0%,100% { opacity:.28; transform:scale(.99); } 50% { opacity:.65; transform:scale(1.015); } }
+@keyframes voxyCrystal { 0%,100% { opacity:.13; transform:scale(.85); } 50% { opacity:.68; transform:scale(1.15); } }
+@keyframes voxyStar { 0%,74%,100% { opacity:0; transform:scale(.5); } 82% { opacity:.95; transform:scale(1.3); } 90% { opacity:0; transform:scale(.7); } }
+@media (prefers-reduced-motion: reduce) { .voxy-beta--animated * { animation: none !important; } }

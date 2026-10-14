@@ -263,7 +263,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 onClick={() => setActiveTab(SettingsTabEnum.ACCOUNT)}
               >
                 <User size={16} />
-                <span>{t('settings.myAccount', 'Minha Conta')}</span>
+                <span>{t('settings.myAccount')}</span>
               </button>
 
               <button
@@ -306,7 +306,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className={styles.sidebarFooter}>
               <div className={styles.dspIndicator}>
                 <span className={styles.dspDot} />
-                <span>DSP: 48kHz / 24bit</span>
+                <span>{t('settings.dspInfo')}</span>
               </div>
               <div className={styles.versionPill}>
                 <span>{t('settings.appVersion')}</span>

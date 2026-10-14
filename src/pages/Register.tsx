@@ -453,13 +453,13 @@ export default function Register() {
               <ShieldAlert size={36} />
             </div>
           </div>
-          <h1 className={styles.blockedTitle}>Acesso Restrito</h1>
+          <h1 className={styles.blockedTitle}>{t('auth.restrictedAccess')}</h1>
           <p className={styles.subtitle}>
-            De acordo com o Estatuto da Criança e do Adolescente (ECA Digital) e leis de proteção de dados (LGPD Art. 14), o cadastro é restrito para usuários a partir de 13 anos.
+            {t('auth.restrictedAccessDesc')}
           </p>
           <div className={styles.mt6}>
             <Link to={AppRoutes.LOGIN} className={`btn-primary ${styles.centerLink}`}>
-              Voltar ao Início
+              {t('common.backToHome')}
             </Link>
           </div>
         </div>
@@ -481,12 +481,12 @@ export default function Register() {
               <Mail size={26} />
             </div>
             <h1 className={styles.title}>
-              {isFromLogin ? 'Verifique seu e-mail para acessar' : 'Confirme seu e-mail'}
+              {isFromLogin ? t('auth.verifyEmailTitleLogin') : t('auth.verifyEmailTitle')}
             </h1>
             <p className={styles.subtitle}>
               {isFromLogin
-                ? 'Sua conta ainda não foi confirmada. Insira o código de 6 dígitos que enviamos para:'
-                : 'Insira o código de 6 dígitos que enviamos para:'} <br />
+                ? t('auth.accountNotConfirmedDesc')
+                : t('auth.enterVerificationCodeDesc')} <br />
               <strong>{targetEmail}</strong>
             </p>
           </div>
@@ -496,25 +496,25 @@ export default function Register() {
             <div className="wizard-stepper-bar">
               <div className="wizard-step-node completed">
                 <div className="wizard-step-bullet completed">✓</div>
-                <span className="wizard-step-label">Identidade</span>
+                <span className="wizard-step-label">{t('auth.stepIdentity')}</span>
               </div>
               <div className="wizard-step-connector active" />
 
               <div className="wizard-step-node completed">
                 <div className="wizard-step-bullet completed">✓</div>
-                <span className="wizard-step-label">Segurança</span>
+                <span className="wizard-step-label">{t('auth.stepSecurity')}</span>
               </div>
               <div className="wizard-step-connector active" />
 
               <div className="wizard-step-node completed">
                 <div className="wizard-step-bullet completed">✓</div>
-                <span className="wizard-step-label">Termos</span>
+                <span className="wizard-step-label">{t('auth.stepTerms')}</span>
               </div>
               <div className="wizard-step-connector active" />
 
               <div className="wizard-step-node active">
                 <div className="wizard-step-bullet active">4</div>
-                <span className="wizard-step-label">Código</span>
+                <span className="wizard-step-label">{t('auth.stepCode')}</span>
               </div>
             </div>
           )}
@@ -626,7 +626,7 @@ export default function Register() {
             <div className={`wizard-step-bullet ${step === 1 ? 'active' : step > 1 ? 'completed' : ''}`}>
               {step > 1 ? '✓' : '1'}
             </div>
-            <span className="wizard-step-label">Identidade</span>
+            <span className="wizard-step-label">{t('auth.stepIdentity')}</span>
           </div>
           <div className={`wizard-step-connector ${step > 1 ? 'active' : ''}`} />
 
@@ -634,7 +634,7 @@ export default function Register() {
             <div className={`wizard-step-bullet ${step === 2 ? 'active' : step > 2 ? 'completed' : ''}`}>
               {step > 2 ? '✓' : '2'}
             </div>
-            <span className="wizard-step-label">Segurança</span>
+            <span className="wizard-step-label">{t('auth.stepSecurity')}</span>
           </div>
           <div className={`wizard-step-connector ${step > 2 ? 'active' : ''}`} />
 
@@ -642,7 +642,7 @@ export default function Register() {
             <div className={`wizard-step-bullet ${step === 3 ? 'active' : step > 3 ? 'completed' : ''}`}>
               {step > 3 ? '✓' : '3'}
             </div>
-            <span className="wizard-step-label">Termos</span>
+            <span className="wizard-step-label">{t('auth.stepTerms')}</span>
           </div>
           <div className={`wizard-step-connector ${step > 3 ? 'active' : ''}`} />
 
@@ -650,7 +650,7 @@ export default function Register() {
             <div className="wizard-step-bullet">
               4
             </div>
-            <span className="wizard-step-label">Código</span>
+            <span className="wizard-step-label">{t('auth.stepCode')}</span>
           </div>
         </div>
 
@@ -722,7 +722,7 @@ export default function Register() {
               className={`btn-primary ${styles.step1SubmitBtn}`}
               disabled={!canGoToStep2}
             >
-              <span>Continuar para Senha</span>
+              <span>{t('auth.continueToPassword')}</span>
               <ArrowRight size={16} />
             </button>
           </form>
@@ -733,7 +733,7 @@ export default function Register() {
           <form onSubmit={handleNextToStep3} className={styles.stepForm}>
             <div className="input-group">
               <div className={styles.birthDateHeader}>
-                <label className={`input-label ${styles.birthDateLabel}`}>Data de Nascimento</label>
+                <label className={`input-label ${styles.birthDateLabel}`}>{t('auth.birthDate')}</label>
                 {declaredAge !== null && (
                   <span className={`${styles.ageClassificationBadge} ${
                     isChild ? styles.badgeChild : isTeen ? styles.badgeTeen : styles.badgeAdult
@@ -741,7 +741,7 @@ export default function Register() {
                     {isChild && <AlertCircle size={11} />}
                     {isTeen && <ShieldCheck size={11} />}
                     {isAdult && <UserCheck size={11} />}
-                    {isChild ? 'Menor de 13 anos' : isTeen ? `${declaredAge} anos (Conta Jovem)` : `${declaredAge} anos (Adulto)`}
+                    {isChild ? t('auth.under13Badge') : isTeen ? t('auth.yearsTeen', { age: declaredAge }) : t('auth.yearsAdult', { age: declaredAge })}
                   </span>
                 )}
               </div>
@@ -830,7 +830,7 @@ export default function Register() {
                 className={`btn-secondary ${styles.stepBackBtn}`}
               >
                 <ArrowLeft size={15} />
-                <span>Voltar</span>
+                <span>{t('auth.back')}</span>
               </button>
 
               <button
@@ -838,7 +838,7 @@ export default function Register() {
                 className={`btn-primary ${styles.stepForwardBtn}`}
                 disabled={!canGoToStep3}
               >
-                <span>Continuar para Termos</span>
+                <span>{t('auth.continueToTerms')}</span>
                 <ArrowRight size={16} />
               </button>
             </div>
@@ -850,14 +850,14 @@ export default function Register() {
           <form onSubmit={handleRegister} className={styles.stepForm}>
             <div className={styles.step3Header}>
               <span className={styles.step3Subtitle}>
-                Selecione cada item para prosseguir:
+                {t('auth.selectTermsSubtitle')}
               </span>
               <button
                 type="button"
                 onClick={handleSelectAllTerms}
                 className={styles.selectAllBtn}
               >
-                {acceptTerms && acceptPrivacy && acceptSafety ? 'Desmarcar todos' : 'Aceitar todos'}
+                {acceptTerms && acceptPrivacy && acceptSafety ? t('auth.uncheckAll') : t('auth.acceptAll')}
               </button>
             </div>
 
@@ -880,7 +880,7 @@ export default function Register() {
                   <div className="terms-card-title-row">
                     <span className="terms-card-title">
                       <FileText size={14} color="#34d399" />
-                      Termos de Serviço do Voxy
+                      {t('auth.termsOfServiceTitle')}
                     </span>
                     <button
                       type="button"
@@ -890,14 +890,14 @@ export default function Register() {
                         setViewingDoc('terms');
                         setDocViewMode('summary');
                       }}
-                      title="Ver resumo dos Termos de Serviço"
+                      title={t('auth.readSummary')}
                     >
                       <BookOpen size={11} />
-                      <span>Ler resumo</span>
+                      <span>{t('auth.readSummary')}</span>
                     </button>
                   </div>
                   <p className="terms-card-desc">
-                    Regras de convivência, uso responsável de salas de voz e proibição de condutas abusivas ou ilícitas.
+                    {t('auth.termsOfServiceDesc')}
                   </p>
                 </div>
               </div>
@@ -920,7 +920,7 @@ export default function Register() {
                   <div className="terms-card-title-row">
                     <span className="terms-card-title">
                       <Lock size={14} color="#60a5fa" />
-                      Privacidade & Diretrizes da ANPD
+                      {t('auth.privacyGuidelinesTitle')}
                     </span>
                     <button
                       type="button"
@@ -930,14 +930,14 @@ export default function Register() {
                         setViewingDoc('privacy');
                         setDocViewMode('summary');
                       }}
-                      title="Ver resumo da Política de Privacidade"
+                      title={t('auth.readSummary')}
                     >
                       <BookOpen size={11} />
-                      <span>Ler resumo</span>
+                      <span>{t('auth.readSummary')}</span>
                     </button>
                   </div>
                   <p className="terms-card-desc">
-                    Tratamento de dados mínimos (LGPD Art. 7 e 14). Suas chamadas de voz e streams são efêmeros e <strong>nunca gravados</strong>.
+                    {t('auth.privacyGuidelinesDesc')}
                   </p>
                 </div>
               </div>
@@ -960,7 +960,7 @@ export default function Register() {
                   <div className="terms-card-title-row">
                     <span className="terms-card-title">
                       <HeartHandshake size={14} color="#c084fc" />
-                      Proteção a Menores (ECA Digital)
+                      {t('auth.childProtectionTitle')}
                     </span>
                     <button
                       type="button"
@@ -970,14 +970,14 @@ export default function Register() {
                         setViewingDoc('safety');
                         setDocViewMode('summary');
                       }}
-                      title="Ver resumo das diretrizes de Proteção a Menores"
+                      title={t('auth.readSummary')}
                     >
                       <BookOpen size={11} />
-                      <span>Ler resumo</span>
+                      <span>{t('auth.readSummary')}</span>
                     </button>
                   </div>
                   <p className="terms-card-desc">
-                    Salvaguardas automáticas para adolescentes e bloqueio total de menores de 13 anos.
+                    {t('auth.childProtectionDesc')}
                   </p>
                 </div>
               </div>
@@ -993,7 +993,7 @@ export default function Register() {
                 className={`btn-secondary ${styles.stepBackBtn}`}
               >
                 <ArrowLeft size={15} />
-                <span>Voltar</span>
+                <span>{t('auth.back')}</span>
               </button>
 
               <button
@@ -1001,7 +1001,7 @@ export default function Register() {
                 className={`btn-primary ${styles.stepForwardBtn}`}
                 disabled={isLoading || !acceptTerms || !acceptPrivacy || !acceptSafety}
               >
-                {isLoading ? <span className="btn-spinner" /> : 'Criar Conta e Confirmar'}
+                {isLoading ? <span className="btn-spinner" /> : t('auth.createAccountConfirm')}
               </button>
             </div>
           </form>

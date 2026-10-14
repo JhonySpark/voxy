@@ -65,6 +65,7 @@ const ChannelActions: React.FC<ChannelActionsProps> = ({
   onDelete,
   children,
 }) => {
+  const { t } = useTranslation();
   if (!isOwner) return children;
 
   return (
@@ -73,14 +74,14 @@ const ChannelActions: React.FC<ChannelActionsProps> = ({
       <ContextMenu.Portal>
         <ContextMenu.Content className="context-menu-content" style={{ zIndex: 9999 }}>
           <ContextMenu.Item className="context-menu-item" onClick={() => onRename?.(channel)}>
-            <Pencil size={14} /> Editar nome
+            <Pencil size={14} /> {t('channel.editName')}
           </ContextMenu.Item>
           <ContextMenu.Item
             className="context-menu-item"
             style={{ color: '#f87171' }}
             onClick={() => onDelete?.(channel)}
           >
-            <Trash2 size={14} /> Excluir canal
+            <Trash2 size={14} /> {t('channel.deleteChannel')}
           </ContextMenu.Item>
         </ContextMenu.Content>
       </ContextMenu.Portal>
@@ -167,7 +168,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
         <div 
           className={styles.serverNameWrapper}
           onClick={() => setIsServerMenuOpen((prev) => !prev)}
-          title="Opções do Servidor"
+          title={t('server.serverOptions')}
         >
           <span className={styles.serverTitle}>{server.name}</span>
           <ChevronDown 
@@ -179,7 +180,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
         <div className={styles.headerActions}>
           <button
             className={styles.iconBtn}
-            title={canInvite ? t('server.inviteUsers', 'Convidar Pessoas') : t('server.noInvitePermission', 'Você não tem permissão para convidar')}
+            title={canInvite ? t('server.inviteUsers') : t('server.noInvitePermission')}
             onClick={onOpenInviteModal}
             disabled={!canInvite || server.isSuspended}
           >
@@ -206,7 +207,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                 }}
               >
                 <Settings size={15} />
-                <span>{t('server.settingsTitle', 'Configurações do Servidor')}</span>
+                <span>{t('server.settingsTitle')}</span>
               </button>
             )}
 
@@ -220,7 +221,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                 }}
               >
                 <UserPlus size={15} />
-                <span>{t('server.inviteUsers', 'Convidar Pessoas')}</span>
+                <span>{t('server.inviteUsers')}</span>
               </button>
             )}
 
@@ -234,7 +235,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                 }}
               >
                 <Plus size={15} />
-                <span>{t('channel.createChannel', 'Criar Canal')}</span>
+                <span>{t('channel.createChannel')}</span>
               </button>
             )}
 
@@ -249,7 +250,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
               }}
             >
               <ShieldAlert size={15} />
-              <span>Denunciar Servidor</span>
+              <span>{t('moderation.reportServer')}</span>
             </button>
 
             {!isOwner && onLeaveServer && (
@@ -262,7 +263,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                 }}
               >
                 <LogOut size={15} />
-                <span>{t('server.leaveServer', 'Sair do Servidor')}</span>
+                <span>{t('server.leaveServer')}</span>
               </button>
             )}
           </div>
@@ -283,10 +284,10 @@ export const ChannelList: React.FC<ChannelListProps> = ({
         >
           <ShieldAlert size={28} color="#ef4444" style={{ margin: '0 auto 0.5rem', display: 'block' }} />
           <h4 style={{ color: '#fff', fontSize: '0.9rem', marginBottom: '0.35rem', fontWeight: 700 }}>
-            Servidor Suspenso
+            {t('server.suspendedTitle')}
           </h4>
           <p style={{ fontSize: '0.75rem', lineHeight: 1.4, color: '#fca5a5', margin: 0 }}>
-            {server.suspendedReason || 'Este servidor foi suspenso pela moderação por violação das diretrizes de segurança ou regras da ANPD.'}
+            {server.suspendedReason || t('server.defaultSuspendedReason')}
           </p>
         </div>
       ) : (
@@ -351,8 +352,8 @@ export const ChannelList: React.FC<ChannelListProps> = ({
         {/* Voice Channels Section */}
         <div>
           <div className={styles.sectionTitleWrapper}>
-            <span className={styles.sectionTitle}>{t('channel.voiceChannels', 'VOICE CHANNELS')}</span>
-            <span className={styles.liveBadge}>{liveVoiceCount} LIVE</span>
+            <span className={styles.sectionTitle}>{t('channel.voiceChannels')}</span>
+            <span className={styles.liveBadge}>{liveVoiceCount} {t('common.live')}</span>
           </div>
           <div>
             {voiceChannels.map((channel) => {
@@ -404,7 +405,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                               }
                             }}
                             style={{ cursor: 'pointer' }}
-                            title={`Ver perfil de ${displayName}`}
+                            title={t('user.viewProfileOf', { name: displayName })}
                           >
                             <div className={styles.avatarWrapper}>
                               <div
@@ -439,7 +440,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                             </span>
                             <div
                               className={styles.voiceStatusIcons}
-                              title={isMutedByMe ? 'Silenciado por você' : p.isMuted ? 'Microfone desligado' : isSpeaking ? 'Falando' : 'Microfone ativo'}
+                              title={isMutedByMe ? t('voice.mutedByYou') : p.isMuted ? t('voice.micOff') : isSpeaking ? t('voice.speaking') : t('voice.micActive')}
                             >
                               {p.isMuted ? (
                                 <MicOff size={14} color="var(--text-muted)" />
@@ -471,7 +472,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                                   className="context-menu-item"
                                   onClick={() => onViewUserProfile?.(p.userId)}
                                 >
-                                  {t('common.profile', 'Perfil')}
+                                  {t('common.profile')}
                                 </ContextMenu.Item>
                                 <ContextMenu.Item
                                   className="context-menu-item"
@@ -481,11 +482,11 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                                     paddingBottom: '8px',
                                   }}
                                 >
-                                  {t('chat.sendMessage', 'Mensagem')}
+                                  {t('chat.sendMessage')}
                                 </ContextMenu.Item>
 
                                 <div className="context-menu-label">
-                                  {t('voice.userVolume', 'Volume do usuário')} ({vol}%)
+                                  {t('voice.userVolume')} ({vol}%)
                                 </div>
                                 <div className="context-menu-slider-container">
                                   <Slider.Root
@@ -510,7 +511,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                                     alignItems: 'center',
                                   }}
                                 >
-                                  {vol <= 0 ? 'Ativar som para mim' : 'Silenciar para mim'}{' '}
+                                  {vol <= 0 ? t('voice.unmuteForMe') : t('voice.muteForMe')}{' '}
                                   <Switch.Root
                                     className="switch-root"
                                     checked={vol <= 0}
@@ -551,7 +552,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                         {channel.name}
                       </span>
                     </div>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Empty</span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{t('channel.empty')}</span>
                   </div>
                 </ChannelActions>
               );

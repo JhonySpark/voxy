@@ -84,7 +84,7 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({
                   e.stopPropagation();
                   onOpenBetaModal();
                 }}
-                title="Informações do Voxy Beta (50 Vagas)"
+                title={t('server.betaBadgeTitle')}
               >
                 BETA
               </span>
@@ -125,7 +125,7 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({
                     onClick={() => onSelectServer(server)}
                     title={
                       server.isSuspended
-                        ? `[SUSPENSO] ${server.name} - Motivo: ${server.suspendedReason || 'Violação das regras'}`
+                        ? `[SUSPENSO] ${server.name} - Motivo: ${server.suspendedReason || t('server.suspendedReasonDefault')}`
                         : server.name
                     }
                   >
@@ -151,7 +151,7 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({
                     {server.isSuspended && (
                       <div
                         className={styles.badgeSuspended}
-                        title="Servidor Suspenso pela Moderação"
+                        title={t('server.suspendedBadge')}
                       >
                         !
                       </div>
@@ -159,7 +159,7 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({
                     {server.is18Plus && (
                       <div
                         className={styles.badge18Plus}
-                        title="Servidor +18"
+                        title={t('server.badge18Plus')}
                       >
                         18+
                       </div>
@@ -177,7 +177,7 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({
                       onClick={() => setServerToReport(server)}
                     >
                       <ShieldAlert size={14} color="#f87171" />
-                      <span>Denunciar Servidor</span>
+                      <span>{t('server.reportServer')}</span>
                     </ContextMenu.Item>
                     {server.ownerId !== myId && onLeaveServer && (
                       <ContextMenu.Item
@@ -185,7 +185,7 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({
                         onClick={() => onLeaveServer(server)}
                       >
                         <LogOut size={14} color="#f87171" />
-                        <span>{t('server.leaveServer', 'Sair do Servidor')}</span>
+                        <span>{t('server.leaveServer')}</span>
                       </ContextMenu.Item>
                     )}
                   </ContextMenu.Content>

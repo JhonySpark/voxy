@@ -35,11 +35,11 @@ export const AppearanceTab: React.FC = () => {
         <label className={styles.label}>{t('settings.theme')}</label>
         <div className={styles.themeCard}>
           <div>
-            <div className={styles.themeTitle}>Obsidian Mint</div>
-            <div className={styles.themeDesc}>Dark Glassmorphism & Luminous Emerald</div>
+            <div className={styles.themeTitle}>{t('settings.themeObsidianMint')}</div>
+            <div className={styles.themeDesc}>{t('settings.themeObsidianMintDesc')}</div>
           </div>
           <Badge variant="brand" size="sm">
-            ATIVO
+            {t('common.active')}
           </Badge>
         </div>
       </div>

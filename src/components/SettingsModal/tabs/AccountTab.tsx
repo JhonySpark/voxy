@@ -78,7 +78,7 @@ export const AccountTab: React.FC<AccountTabProps> = ({
         if (updatedUser.ageClassification === 'CHILD') {
           setAgeFeedback({
             type: 'error',
-            message: 'Classificação detectada como Menor de Idade (<13 anos). O uso da plataforma é restrito.',
+            message: t('user.ageRestrictedChild'),
           });
           setTimeout(() => {
             onClose();
@@ -90,31 +90,34 @@ export const AccountTab: React.FC<AccountTabProps> = ({
         const oldClass = currentUser?.ageClassification || 'UNKNOWN';
         const newClass = updatedUser.ageClassification;
 
+        const classificationLabel =
+          newClass === 'ADULT'
+            ? t('user.agePillAdult')
+            : newClass === 'TEEN'
+            ? t('user.agePillTeen')
+            : newClass;
+
         if (oldClass !== newClass) {
           setAgeFeedback({
             type: 'success',
-            message: `Faixa etária atualizada com sucesso para ${
-              newClass === 'ADULT' ? 'Adulto (+18)' : newClass === 'TEEN' ? 'Jovem (13-17 anos)' : newClass
-            }! Suas permissões foram atualizadas.`,
+            message: t('user.ageUpdatedSuccess', { classification: classificationLabel }),
           });
         } else {
           setAgeFeedback({
             type: 'info',
-            message: `Sua faixa etária já está sincronizada (${
-              newClass === 'ADULT' ? 'Adulto +18' : newClass === 'TEEN' ? 'Jovem 13-17 anos' : 'Padrão'
-            }). Nenhuma alteração foi necessária.`,
+            message: t('user.ageAlreadySynced', { classification: classificationLabel }),
           });
         }
       } else {
         setAgeFeedback({
           type: 'error',
-          message: 'Não foi possível revalidar a idade no momento.',
+          message: t('user.ageRevalidateError'),
         });
       }
     } catch (err: any) {
       setAgeFeedback({
         type: 'error',
-        message: err.response?.data?.message || 'Falha ao revalidar sinal de idade.',
+        message: err.response?.data?.message || t('user.ageRevalidateError'),
       });
     } finally {
       setIsRevalidatingAge(false);
@@ -126,17 +129,17 @@ export const AccountTab: React.FC<AccountTabProps> = ({
     setPasswordFeedback(null);
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setPasswordFeedback({ type: 'error', message: 'Preencha todos os campos.' });
+      setPasswordFeedback({ type: 'error', message: t('user.fillAllFields') });
       return;
     }
 
     if (newPassword.length < 6) {
-      setPasswordFeedback({ type: 'error', message: 'A nova senha deve ter no mínimo 6 caracteres.' });
+      setPasswordFeedback({ type: 'error', message: t('user.newPasswordTooShort') });
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setPasswordFeedback({ type: 'error', message: 'As senhas não coincidem.' });
+      setPasswordFeedback({ type: 'error', message: t('user.passwordsDoNotMatch') });
       return;
     }
 
@@ -146,14 +149,14 @@ export const AccountTab: React.FC<AccountTabProps> = ({
         currentPassword,
         newPassword,
       });
-      setPasswordFeedback({ type: 'success', message: 'Senha alterada com sucesso!' });
+      setPasswordFeedback({ type: 'success', message: t('user.passwordChangedSuccess') });
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err: any) {
       setPasswordFeedback({
         type: 'error',
-        message: err.response?.data?.message || 'Erro ao alterar senha. Verifique sua senha atual.',
+        message: err.response?.data?.message || t('user.passwordChangeError'),
       });
     } finally {
       setIsChangingPassword(false);
@@ -162,15 +165,15 @@ export const AccountTab: React.FC<AccountTabProps> = ({
 
   const getAgePill = () => {
     if (currentUser?.ageClassification === 'ADULT') {
-      return <span className={`${styles.agePill} ${styles.agePillAdult}`}>Adulto (+18)</span>;
+      return <span className={`${styles.agePill} ${styles.agePillAdult}`}>{t('user.agePillAdult')}</span>;
     }
     if (currentUser?.ageClassification === 'TEEN') {
-      return <span className={`${styles.agePill} ${styles.agePillTeen}`}>Jovem (13-17 anos)</span>;
+      return <span className={`${styles.agePill} ${styles.agePillTeen}`}>{t('user.agePillTeen')}</span>;
     }
     if (currentUser?.ageClassification === 'CHILD') {
-      return <span className={`${styles.agePill} ${styles.agePillChild}`}>Menor (&lt;13 anos)</span>;
+      return <span className={`${styles.agePill} ${styles.agePillChild}`}>{t('user.agePillChild')}</span>;
     }
-    return <span className={`${styles.agePill} ${styles.agePillUnknown}`}>Padrão / Desconhecido</span>;
+    return <span className={`${styles.agePill} ${styles.agePillUnknown}`}>{t('user.agePillUnknown')}</span>;
   };
 
   return (
@@ -209,10 +212,10 @@ export const AccountTab: React.FC<AccountTabProps> = ({
             </div>
             <div className={styles.profileInfo}>
               <div className={styles.usernameRow}>
-                <span className={styles.username}>{currentUser?.displayName || currentUser?.username || 'Usuário'}</span>
+                <span className={styles.username}>{currentUser?.displayName || currentUser?.username || t('user.defaultUser')}</span>
                 {currentUser?.role === 'ADMIN' && (
                   <Badge variant="brand" size="sm">
-                    ADMIN
+                    {t('common.owner')}
                   </Badge>
                 )}
               </div>
@@ -226,7 +229,7 @@ export const AccountTab: React.FC<AccountTabProps> = ({
               onClick={onOpenEditProfile}
             >
               <Sparkles size={14} />
-              <span>{t('user.editProfile', 'Editar Perfil')}</span>
+              <span>{t('user.editProfile')}</span>
             </button>
           )}
         </div>
@@ -234,18 +237,18 @@ export const AccountTab: React.FC<AccountTabProps> = ({
 
       {/* 1. Informações da Conta */}
       <div className={styles.section}>
-        <span className={styles.sectionTitle}>{t('user.accountDetails', 'Dados da Conta')}</span>
+        <span className={styles.sectionTitle}>{t('user.accountDetails')}</span>
         <div className={styles.infoBox}>
           <div className={styles.infoRow}>
-            <span className={styles.infoLabel}>{t('user.displayName', 'Nome de exibição')}</span>
-            <span className={styles.infoValue}>{currentUser?.displayName || 'Não definido'}</span>
+            <span className={styles.infoLabel}>{t('user.displayName')}</span>
+            <span className={styles.infoValue}>{currentUser?.displayName || t('user.notDefined')}</span>
           </div>
           <div className={styles.infoRow}>
-            <span className={styles.infoLabel}>{t('user.username', 'Nome de usuário')}</span>
+            <span className={styles.infoLabel}>{t('user.username')}</span>
             <span className={styles.infoValue}>@{currentUser?.username || '-'}</span>
           </div>
           <div className={styles.infoRow}>
-            <span className={styles.infoLabel}>{t('user.email', 'E-mail')}</span>
+            <span className={styles.infoLabel}>{t('user.email')}</span>
             <span className={styles.infoValue}>{currentUser?.email || '••••••••@••••.com'}</span>
           </div>
         </div>
@@ -255,46 +258,46 @@ export const AccountTab: React.FC<AccountTabProps> = ({
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
           <span className={styles.sectionTitle}>
-            {t('user.ageSignalsTitle', 'Classificação Etária & Proteção Legal')}
+            {t('user.ageSignalsTitle')}
           </span>
           {getAgePill()}
         </div>
 
         <div className={styles.infoBox}>
           <div className={styles.infoRow}>
-            <span className={styles.infoLabel}>Permissões de Transmissão</span>
+            <span className={styles.infoLabel}>{t('user.streamPermissions')}</span>
             <span className={styles.infoValue}>
               {currentUser?.ageClassification === 'ADULT'
-                ? 'Transmissão de Jogos e Compartilhamento de Telas Gerais'
+                ? t('user.streamPermAdult')
                 : currentUser?.ageClassification === 'TEEN'
-                ? 'Apenas Transmissão de Jogos Detectados (Telas e Janelas Gerais Desativadas)'
-                : 'Acesso Restrito'}
+                ? t('user.streamPermTeen')
+                : t('user.streamPermRestricted')}
             </span>
           </div>
 
           <div className={styles.infoRow}>
-            <span className={styles.infoLabel}>Servidores e Streams +18</span>
+            <span className={styles.infoLabel}>{t('user.adultServers')}</span>
             <span className={`${styles.infoValue} ${currentUser?.ageClassification === 'ADULT' ? styles.valueAllowed : styles.valueBlocked}`}>
-              {currentUser?.ageClassification === 'ADULT' ? 'Permitido (+18)' : 'Bloqueado (Restrito a Maiores)'}
+              {currentUser?.ageClassification === 'ADULT' ? t('user.allowedAdult') : t('user.blockedAdult')}
             </span>
           </div>
 
           <div className={styles.infoRow}>
-            <span className={styles.infoLabel}>Origem do Sinal</span>
+            <span className={styles.infoLabel}>{t('user.signalOrigin')}</span>
             <span className={styles.infoValue}>
               {currentUser?.ageSignalSource === 'WINDOWS_OS'
-                ? 'Windows 11 OS (WinRT Age Signal)'
+                ? t('user.signalWinRT')
                 : currentUser?.ageSignalSource === 'DECLARED'
-                ? 'Data de Nascimento Declarada'
-                : 'Padrão / Nenhum'}
+                ? t('user.signalDeclared')
+                : t('user.signalNone')}
             </span>
           </div>
 
           {currentUser?.birthDate && (
             <div className={styles.infoRow}>
-              <span className={styles.infoLabel}>Data de Nascimento</span>
+              <span className={styles.infoLabel}>{t('user.birthDate')}</span>
               <span className={styles.infoValue}>
-                {new Date(currentUser.birthDate).toLocaleDateString('pt-BR')}
+                {new Date(currentUser.birthDate).toLocaleDateString()}
               </span>
             </div>
           )}
@@ -317,7 +320,7 @@ export const AccountTab: React.FC<AccountTabProps> = ({
 
         <div className={styles.revalidateRow}>
           <span className={styles.revalidateText}>
-            Completou 18 anos ou atualizou sua conta Microsoft? Revalide os sinais.
+            {t('user.revalidateHint')}
           </span>
           <button
             type="button"
@@ -326,7 +329,7 @@ export const AccountTab: React.FC<AccountTabProps> = ({
             disabled={isRevalidatingAge}
           >
             <RefreshCw size={14} className={isRevalidatingAge ? styles.spinAnimation : ''} />
-            <span>{isRevalidatingAge ? 'Revalidando...' : 'Revalidar idade'}</span>
+            <span>{isRevalidatingAge ? t('user.revalidating') : t('user.revalidateBtn')}</span>
           </button>
         </div>
       </div>
@@ -334,15 +337,15 @@ export const AccountTab: React.FC<AccountTabProps> = ({
       {/* 3. Segurança / Alterar Senha */}
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
-          <span className={styles.sectionTitle}>{t('user.securityTitle', 'Segurança e Senha')}</span>
-          <span className={styles.passwordTip}>Mínimo de 6 caracteres</span>
+          <span className={styles.sectionTitle}>{t('user.securityTitle')}</span>
+          <span className={styles.passwordTip}>{t('user.passwordMinLength')}</span>
         </div>
 
         <form onSubmit={handleChangePassword} className={styles.passwordForm}>
           <div className={styles.formGrid}>
             <Input
               type="password"
-              label={t('user.currentPassword', 'Senha atual')}
+              label={t('user.currentPassword')}
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
               placeholder="••••••••"
@@ -351,7 +354,7 @@ export const AccountTab: React.FC<AccountTabProps> = ({
             />
             <Input
               type="password"
-              label={t('user.newPassword', 'Nova senha')}
+              label={t('user.newPassword')}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="••••••••"
@@ -360,7 +363,7 @@ export const AccountTab: React.FC<AccountTabProps> = ({
             />
             <Input
               type="password"
-              label={t('user.confirmPassword', 'Confirmar nova senha')}
+              label={t('user.confirmPassword')}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••"
@@ -387,7 +390,7 @@ export const AccountTab: React.FC<AccountTabProps> = ({
               disabled={isChangingPassword}
             >
               <KeyRound size={14} />
-              <span>{isChangingPassword ? 'Atualizando...' : t('user.updatePassword', 'Atualizar Senha')}</span>
+              <span>{isChangingPassword ? t('user.updating') : t('user.updatePassword')}</span>
             </button>
           </div>
         </form>

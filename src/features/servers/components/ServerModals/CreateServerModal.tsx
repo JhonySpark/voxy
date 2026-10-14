@@ -83,12 +83,12 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      toast.error(t('user.invalidImageType', 'Por favor, selecione uma imagem válida (PNG, JPG, WebP).'));
+      toast.error(t('user.invalidImageType'));
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('O ícone não pode exceder 5MB.');
+      toast.error(t('server.iconTooLarge'));
       return;
     }
 
@@ -139,7 +139,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
       if (text) {
         const cleaned = extractInviteCode(text);
         setInviteCode(cleaned);
-        toast.info('Código colado com sucesso!');
+        toast.info(t('server.codePastedSuccess'));
       }
     } catch {
       // Ignora erro de permissão do navegador
@@ -160,7 +160,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
     e.preventDefault();
     const trimmed = serverName.trim();
     if (!trimmed) {
-      toast.warning(t('server.serverNamePlaceholder', 'Dê um nome ao seu servidor'));
+      toast.warning(t('server.serverNamePlaceholder'));
       return;
     }
 
@@ -183,7 +183,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
       onClose();
       onServerCreated();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || t('server.invalidInvite', 'Erro ao criar servidor.'));
+      toast.error(err.response?.data?.message || t('server.invalidInvite'));
     } finally {
       setIsCreating(false);
     }
@@ -193,18 +193,18 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
     e.preventDefault();
     const cleaned = extractInviteCode(inviteCode);
     if (!cleaned) {
-      toast.warning(t('server.joinServerPlaceholder', 'Insira um código de convite válido'));
+      toast.warning(t('server.joinServerPlaceholder'));
       return;
     }
 
     setIsJoining(true);
     try {
       await httpClient.post(ApiRoutes.SERVERS_JOIN, { inviteCode: cleaned });
-      toast.success(t('server.joinedSuccess', 'Você entrou no servidor com sucesso!'));
+      toast.success(t('server.joinedSuccess'));
       onClose();
       onServerCreated();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || t('server.invalidInvite', 'Código de convite inválido ou expirado.'));
+      toast.error(err.response?.data?.message || t('server.invalidInvite'));
     } finally {
       setIsJoining(false);
     }
@@ -221,7 +221,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
           className={styles.closeButton}
           onClick={onClose}
           disabled={isCreating || isJoining}
-          title={t('common.close', 'Fechar')}
+          title={t('common.close')}
         >
           <X size={18} />
         </button>
@@ -235,7 +235,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
             disabled={isCreating || isJoining}
           >
             <Plus size={16} />
-            <span>{t('server.createServer', 'Criar Servidor')}</span>
+            <span>{t('server.createServer')}</span>
           </button>
           <button
             type="button"
@@ -244,7 +244,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
             disabled={isCreating || isJoining}
           >
             <Compass size={16} />
-            <span>{t('server.joinServer', 'Entrar em um')}</span>
+            <span>{t('server.joinServer')}</span>
           </button>
         </div>
 
@@ -252,12 +252,9 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
         {activeTab === 'CREATE' && (
           <form onSubmit={handleCreate} className={styles.contentArea}>
             <div className={styles.headerSection}>
-              <h2 className={styles.title}>{t('server.createServerTitle', 'Crie o seu espaço')}</h2>
+              <h2 className={styles.title}>{t('server.createServerTitle')}</h2>
               <p className={styles.subtitle}>
-                {t(
-                  'server.createServerSubtitle',
-                  'Seu servidor é onde você e seus amigos se reúnem em chamadas de voz e texto de alta fidelidade.'
-                )}
+                {t('server.createServerSubtitle')}
               </p>
             </div>
 
@@ -276,7 +273,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
-                title={t('server.uploadIcon', 'Escolher ícone do servidor')}
+                title={t('server.uploadIcon')}
               >
                 <div className={styles.avatarRing}>
                   {iconPreview ? (
@@ -284,7 +281,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
                       <img src={iconPreview} alt="Ícone preview" className={styles.avatarImage} />
                       <div className={styles.avatarHoverOverlay}>
                         <Camera size={20} />
-                        <span>Trocar</span>
+                        <span>{t('server.changePhoto')}</span>
                       </div>
                     </>
                   ) : (
@@ -304,11 +301,11 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
                   className={styles.removeIconBtn}
                   onClick={handleRemoveIcon}
                 >
-                  Remover foto
+                  {t('server.removePhoto')}
                 </button>
               ) : (
                 <span className={styles.uploadHint}>
-                  {t('server.iconHint', 'Ícone opcional (PNG, JPG até 5MB)')}
+                  {t('server.iconHint')}
                 </span>
               )}
             </div>
@@ -316,7 +313,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
             {/* Nome do Servidor */}
             <div className={styles.formGroup}>
               <div className={styles.labelWrapper}>
-                <label className={styles.label}>{t('server.serverName', 'NOME DO SERVIDOR')}</label>
+                <label className={styles.label}>{t('server.serverName')}</label>
                 <span className={styles.charCount}>{serverName.length}/50</span>
               </div>
               <div className={styles.inputContainer}>
@@ -326,7 +323,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
                   value={serverName}
                   maxLength={50}
                   onChange={(e) => setServerName(e.target.value)}
-                  placeholder={t('server.serverNamePlaceholder', 'ex: Servidor dos Amigos, Clube Gamer...')}
+                  placeholder={t('server.serverNamePlaceholder')}
                   autoFocus
                   disabled={isCreating}
                 />
@@ -343,9 +340,9 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
                   18+
                 </span>
                 <div>
-                  <div className={styles.safetyTitle}>Restrito para maiores (+18)</div>
+                  <div className={styles.safetyTitle}>{t('server.restricted18')}</div>
                   <div className={styles.safetySubtitle}>
-                    Exige confirmação de maioridade e segue as diretrizes da ANPD/ECA.
+                    {t('server.restricted18Desc')}
                   </div>
                 </div>
               </div>
@@ -362,7 +359,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
                 onClick={onClose}
                 disabled={isCreating}
               >
-                {t('common.cancel', 'Cancelar')}
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
@@ -374,7 +371,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
                 ) : (
                   <>
                     <Sparkles size={16} />
-                    <span>{t('server.createServerButton', 'Criar Servidor')}</span>
+                    <span>{t('server.createServerButton')}</span>
                   </>
                 )}
               </button>
@@ -389,26 +386,23 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
               <div className={styles.heroIconBadge}>
                 <Compass size={24} />
               </div>
-              <h2 className={styles.title}>{t('server.joinServerTitle', 'Junte-se a uma comunidade')}</h2>
+              <h2 className={styles.title}>{t('server.joinServerTitle')}</h2>
               <p className={styles.subtitle}>
-                {t(
-                  'server.joinServerSubtitle',
-                  'Informe o código de convite ou link compartilhado por um amigo para entrar no servidor.'
-                )}
+                {t('server.joinServerSubtitle')}
               </p>
             </div>
 
             {/* Input do Código de Convite */}
             <div className={styles.formGroup}>
               <label className={styles.label}>
-                {t('server.inviteCodeLabel', 'CÓDIGO DE CONVITE OU LINK')}
+                {t('server.inviteCodeLabel')}
               </label>
               <div className={styles.inputContainer}>
                 <Link2 size={16} className={styles.inputIcon} />
                 <input
                   type="text"
                   className={`${styles.textInput} ${styles.inputWithIcon}`}
-                  placeholder={t('server.joinServerPlaceholder', 'ex: 7X8K2M ou voxy.gg/7X8K2M')}
+                  placeholder={t('server.joinServerPlaceholder')}
                   value={inviteCode}
                   onChange={(e) => setInviteCode(e.target.value)}
                   autoFocus
@@ -418,10 +412,10 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
                   type="button"
                   className={styles.pasteButton}
                   onClick={handlePasteInviteCode}
-                  title="Colar da área de transferência"
+                  title={t('common.pasteFromClipboard')}
                 >
                   <Clipboard size={13} />
-                  <span>Colar</span>
+                  <span>{t('common.paste')}</span>
                 </button>
               </div>
             </div>
@@ -430,15 +424,15 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
             <div className={styles.infoCard}>
               <div className={styles.infoItem}>
                 <CheckCircle2 size={15} />
-                <span>Entrada instantânea sem aprovação pendente</span>
+                <span>{t('server.joinBenefitInstant')}</span>
               </div>
               <div className={styles.infoItem}>
                 <Volume2 size={15} />
-                <span>Salas de voz ilimitadas com baixa latência</span>
+                <span>{t('server.joinBenefitVoice')}</span>
               </div>
               <div className={styles.infoItem}>
                 <Users size={15} />
-                <span>Canais de texto e compartilhamento integrados</span>
+                <span>{t('server.joinBenefitText')}</span>
               </div>
             </div>
 
@@ -450,7 +444,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
                 onClick={onClose}
                 disabled={isJoining}
               >
-                {t('common.cancel', 'Cancelar')}
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
@@ -461,7 +455,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
                   <span className={styles.spinner} />
                 ) : (
                   <>
-                    <span>{t('server.joinServerButton', 'Entrar no Servidor')}</span>
+                    <span>{t('server.joinServerButton')}</span>
                     <ArrowRight size={16} />
                   </>
                 )}

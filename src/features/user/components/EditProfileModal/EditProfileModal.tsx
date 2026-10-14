@@ -74,7 +74,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      toast.error(t('user.invalidImageType', 'Por favor, selecione uma imagem válida.'));
+      toast.error(t('user.invalidImageType'));
       return;
     }
 
@@ -95,9 +95,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         userId: user.id,
         avatarUrl: url,
       });
-      toast.success(t('user.avatarUpdated', 'Avatar atualizado com sucesso!'));
+      toast.success(t('user.avatarUpdated'));
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Erro ao enviar avatar.');
+      toast.error(err.response?.data?.message || t('errors.avatarUploadFailed'));
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -108,7 +108,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      toast.error(t('user.invalidImageType', 'Por favor, selecione uma imagem válida.'));
+      toast.error(t('user.invalidImageType'));
       return;
     }
 
@@ -129,9 +129,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         userId: user.id,
         bannerUrl: url,
       });
-      toast.success(t('user.bannerUpdated', 'Banner atualizado com sucesso!'));
+      toast.success(t('user.bannerUpdated'));
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Erro ao enviar banner.');
+      toast.error(err.response?.data?.message || t('errors.bannerUploadFailed'));
     } finally {
       setIsUploadingBanner(false);
     }
@@ -160,10 +160,10 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         bannerColor: res.bannerColor,
       });
 
-      toast.success(t('user.profileSaved', 'Perfil salvo com sucesso!'));
+      toast.success(t('user.profileSaved'));
       onClose();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Erro ao salvar perfil.');
+      toast.error(err.response?.data?.message || t('errors.profileUpdateFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -176,7 +176,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         <div className={styles.modalHeader}>
           <div className={styles.modalHeaderTitle}>
             <Sparkles size={20} className={styles.headerIcon} />
-            <h2>{t('user.editProfileTitle', 'Editar Perfil')}</h2>
+            <h2>{t('user.editProfileTitle')}</h2>
           </div>
           <button type="button" className={styles.closeBtn} onClick={onClose}>
             <X size={20} />
@@ -202,14 +202,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 className={styles.changeBannerBtn}
                 onClick={() => bannerInputRef.current?.click()}
                 disabled={isUploadingBanner}
-                title="Trocar imagem do banner"
+                title={t('user.changeBannerTitle')}
               >
                 {isUploadingBanner ? (
                   <Loader2 size={16} className="animate-spin" />
                 ) : (
                   <Camera size={16} />
                 )}
-                <span>{t('user.changeBanner', 'Trocar banner')}</span>
+                <span>{t('user.changeBanner')}</span>
               </button>
               <input
                 type="file"
@@ -240,7 +240,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   className={styles.changeAvatarOverlay}
                   onClick={() => avatarInputRef.current?.click()}
                   disabled={isUploadingAvatar}
-                  title="Trocar avatar"
+                  title={t('user.changeAvatarTitle')}
                 >
                   {isUploadingAvatar ? (
                     <Loader2 size={18} className="animate-spin" />
@@ -270,7 +270,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
           <div className={styles.fieldGroup}>
             <label className={styles.label}>
               <ImageIcon size={14} />
-              <span>{t('user.bannerColor', 'Cor do Banner')}</span>
+              <span>{t('user.bannerColor')}</span>
             </label>
             <div className={styles.colorPalette}>
               {PRESET_COLORS.map((c) => (
@@ -290,7 +290,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
           {/* Nome de Exibição */}
           <div className={styles.fieldGroup}>
             <label className={styles.label}>
-              {t('user.displayNameLabel', 'Nome de Exibição')}
+              {t('user.displayNameLabel')}
             </label>
             <input
               type="text"
@@ -305,11 +305,11 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
           {/* Pensamento / Bio */}
           <div className={styles.fieldGroup}>
             <label className={styles.label}>
-              {t('user.bioLabel', 'Pensamento / Sobre mim')}
+              {t('user.bioLabel')}
             </label>
             <textarea
               className={styles.textarea}
-              placeholder={t('user.bioPlaceholder', 'Escreva algo sobre você ou um pensamento rápido...')}
+              placeholder={t('user.bioPlaceholder')}
               value={bio}
               maxLength={160}
               rows={3}
@@ -325,7 +325,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               onClick={onClose}
               disabled={isSaving}
             >
-              {t('common.cancel', 'Cancelar')}
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -335,10 +335,10 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               {isSaving ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
-                  <span>{t('common.saving', 'Salvando...')}</span>
+                  <span>{t('common.saving')}</span>
                 </>
               ) : (
-                <span>{t('common.saveChanges', 'Salvar Alterações')}</span>
+                <span>{t('common.save')}</span>
               )}
             </button>
           </div>

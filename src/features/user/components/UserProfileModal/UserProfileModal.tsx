@@ -185,7 +185,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             type="button"
             className={styles.closeButton}
             onClick={onClose}
-            title={t('common.close', 'Fechar')}
+            title={t('common.close')}
           >
             <X size={18} />
           </button>
@@ -220,8 +220,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
             {/* Badges de Identificação */}
             <div className={styles.badgeRow}>
-              {isSelf && <span className={`${styles.badge} ${styles.badgeSelf}`}>Você</span>}
-              {!isSelf && isFriend && <span className={`${styles.badge} ${styles.badgeFriend}`}>Amigo</span>}
+              {isSelf && <span className={`${styles.badge} ${styles.badgeSelf}`}>{t('user.badgeYou')}</span>}
+              {!isSelf && isFriend && <span className={`${styles.badge} ${styles.badgeFriend}`}>{t('user.badgeFriend')}</span>}
             </div>
           </div>
 
@@ -239,23 +239,23 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
           {/* Seção Sobre Mim / Biografia */}
           <div className={styles.cardSection}>
-            <span className={styles.sectionTitle}>{t('user.aboutMe', 'Sobre Mim')}</span>
+            <span className={styles.sectionTitle}>{t('user.aboutMe')}</span>
             {loading && !profile?.bio ? (
-              <span className={styles.bioEmpty}>{t('common.loading', 'Carregando...')}</span>
+              <span className={styles.bioEmpty}>{t('common.loading')}</span>
             ) : profile?.bio ? (
               <p className={styles.bioText}>{profile.bio}</p>
             ) : (
-              <span className={styles.bioEmpty}>{t('user.noBio', 'Nenhuma biografia informada.')}</span>
+              <span className={styles.bioEmpty}>{t('user.noBio')}</span>
             )}
 
             <div className={styles.metaRow}>
               <Calendar size={14} />
               <span>
                 {memberSince
-                  ? `${t('user.memberSince', 'Membro desde')} ${memberSince}`
+                  ? `${t('user.memberSince')} ${memberSince}`
                   : loading
-                  ? `${t('user.memberSince', 'Membro desde')} ...`
-                  : `${t('user.memberSince', 'Membro desde')} recentemente`}
+                  ? `${t('user.memberSince')} ...`
+                  : `${t('user.memberSince')} ${t('user.memberRecently')}`}
               </span>
             </div>
           </div>
@@ -272,7 +272,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 }}
               >
                 <Pencil size={18} />
-                <span>{t('user.editProfile', 'Editar Perfil')}</span>
+                <span>{t('user.editProfile')}</span>
               </button>
             ) : relationship?.hasBlocked ? (
               <div className={styles.moderationActionsRow}>
@@ -287,16 +287,16 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   }}
                 >
                   <ShieldCheck size={18} color="#10b981" />
-                  <span>{t('friends.unblockUser', 'Desbloquear')}</span>
+                  <span>{t('friends.unblockUser')}</span>
                 </button>
                 <button
                   type="button"
                   className={styles.reportActionBtn}
                   onClick={() => setIsReportOpen(true)}
-                  title={t('moderation.reportUser', 'Denunciar Usuário')}
+                  title={t('moderation.reportUser')}
                 >
                   <ShieldAlert size={18} />
-                  <span>{t('moderation.reportUser', 'Denunciar Usuário')}</span>
+                  <span>{t('moderation.reportUser')}</span>
                 </button>
               </div>
             ) : (
@@ -312,7 +312,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       }}
                     >
                       <MessageSquare size={18} />
-                      <span>{t('chat.sendMessage', 'Enviar Mensagem')}</span>
+                      <span>{t('chat.sendMessage')}</span>
                     </button>
                   )}
 
@@ -323,9 +323,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                         className={styles.secondaryActionBtn}
                         onClick={async () => {
                           const ok = await confirm({
-                            title: t('friends.removeFriend', 'Desfazer Amizade'),
+                            title: t('friends.removeFriend'),
                             message: t('friends.removeFriendConfirm', { name: displayName }),
-                            confirmText: t('friends.removeFriend', 'Desfazer Amizade'),
+                            confirmText: t('friends.removeFriend'),
                             variant: 'danger',
                           });
                           if (ok) {
@@ -333,10 +333,10 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                             setRelationship((prev) => prev ? { ...prev, isFriend: false } : null);
                           }
                         }}
-                        title={t('friends.removeFriend', 'Desfazer Amizade')}
+                        title={t('friends.removeFriend')}
                       >
                         <UserMinus size={18} />
-                        <span>{t('friends.removeFriend', 'Desfazer Amizade')}</span>
+                        <span>{t('friends.removeFriend')}</span>
                       </button>
                     )
                   ) : (
@@ -357,8 +357,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                         )}
                         <span>
                           {friendRequested || relationship?.isPending
-                            ? t('friends.requestSentShort', 'Pedido Enviado!')
-                            : t('friends.addFriend', 'Adicionar Amigo')}
+                            ? t('friends.requestSentShort')
+                            : t('friends.addFriend')}
                         </span>
                       </button>
                     )
@@ -372,9 +372,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       className={styles.blockActionBtn}
                       onClick={async () => {
                         const ok = await confirm({
-                          title: t('friends.blockUser', 'Bloquear Usuário'),
+                          title: t('friends.blockUser'),
                           message: t('friends.blockUserConfirm', { name: displayName }),
-                          confirmText: t('friends.blockUser', 'Bloquear Usuário'),
+                          confirmText: t('friends.blockUser'),
                           variant: 'danger',
                         });
                         if (ok) {
@@ -382,10 +382,10 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                           setRelationship((prev) => prev ? { ...prev, isFriend: false, isBlocked: true, hasBlocked: true } : null);
                         }
                       }}
-                      title={t('friends.blockUser', 'Bloquear Usuário')}
+                      title={t('friends.blockUser')}
                     >
                       <Ban size={18} />
-                      <span>{t('friends.blockUser', 'Bloquear Usuário')}</span>
+                      <span>{t('friends.blockUser')}</span>
                     </button>
                   )}
 
@@ -393,10 +393,10 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     type="button"
                     className={styles.reportActionBtn}
                     onClick={() => setIsReportOpen(true)}
-                    title={t('moderation.reportUser', 'Denunciar Usuário')}
+                    title={t('moderation.reportUser')}
                   >
                     <ShieldAlert size={18} />
-                    <span>{t('moderation.reportUser', 'Denunciar Usuário')}</span>
+                    <span>{t('moderation.reportUser')}</span>
                   </button>
                 </div>
               </>

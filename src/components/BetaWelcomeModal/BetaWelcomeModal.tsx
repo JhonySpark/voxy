@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Rocket, AlertTriangle, ShieldCheck, MessageSquareHeart, X, Sparkles, Cpu } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { StorageKeys } from '../../core/enums';
 import styles from './BetaWelcomeModal.module.css';
 
@@ -9,6 +10,7 @@ interface BetaWelcomeModalProps {
 }
 
 export const BetaWelcomeModal: React.FC<BetaWelcomeModalProps> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
   if (!isOpen) return null;
@@ -28,7 +30,7 @@ export const BetaWelcomeModal: React.FC<BetaWelcomeModalProps> = ({ isOpen, onCl
         <button
           className={styles.closeButton}
           onClick={handleConfirm}
-          aria-label="Fechar"
+          aria-label={t('common.close')}
         >
           <X size={18} />
         </button>
@@ -42,12 +44,12 @@ export const BetaWelcomeModal: React.FC<BetaWelcomeModalProps> = ({ isOpen, onCl
 
           <div className={styles.badgePill}>
             <span className={styles.pulsingDot} />
-            <span>Fase Experimental • 50 Testadores</span>
+            <span>{t('auth.welcomeBetaBadge')}</span>
           </div>
 
-          <h2 className={styles.title}>Bem-vindo ao Voxy Beta</h2>
+          <h2 className={styles.title}>{t('auth.welcomeBetaTitle')}</h2>
           <p className={styles.subtitle}>
-            Você é um dos 50 primeiros pioneiros a ter acesso antecipado à nossa plataforma.
+            {t('auth.welcomeBetaSubtitle')}
           </p>
         </div>
 
@@ -58,9 +60,9 @@ export const BetaWelcomeModal: React.FC<BetaWelcomeModalProps> = ({ isOpen, onCl
                 <AlertTriangle size={20} />
               </div>
               <div>
-                <h3 className={styles.cardTitle}>Projeto Novo em Fase de Testes</h3>
+                <h3 className={styles.cardTitle}>{t('auth.betaFeature1Title')}</h3>
                 <p className={styles.cardDesc}>
-                  O Voxy está em desenvolvimento ativo. Durante esta fase inicial, você poderá encontrar pequenos bugs, falhas momentâneas de conexão ou recursos em lapidação diária.
+                  {t('auth.betaFeature1Desc')}
                 </p>
               </div>
             </div>
@@ -70,9 +72,9 @@ export const BetaWelcomeModal: React.FC<BetaWelcomeModalProps> = ({ isOpen, onCl
                 <Cpu size={20} />
               </div>
               <div>
-                <h3 className={styles.cardTitle}>Tecnologia Construída do Zero</h3>
+                <h3 className={styles.cardTitle}>{t('auth.betaFeature2Title')}</h3>
                 <p className={styles.cardDesc}>
-                  Engine de voz WebRTC com latência ultrabaixa, captura nativa de jogos no Windows e servidores privados sem algoritmos invasivos ou anúncios.
+                  {t('auth.betaFeature2Desc')}
                 </p>
               </div>
             </div>
@@ -82,9 +84,9 @@ export const BetaWelcomeModal: React.FC<BetaWelcomeModalProps> = ({ isOpen, onCl
                 <ShieldCheck size={20} />
               </div>
               <div>
-                <h3 className={styles.cardTitle}>Privacidade & Conformidade Total</h3>
+                <h3 className={styles.cardTitle}>{t('auth.betaFeature3Title')}</h3>
                 <p className={styles.cardDesc}>
-                  Suas chamadas não são gravadas nem espionadas. Seguimos estritamente a LGPD, regulamentações da ANPD e salvaguardas de proteção a menores (ECA Digital).
+                  {t('auth.betaFeature3Desc')}
                 </p>
               </div>
             </div>
@@ -94,9 +96,9 @@ export const BetaWelcomeModal: React.FC<BetaWelcomeModalProps> = ({ isOpen, onCl
                 <MessageSquareHeart size={20} />
               </div>
               <div>
-                <h3 className={styles.cardTitle}>Seu Feedback Molda o Voxy</h3>
+                <h3 className={styles.cardTitle}>{t('auth.betaFeature4Title')}</h3>
                 <p className={styles.cardDesc}>
-                  Encontrou algum comportamento estranho ou tem sugestões de melhoria? Seu olhar crítico é a chave para construirmos uma alternativa de respeito aos gigantes.
+                  {t('auth.betaFeature4Desc')}
                 </p>
               </div>
             </div>
@@ -111,12 +113,12 @@ export const BetaWelcomeModal: React.FC<BetaWelcomeModalProps> = ({ isOpen, onCl
               onChange={(e) => setDontShowAgain(e.target.checked)}
               className="custom-checkbox"
             />
-            <span>Não exibir este aviso automaticamente novamente</span>
+            <span>{t('auth.dontShowAgain')}</span>
           </label>
 
           <button className={styles.actionButton} onClick={handleConfirm}>
             <Sparkles size={18} />
-            <span>Entendi, vamos explorar o Voxy!</span>
+            <span>{t('auth.exploreBeta')}</span>
           </button>
         </div>
       </div>

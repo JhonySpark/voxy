@@ -51,12 +51,12 @@ export interface ServerMemberItem {
 }
 
 const PRESET_BAN_REASONS = [
-  'Violação das regras do servidor',
-  'Spam ou divulgação não autorizada',
-  'Comportamento tóxico ou assédio',
-  'Discurso de ódio ou preconceito',
-  'Conteúdo impróprio / NSFW não autorizado',
-  'Tentativa de golpe ou links suspeitos',
+  'server.banReasonRules',
+  'server.banReasonSpam',
+  'server.banReasonHarassment',
+  'server.banReasonHate',
+  'server.banReasonNsfw',
+  'server.banReasonScam',
 ];
 
 // Cache em memória por servidor (sobrevive ao desmontar a sidebar).
@@ -204,7 +204,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
   const handleChangeRole = async (targetUserId: string, newRole: string) => {
     try {
       await httpClient.patch(`/servers/${serverId}/members/${targetUserId}/role`, { role: newRole });
-      toast.success(t('server.roleUpdated', 'Cargo do membro atualizado com sucesso!'));
+      toast.success(t('server.roleUpdated'));
       setMembers((prev) =>
         prev.map((m) => (m.userId === targetUserId ? { ...m, role: newRole as any } : m))
       );
@@ -220,7 +220,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
     setIsKicking(true);
     try {
       await httpClient.delete(`/servers/${serverId}/members/${kickTargetMember.userId}`);
-      toast.success(t('server.memberKicked', 'Membro expulso do servidor!'));
+      toast.success(t('server.memberKicked'));
       setMembers((prev) => prev.filter((m) => m.userId !== kickTargetMember.userId));
       realtimeClient.emit(RealtimeEvents.SERVER_MEMBERS_UPDATED, { serverId });
       realtimeClient.emit(RealtimeEvents.MEMBER_KICKED, {
@@ -244,7 +244,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
         userId: banTargetMember.userId,
         reason: banReason.trim() || undefined,
       });
-      toast.success(t('server.memberBanned', 'Membro banido do servidor!'));
+      toast.success(t('server.memberBanned'));
       setMembers((prev) => prev.filter((m) => m.userId !== banTargetMember.userId));
       realtimeClient.emit(RealtimeEvents.SERVER_MEMBERS_UPDATED, { serverId });
       realtimeClient.emit(RealtimeEvents.MEMBER_BANNED, {
@@ -270,7 +270,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
         reason: muteReason.trim() || undefined,
         durationMinutes: muteDurationMinutes > 0 ? muteDurationMinutes : undefined,
       });
-      toast.success(t('server.memberMuted', 'Membro silenciado com sucesso!'));
+      toast.success(t('server.memberMuted'));
       setMembers((prev) =>
         prev.map((m) =>
           m.userId === muteTargetMember.userId
@@ -295,7 +295,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
   const handleUnmute = async (member: ServerMemberItem) => {
     try {
       await httpClient.post(`/servers/${serverId}/members/${member.userId}/unmute`);
-      toast.success(t('server.memberUnmuted', 'Silenciamento do membro removido!'));
+      toast.success(t('server.memberUnmuted'));
       setMembers((prev) =>
         prev.map((m) =>
           m.userId === member.userId
@@ -316,7 +316,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
   const handleBlockMember = async (member: ServerMemberItem) => {
     try {
       await httpClient.post(`/friends/block/${member.userId}`);
-      toast.success(`Usuário @${member.user?.username} bloqueado.`);
+      toast.success(t('user.userBlocked', { username: member.user?.username }));
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Erro ao bloquear usuário.');
     }
@@ -369,7 +369,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
             createdAt: member.user.createdAt,
           })
         }
-        title={t('user.clickToViewProfile', 'Clique para ver o perfil')}
+        title={t('user.clickToViewProfile')}
       >
         <div className={styles.memberLeft}>
           <div className={styles.avatarWrapper}>
@@ -396,13 +396,13 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
             <span className={styles.displayName}>
               {member.user?.displayName || member.user?.username}
               {(member.role === 'OWNER' || member.role === 'ADMIN') && (
-                <span title={member.role === 'OWNER' ? 'Líder do Servidor' : 'Administrador'} style={{ display: 'inline-flex', alignItems: 'center' }}>
+                <span title={member.role === 'OWNER' ? t('server.serverLeader') : t('server.admin')} style={{ display: 'inline-flex', alignItems: 'center' }}>
                   <Crown size={14} className={styles.adminCrown} />
                 </span>
               )}
               {member.role === 'MODERATOR' && (
-                <span className={styles.badgeMod} title="Oficial / Moderador">
-                  <Award size={10} /> Oficial
+                <span className={styles.badgeMod} title={t('server.roleOfficialTitle')}>
+                  <Award size={10} /> {t('server.roleOfficial')}
                 </span>
               )}
               {member.isMuted && (
@@ -420,9 +420,9 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                     borderRadius: 4,
                     marginLeft: 4,
                   }}
-                  title="Membro silenciado no servidor"
+                  title={t('server.mutedBadgeTitle')}
                 >
-                  <MicOff size={10} /> Mudo
+                  <MicOff size={10} /> {t('server.mutedBadge')}
                 </span>
               )}
             </span>
@@ -440,7 +440,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
               setShowRoleSelectorForId(null);
               setActiveMenuMemberId((curr) => (curr === member.userId ? null : member.userId));
             }}
-            title="Ações do membro"
+            title={t('server.memberActions')}
           >
             <MoreVertical size={14} />
           </button>
@@ -476,7 +476,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                   }}
                 >
                   <Users size={14} />
-                  <span>Ver Perfil</span>
+                  <span>{t('user.viewProfile')}</span>
                 </div>
 
                 {onOpenDirectMessage && !isSelf && (
@@ -489,7 +489,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                     }}
                   >
                     <MessageSquare size={14} />
-                    <span>Mensagem Direta</span>
+                    <span>{t('friends.openDm')}</span>
                   </div>
                 )}
 
@@ -515,7 +515,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <Shield size={14} />
-                            <span>Alterar Cargo</span>
+                            <span>{t('server.changeRole')}</span>
                           </div>
                           <ChevronRight
                             size={14}
@@ -540,7 +540,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                                 }}
                               >
                                 {member.role === 'ADMIN' ? <Check size={14} /> : <div style={{ width: 14 }} />}
-                                <span>Administrador</span>
+                                <span>{t('server.roleAdmin')}</span>
                               </div>
                             )}
                             <div
@@ -553,7 +553,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                               }}
                             >
                               {member.role === 'MODERATOR' ? <Check size={14} /> : <div style={{ width: 14 }} />}
-                              <span>Moderador</span>
+                              <span>{t('server.roleModerator')}</span>
                             </div>
                             <div
                               className="context-menu-item"
@@ -565,7 +565,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                               }}
                             >
                               {member.role === 'MEMBER' ? <Check size={14} /> : <div style={{ width: 14 }} />}
-                              <span>Membro Padrão</span>
+                              <span>{t('server.roleMember')}</span>
                             </div>
                           </div>
                         )}
@@ -582,7 +582,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                         }}
                       >
                         <UserMinus size={14} />
-                        <span>Expulsar do Servidor</span>
+                        <span>{t('server.kickMember')}</span>
                       </div>
                     )}
 
@@ -596,7 +596,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                         }}
                       >
                         <Ban size={14} />
-                        <span>Banir do Servidor</span>
+                        <span>{t('server.banMember')}</span>
                       </div>
                     )}
 
@@ -611,7 +611,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                           }}
                         >
                           <Mic size={14} />
-                          <span>Desmutar no Servidor</span>
+                          <span>{t('server.unmuteMember')}</span>
                         </div>
                       ) : (
                         <div
@@ -624,7 +624,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                           }}
                         >
                           <MicOff size={14} />
-                          <span>Silenciar no Servidor</span>
+                          <span>{t('server.muteMember')}</span>
                         </div>
                       )
                     )}
@@ -643,7 +643,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                       }}
                     >
                       <Ban size={14} />
-                      <span>Bloquear Usuário</span>
+                      <span>{t('friends.blockUser')}</span>
                     </div>
                     <div
                       className="context-menu-item context-menu-item-danger"
@@ -653,7 +653,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                       }}
                     >
                       <ShieldAlert size={14} />
-                      <span>Denunciar Usuário</span>
+                      <span>{t('moderation.reportUser')}</span>
                     </div>
                   </>
                 )}
@@ -672,11 +672,11 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
         <div className={styles.headerLeft}>
           <Users size={16} color="var(--brand-primary, #34d399)" />
           <span>
-            {t('server.members', 'Membros')}
+            {t('server.members')}
             {!isLoading && ` — ${members.length}`}
           </span>
         </div>
-        <button type="button" className={styles.closeBtn} onClick={onClose} title={t('common.close', 'Fechar')}>
+        <button type="button" className={styles.closeBtn} onClick={onClose} title={t('common.close')}>
           <X size={16} />
         </button>
       </div>
@@ -687,7 +687,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
         <input
           type="text"
           className={styles.searchInput}
-          placeholder={t('server.searchMembers', 'Buscar membros...')}
+          placeholder={t('server.searchMembers')}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -698,18 +698,18 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
         {isLoading ? (
           <div className={styles.loadingContainer}>
             <Loader2 size={24} className={styles.spinner} />
-            <span>{t('server.loadingMembers', 'Carregando membros...')}</span>
+            <span>{t('server.loadingMembers')}</span>
           </div>
         ) : filteredMembers.length === 0 ? (
           <div className={styles.emptyMembers}>
-            <span>{t('server.noMembersFound', 'Nenhum membro encontrado.')}</span>
+            <span>{t('server.noMembersFound')}</span>
           </div>
         ) : (
           <>
             {ownerAndAdmins.length > 0 && (
               <div className={styles.group}>
                 <span className={styles.groupTitle}>
-                  LÍDERES — {ownerAndAdmins.length}
+                  {t('server.membersLeaders', { count: ownerAndAdmins.length })}
                 </span>
                 {ownerAndAdmins.map(renderMemberRow)}
               </div>
@@ -718,7 +718,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
             {moderators.length > 0 && (
               <div className={styles.group}>
                 <span className={styles.groupTitle}>
-                  OFICIAIS — {moderators.length}
+                  {t('server.membersOfficers', { count: moderators.length })}
                 </span>
                 {moderators.map(renderMemberRow)}
               </div>
@@ -727,7 +727,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
             {standardMembers.length > 0 && (
               <div className={styles.group}>
                 <span className={styles.groupTitle}>
-                  ESQUADRÃO — {standardMembers.length}
+                  {t('server.membersSquad', { count: standardMembers.length })}
                 </span>
                 {standardMembers.map(renderMemberRow)}
               </div>
@@ -765,10 +765,10 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#f8fafc', fontWeight: 700 }}>
-              Expulsar {kickTargetMember.user?.displayName || kickTargetMember.user?.username}?
+              {t('server.kickConfirmTitle', { name: kickTargetMember.user?.displayName || kickTargetMember.user?.username })}
             </h3>
             <p style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.4 }}>
-              Tem certeza que deseja expulsar @{kickTargetMember.user?.username} deste servidor? O usuário poderá retornar caso receba outro convite.
+              {t('server.kickConfirmDesc', { username: kickTargetMember.user?.username })}
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
               <button
@@ -778,7 +778,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                 onClick={() => setKickTargetMember(null)}
                 disabled={isKicking}
               >
-                Cancelar
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -794,7 +794,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                 onClick={handleConfirmKick}
                 disabled={isKicking}
               >
-                {isKicking ? 'Expulsando...' : 'Expulsar'}
+                {isKicking ? t('server.kicking') : t('server.kick')}
               </button>
             </div>
           </div>
@@ -853,7 +853,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
               </div>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#f8fafc', fontWeight: 700 }}>
-                  Banir {banTargetMember.user?.displayName || banTargetMember.user?.username}?
+                  {t('server.banConfirmTitle', { name: banTargetMember.user?.displayName || banTargetMember.user?.username })}
                 </h3>
                 <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
                   @{banTargetMember.user?.username}
@@ -862,23 +862,24 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
             </div>
 
             <p style={{ margin: 0, fontSize: '0.84rem', color: '#94a3b8', lineHeight: 1.45 }}>
-              Tem certeza que deseja banir este usuário? Ele será removido imediatamente e perderá o acesso definitivo a este servidor.
+              {t('server.banConfirmDesc')}
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <label style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Motivo do Banimento
+                {t('server.banReasonLabel')}
               </label>
 
               {/* Predefined reason chips */}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                {PRESET_BAN_REASONS.map((preset) => {
-                  const isSelected = banReason === preset;
+                {PRESET_BAN_REASONS.map((presetKey) => {
+                  const presetText = t(presetKey);
+                  const isSelected = banReason === presetText;
                   return (
                     <button
-                      key={preset}
+                      key={presetKey}
                       type="button"
-                      onClick={() => setBanReason(isSelected ? '' : preset)}
+                      onClick={() => setBanReason(isSelected ? '' : presetText)}
                       style={{
                         padding: '0.35rem 0.65rem',
                         borderRadius: 6,
@@ -895,7 +896,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                         transition: 'all 0.15s ease',
                       }}
                     >
-                      {preset}
+                      {presetText}
                     </button>
                   );
                 })}
@@ -903,7 +904,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
 
               <input
                 type="text"
-                placeholder="Ou digite/complemente um motivo personalizado..."
+                placeholder={t('server.banReasonCustomPlaceholder')}
                 value={banReason}
                 onChange={(e) => setBanReason(e.target.value)}
                 style={{
@@ -938,7 +939,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                 }}
                 disabled={isBanning}
               >
-                Cancelar
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -960,7 +961,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                 disabled={isBanning}
               >
                 <Ban size={15} />
-                <span>{isBanning ? 'Banindo...' : 'Confirmar Banimento'}</span>
+                <span>{isBanning ? t('server.banning') : t('server.confirmBan')}</span>
               </button>
             </div>
           </div>
@@ -1000,25 +1001,25 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                 <MicOff size={18} />
               </div>
               <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#f8fafc', fontWeight: 700 }}>
-                Silenciar {muteTargetMember.user?.displayName || muteTargetMember.user?.username}?
+                {t('server.muteConfirmTitle', { name: muteTargetMember.user?.displayName || muteTargetMember.user?.username })}
               </h3>
             </div>
             <p style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.4 }}>
-              O membro não poderá enviar mensagens de texto nem falar nos canais de voz deste servidor durante o período selecionado.
+              {t('server.muteConfirmDesc')}
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
               <label style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>
-                Duração do Silenciamento
+                {t('server.muteDurationLabel')}
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.4rem' }}>
                 {[
-                  { label: '5 min', val: 5 },
-                  { label: '15 min', val: 15 },
-                  { label: '1 hora', val: 60 },
-                  { label: '24 horas', val: 1440 },
-                  { label: '7 dias', val: 10080 },
-                  { label: 'Permanente', val: 0 },
+                  { label: `5 ${t('common.minAbbr')}`, val: 5 },
+                  { label: `15 ${t('common.minAbbr')}`, val: 15 },
+                  { label: `1 ${t('common.hour')}`, val: 60 },
+                  { label: `24 ${t('common.hours')}`, val: 1440 },
+                  { label: `7 ${t('common.days')}`, val: 10080 },
+                  { label: t('common.permanent'), val: 0 },
                 ].map((d) => (
                   <button
                     key={d.val}
@@ -1043,11 +1044,11 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
               <label style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>
-                Motivo (opcional)
+                {t('server.muteReasonLabel')}
               </label>
               <input
                 type="text"
-                placeholder="Ex: Spam ou comportamento desrespeitoso"
+                placeholder={t('server.muteReasonPlaceholder')}
                 value={muteReason}
                 onChange={(e) => setMuteReason(e.target.value)}
                 style={{
@@ -1069,7 +1070,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                 onClick={() => setMuteTargetMember(null)}
                 disabled={isMuting}
               >
-                Cancelar
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -1085,7 +1086,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
                 onClick={handleConfirmMute}
                 disabled={isMuting}
               >
-                {isMuting ? 'Silenciando...' : 'Confirmar Silenciamento'}
+                {isMuting ? t('server.muting') : t('server.confirmMute')}
               </button>
             </div>
           </div>

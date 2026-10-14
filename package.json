@@ -8,6 +8,7 @@
   "description": "Voxy - Plataforma de Comunicação",
   "scripts": {
     "dev": "vite",
+    "validate:i18n": "node scripts/validate-i18n.js",
     "build": "node scripts/generate_native_manifest.js && tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",

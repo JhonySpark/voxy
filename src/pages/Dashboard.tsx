@@ -513,7 +513,7 @@ export default function Dashboard() {
         setActiveServer(null);
         setActiveChannel(null);
         setActiveView(DashboardView.DM);
-        toast.error(`Servidor suspenso pela moderação: ${data.reason || 'Violação das regras'}`);
+        toast.error(t('moderation.serverSuspendedToast', { reason: data.reason || t('server.suspendedReasonDefault') }));
       }
     };
 
@@ -521,7 +521,7 @@ export default function Dashboard() {
       if (data.userId === myId) {
         localStorage.removeItem(StorageKeys.AUTH_TOKEN);
         realtimeClient.disconnect();
-        toast.error(`Sua conta foi suspensa: ${data.reason || 'Violação das diretrizes'}`);
+        toast.error(t('moderation.accountSuspendedToast', { reason: data.reason || t('moderation.guidelinesViolationDefault') }));
         navigate(AppRoutes.LOGIN);
       }
     };
@@ -537,7 +537,7 @@ export default function Dashboard() {
           setActiveChannel(null);
           setActiveView(DashboardView.DM);
         }
-        toast.info(`Você foi expulso do servidor ${data.serverName || ''}`);
+        toast.info(t('server.kickedNotification', { server: data.serverName || '' }));
       }
     };
 
@@ -552,16 +552,16 @@ export default function Dashboard() {
           setActiveChannel(null);
           setActiveView(DashboardView.DM);
         }
-        toast.error(`Você foi banido do servidor ${data.serverName || ''}`);
+        toast.error(t('server.bannedNotification', { server: data.serverName || '' }));
       }
     };
 
     const onMemberMuted = (data: { serverId: string; userId: string; reason?: string; isMuted?: boolean }) => {
       if (data.userId === myId && activeServer?.id === data.serverId) {
         if (data.isMuted) {
-          toast.warning(`Você foi silenciado neste servidor. Motivo: ${data.reason || 'Silenciado por um moderador'}`);
+          toast.warning(t('server.mutedNotification', { reason: data.reason || t('server.defaultMuteReason') }));
         } else {
-          toast.info('Seu silenciamento no servidor foi removido.');
+          toast.info(t('server.unmutedNotification'));
         }
       }
     };
@@ -573,7 +573,7 @@ export default function Dashboard() {
         const lastNotified = lastNotifiedServerRef.current.get(data.serverId) || 0;
         if (now - lastNotified > 3000) {
           lastNotifiedServerRef.current.set(data.serverId, now);
-          toast.info(`Você foi adicionado ao servidor ${data.serverName}!`);
+          toast.info(t('server.addedNotification', { server: data.serverName }));
         }
       }
     };
@@ -707,18 +707,14 @@ export default function Dashboard() {
 
   const handleLeaveServer = async (serverToLeave: ServerItem) => {
     if (serverToLeave.ownerId === myId) {
-      toast.error(t('server.ownerCannotLeave', 'O proprietário não pode sair do servidor. Transfira a posse ou exclua o servidor nas configurações.'));
+      toast.error(t('server.ownerCannotLeave'));
       return;
     }
 
     const ok = await confirm({
-      title: t('server.leaveTitle', 'Sair do Servidor'),
-      message: t(
-        'server.leaveConfirmMessage',
-        `Tem certeza de que deseja sair de "${serverToLeave.name}"? Você não terá mais acesso aos canais ou mensagens a menos que receba um novo convite.`,
-        { name: serverToLeave.name }
-      ),
-      confirmText: t('server.leaveServer', 'Sair do Servidor'),
+      title: t('server.leaveTitle'),
+      message: t('server.leaveConfirmMessage', { name: serverToLeave.name }),
+      confirmText: t('server.leaveServer'),
       variant: 'danger',
     });
     if (!ok) return;
@@ -740,9 +736,9 @@ export default function Dashboard() {
       }
 
       await fetchServers();
-      toast.success(t('server.leftSuccess', `Você saiu de "${serverToLeave.name}".`, { name: serverToLeave.name }));
+      toast.success(t('server.leftSuccess', { name: serverToLeave.name }));
     } catch (err: any) {
-      toast.error(err.response?.data?.message || t('server.leaveError', 'Erro ao sair do servidor.'));
+      toast.error(err.response?.data?.message || t('server.leaveError'));
     }
   };
 
@@ -833,11 +829,11 @@ export default function Dashboard() {
             onViewUserProfile={setViewingUserId}
             onRenameChannel={async (channel) => {
               const rawName = await prompt({
-                title: t('channel.renameTitle', 'Renomear Canal'),
-                message: t('channel.renamePrompt', 'Digite o novo nome para o canal:'),
+                title: t('channel.renameTitle'),
+                message: t('channel.renamePrompt'),
                 defaultValue: channel.name,
                 placeholder: 'ex: geral',
-                confirmText: t('common.save', 'Salvar'),
+                confirmText: t('common.save'),
               });
               const name = rawName?.trim();
               if (!name || name === channel.name) return;
@@ -845,16 +841,16 @@ export default function Dashboard() {
                 await httpClient.patch(`${ApiRoutes.CHANNELS}/${channel.id}`, { name });
                 await fetchServers();
                 realtimeClient.emit(RealtimeEvents.SERVER_UPDATED, { serverId: activeServer.id });
-                toast.success('Nome do canal atualizado.');
+                toast.success(t('channel.renameSuccess'));
               } catch (error: any) {
-                toast.error(error.response?.data?.message || 'Não foi possível renomear o canal.');
+                toast.error(error.response?.data?.message || t('channel.renameFailed'));
               }
             }}
             onDeleteChannel={async (channel) => {
               const ok = await confirm({
-                title: t('channel.deleteTitle', 'Excluir Canal'),
-                message: `Excluir o canal "${channel.name}"? Esta ação também remove as mensagens dele.`,
-                confirmText: t('common.delete', 'Excluir Canal'),
+                title: t('channel.deleteTitle'),
+                message: t('channel.deleteConfirm', { name: channel.name }),
+                confirmText: t('channel.deleteChannel'),
                 variant: 'danger',
               });
               if (!ok) return;
@@ -866,9 +862,9 @@ export default function Dashboard() {
                 }
                 await fetchServers();
                 realtimeClient.emit(RealtimeEvents.SERVER_UPDATED, { serverId: activeServer.id });
-                toast.success('Canal excluído.');
+                toast.success(t('channel.deletedSuccess'));
               } catch (error: any) {
-                toast.error(error.response?.data?.message || 'Não foi possível excluir o canal.');
+                toast.error(error.response?.data?.message || t('channel.deleteFailed'));
               }
             }}
             onLeaveServer={() => handleLeaveServer(activeServer)}

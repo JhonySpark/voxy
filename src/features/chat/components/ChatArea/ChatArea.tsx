@@ -603,7 +603,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         setReplyingTo(null);
       } catch (err: any) {
         console.error('Falha no upload do anexo:', err);
-        toast.error(err.message || 'Erro ao enviar anexo.');
+        toast.error(err.message || t('chat.uploadAttachmentError'));
       } finally {
         setIsUploading(false);
         setUploadProgress(0);
@@ -637,7 +637,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       }, 1000);
     } catch (err) {
       console.error('Erro ao acessar microfone para gravação:', err);
-      toast.error('Não foi possível acessar o microfone.');
+      toast.error(t('chat.micAccessError'));
     }
   };
 
@@ -659,7 +659,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       setRecordingSeconds(0);
 
       setIsUploading(true);
-      setUploadStatusText('Enviando mensagem de voz...');
+      setUploadStatusText(t('chat.uploadVoiceProgress'));
 
       const channelId = type === 'CHANNEL' ? target.id : undefined;
       const receiverId = type === 'DM' ? target.id : undefined;
@@ -679,7 +679,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       setReplyingTo(null);
     } catch (err: any) {
       console.error('Falha ao enviar áudio:', err);
-      toast.error(err.message || 'Erro ao enviar áudio de voz.');
+      toast.error(err.message || t('chat.uploadVoiceError'));
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -703,7 +703,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               className={styles.avatarWrapper}
               onClick={() => onOpenUserProfile?.(target.id)}
               style={{ cursor: onOpenUserProfile ? 'pointer' : 'default' }}
-              title={`Ver perfil de ${targetName}`}
+              title={t('user.viewProfileOf', { name: targetName })}
             >
               <div className={styles.avatar}>
                 {getMediaUrl((target as FriendUser).avatarUrl) ? (
@@ -743,7 +743,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 type="button"
                 className={styles.headerActionBtn}
                 onClick={() => onOpenUserProfile(target.id)}
-                title={t('user.viewProfile', 'Ver Perfil')}
+                title={t('user.viewProfile')}
               >
                 <User size={18} />
               </button>
@@ -755,7 +755,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   type="button"
                   className={`${styles.headerActionBtn} ${showDmMenu ? styles.headerActionBtnActive : ''}`}
                   onClick={() => setShowDmMenu((prev) => !prev)}
-                  title={t('friends.moreOptions', 'Mais opções')}
+                  title={t('friends.moreOptions')}
                 >
                   <MoreVertical size={18} />
                 </button>
@@ -789,7 +789,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                           }}
                         >
                           <User size={14} />
-                          <span>{t('user.viewProfile', 'Ver Perfil')}</span>
+                          <span>{t('user.viewProfile')}</span>
                         </div>
                       )}
 
@@ -804,9 +804,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                           onClick={async () => {
                             setShowDmMenu(false);
                             const ok = await confirm({
-                              title: t('friends.removeFriend', 'Desfazer Amizade'),
+                              title: t('friends.removeFriend'),
                               message: t('friends.removeFriendConfirm', { name: targetName }),
-                              confirmText: t('friends.removeFriend', 'Desfazer Amizade'),
+                              confirmText: t('friends.removeFriend'),
                               variant: 'danger',
                             });
                             if (ok) {
@@ -815,7 +815,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                           }}
                         >
                           <UserMinus size={14} />
-                          <span>{t('friends.removeFriend', 'Desfazer Amizade')}</span>
+                          <span>{t('friends.removeFriend')}</span>
                         </div>
                       )}
 
@@ -826,9 +826,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                           onClick={async () => {
                             setShowDmMenu(false);
                             const ok = await confirm({
-                              title: t('friends.blockUser', 'Bloquear Usuário'),
+                              title: t('friends.blockUser'),
                               message: t('friends.blockUserConfirm', { name: targetName }),
-                              confirmText: t('friends.blockUser', 'Bloquear Usuário'),
+                              confirmText: t('friends.blockUser'),
                               variant: 'danger',
                             });
                             if (ok) {
@@ -837,7 +837,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                           }}
                         >
                           <Ban size={14} />
-                          <span>{t('friends.blockUser', 'Bloquear Usuário')}</span>
+                          <span>{t('friends.blockUser')}</span>
                         </div>
                       )}
                     </div>
@@ -867,10 +867,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               fontWeight: 600,
               transition: 'all 0.2s',
             }}
-            title={isMembersListOpen ? 'Ocultar Membros' : 'Exibir Membros do Servidor'}
+            title={isMembersListOpen ? t('chat.hideMembers') : t('chat.showMembers')}
           >
             <Users size={16} />
-            <span>Membros</span>
+            <span>{t('chat.members')}</span>
           </button>
         )}
       </header>
@@ -880,13 +880,13 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         {isLoadingMore && (
           <div className={styles.loadingMoreContainer}>
             <Loader2 size={16} className={styles.loadingSpinner} />
-            <span>{t('chat.loadingOlderMessages', 'Carregando mensagens anteriores...')}</span>
+            <span>{t('chat.loadingOlderMessages')}</span>
           </div>
         )}
         {isLoading && messages.length === 0 ? (
           <div className={styles.loadingMessagesContainer}>
             <Loader2 size={32} className={styles.loadingSpinner} />
-            <span>{t('chat.loadingMessages', 'Carregando mensagens...')}</span>
+            <span>{t('chat.loadingMessages')}</span>
           </div>
         ) : messages.length === 0 ? (
           <div className={styles.emptyMessagesContainer}>
@@ -896,8 +896,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             <h2>{type === 'DM' ? targetName : `#${targetName}`}</h2>
             <p>
               {type === 'DM'
-                ? t('chat.startDmConversation', `Este é o início da sua conversa com ${targetName}.`)
-                : t('chat.startChannelConversation', `Este é o início do canal #${targetName}.`)}
+                ? t('chat.startDmConversation', { name: targetName })
+                : t('chat.startChannelConversation', { name: targetName })}
             </p>
           </div>
         ) : (
@@ -947,7 +947,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                         cursor: onOpenUserProfile ? 'pointer' : 'default' 
                       }}
                       onClick={() => onOpenUserProfile?.(msg.senderId)}
-                      title={`Ver perfil de ${author}`}
+                      title={t('user.viewProfileOf', { name: author })}
                     >
                       {avatarMedia && !failedAvatars[msg.id] ? (
                         <img 
@@ -1089,7 +1089,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                                   }}
                                 >
                                   <Reply size={13} />
-                                  <span>Responder</span>
+                                  <span>{t('chat.reply')}</span>
                                 </button>
 
                                 {isMe && onEditMessage && (
@@ -1102,7 +1102,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                                     }}
                                   >
                                     <Pencil size={13} />
-                                    <span>Editar</span>
+                                    <span>{t('chat.edit')}</span>
                                   </button>
                                 )}
 
@@ -1118,7 +1118,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                                       }}
                                     >
                                       <Trash2 size={13} />
-                                      <span>Excluir</span>
+                                      <span>{t('chat.delete')}</span>
                                     </button>
                                   </>
                                 )}
@@ -1196,7 +1196,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                                 />
                                 <div className={styles.editActions}>
                                   <span className={styles.editHint}>
-                                    escape para <button type="button" onClick={handleCancelEditing} className={styles.editHintLink}>cancelar</button> • enter para <button type="button" onClick={() => handleSaveEditing(msg.id)} className={styles.editHintLink}>salvar</button>
+                                    {t('chat.escToCancel')}
                                   </span>
                                   <div className={styles.editButtons}>
                                     <button
@@ -1204,7 +1204,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                                       className={styles.cancelEditBtn}
                                       onClick={handleCancelEditing}
                                     >
-                                      Cancelar
+                                      {t('common.cancel')}
                                     </button>
                                     <button
                                       type="button"
@@ -1212,7 +1212,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                                       onClick={() => handleSaveEditing(msg.id)}
                                       disabled={!editingContent.trim()}
                                     >
-                                      Salvar
+                                      {t('common.save')}
                                     </button>
                                   </div>
                                 </div>
@@ -1226,7 +1226,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                                       textInputRef.current?.focus();
                                     })}
                                   </span>
-                                  {msg.isEdited && <span className={styles.editedTag}>(editada)</span>}
+                                  {msg.isEdited && <span className={styles.editedTag}>{t('chat.edited')}</span>}
                                 </div>
                               )
                             )}
@@ -1410,17 +1410,17 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               type="button"
               className={styles.cancelRecButton}
               onClick={handleCancelRecording}
-              title="Cancelar gravação"
+              title={t('chat.cancelRecording')}
             >
               <Trash2 size={16} />
-              <span>Cancelar</span>
+              <span>{t('common.cancel')}</span>
             </button>
 
             <button
               type="button"
               className={styles.sendRecButton}
               onClick={handleSendRecording}
-              title="Enviar áudio"
+              title={t('chat.sendAudio')}
             >
               <Send size={16} style={{ marginLeft: 2 }} />
             </button>
@@ -1435,7 +1435,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             <button
               type="button"
               className={styles.actionButton}
-              title="Gravar áudio de voz"
+              title={t('chat.recordAudio')}
               onClick={handleStartRecording}
             >
               <Mic size={18} />
@@ -1445,7 +1445,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               {activeMention && activeMention.suggestions.length > 0 && (
                 <div className={styles.mentionSuggestionsPopup}>
                   <div className={styles.mentionSuggestionHeader}>
-                    {type === 'CHANNEL' ? 'Membros do Canal' : 'Amigos'}
+                    {type === 'CHANNEL' ? t('chat.channelMembers') : t('friends.allFriends')}
                   </div>
                   {activeMention.suggestions.map((suggestion, index) => {
                     const isSelected = index === selectedMentionIndex;
@@ -1487,7 +1487,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 className={styles.textInputField}
                 placeholder={
                   stagedAttachment
-                    ? 'Adicionar legenda ao anexo (opcional)...'
+                    ? t('chat.attachmentCaptionPlaceholder')
                     : placeholder
                 }
                 value={newMessage}

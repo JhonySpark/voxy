@@ -385,7 +385,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
 
   const handleDeleteServer = async () => {
     if (deleteConfirmationText.trim().toLowerCase() !== server.name.trim().toLowerCase()) {
-      toast.warning('Digite o nome exato do servidor para confirmar.');
+      toast.warning(t('server.typeExactName'));
       return;
     }
 
@@ -393,7 +393,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
     try {
       await httpClient.delete(`${ApiRoutes.SERVERS}/${server.id}`);
       realtimeClient.emit(RealtimeEvents.SERVER_DELETED, { serverId: server.id });
-      toast.success(t('server.serverDeleted', 'Servidor excluído com sucesso!'));
+      toast.success(t('server.serverDeleted'));
       onClose();
       if (onServerDeleted) {
         onServerDeleted();
@@ -401,7 +401,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
         onServerUpdated();
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Erro ao excluir servidor.');
+      toast.error(err.response?.data?.message || t('server.leaveError'));
     } finally {
       setIsDeleting(false);
     }
@@ -423,7 +423,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                 {server.name}
               </h2>
               <div className={styles.settingsHeaderSubtitle}>
-                {t('server.settingsSubtitle', 'Configurações e Moderação do Servidor')}
+                {t('server.settingsSubtitle')}
               </div>
             </div>
           </div>
@@ -431,7 +431,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
             type="button"
             onClick={onClose}
             className={styles.settingsCloseBtn}
-            title={t('common.close', 'Fechar')}
+            title={t('common.close')}
           >
             <X size={18} />
           </button>
@@ -443,7 +443,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
           <div className={styles.settingsSidebar}>
             <div className={styles.settingsSidebarNav}>
               <div className={styles.settingsSidebarSection}>
-                {t('server.settingsSection', 'CONFIGURAÇÕES')}
+                {t('server.settingsSection')}
               </div>
 
               <button
@@ -452,7 +452,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                 onClick={() => setActiveTab('overview')}
               >
                 <SettingsIcon size={16} />
-                <span>{t('server.tabOverview', 'Visão Geral')}</span>
+                <span>{t('server.tabOverview')}</span>
               </button>
 
               <button
@@ -461,7 +461,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                 onClick={() => setActiveTab('roles')}
               >
                 <Shield size={16} />
-                <span>{t('server.tabModeration', 'Moderação & Cargos')}</span>
+                <span>{t('server.tabModeration')}</span>
               </button>
 
               <button
@@ -470,7 +470,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                 onClick={() => setActiveTab('bans')}
               >
                 <UserX size={16} />
-                <span>{t('server.tabBans', 'Banimentos')}</span>
+                <span>{t('server.tabBans')}</span>
               </button>
 
               <button
@@ -479,13 +479,13 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                 onClick={() => setActiveTab('audit')}
               >
                 <FileText size={16} />
-                <span>{t('server.tabAudit', 'Auditoria')}</span>
+                <span>{t('server.tabAudit')}</span>
               </button>
 
               {isOwner && (
                 <>
                   <div className={styles.settingsSidebarSection} style={{ marginTop: '0.75rem' }}>
-                    {t('server.managementSection', 'GERENCIAMENTO')}
+                    {t('server.managementSection')}
                   </div>
                   <button
                     type="button"
@@ -493,7 +493,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                     onClick={() => setActiveTab('danger')}
                   >
                     <Trash2 size={16} />
-                    <span>{t('server.tabDanger', 'Excluir Servidor')}</span>
+                    <span>{t('server.tabDanger')}</span>
                   </button>
                 </>
               )}
@@ -501,7 +501,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
 
             <div className={styles.settingsSidebarFooter}>
               <div className={styles.serverInfoPill}>
-                <span className={styles.serverInfoLabel}>ID Servidor:</span>
+                <span className={styles.serverInfoLabel}>{t('server.serverIdLabel')}</span>
                 <span className={styles.serverInfoValue}>{server.id.substring(0, 8)}...</span>
               </div>
             </div>
@@ -512,18 +512,18 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
             {/* Header of Content */}
             <div className={styles.contentHeader}>
               <h3 className={styles.contentHeaderTitle}>
-                {activeTab === 'overview' && t('server.overviewTitle', 'Visão Geral do Servidor')}
-                {activeTab === 'roles' && t('server.rolesTitle', 'Moderação & Permissões por Cargo')}
-                {activeTab === 'bans' && t('server.bansTitle', 'Usuários Banidos')}
-                {activeTab === 'audit' && t('server.auditTitle', 'Registro de Auditoria de Segurança')}
-                {activeTab === 'danger' && t('server.dangerTitle', 'Zona de Perigo')}
+                {activeTab === 'overview' && t('server.overviewTitle')}
+                {activeTab === 'roles' && t('server.rolesTitle')}
+                {activeTab === 'bans' && t('server.bansTitle')}
+                {activeTab === 'audit' && t('server.auditTitle')}
+                {activeTab === 'danger' && t('server.dangerTitle')}
               </h3>
               <p className={styles.contentHeaderSubtitle}>
-                {activeTab === 'overview' && t('server.overviewSubtitle', 'Atualize as informações públicas e o ícone de identificação deste servidor.')}
-                {activeTab === 'roles' && t('server.rolesSubtitle', 'Configure permissões granulares para administradores, moderadores e membros padrão.')}
-                {activeTab === 'bans' && t('server.bansSubtitle', 'Gerencie usuários que foram banidos deste servidor e revogue punições.')}
-                {activeTab === 'audit' && t('server.auditSubtitle', 'Histórico completo de ações de moderação, transmissões e conformidade de segurança (ECA / ANPD).')}
-                {activeTab === 'danger' && t('server.dangerSubtitle', 'Ações destrutivas com soft delete que desativam o servidor para todos os membros.')}
+                {activeTab === 'overview' && t('server.overviewSubtitle')}
+                {activeTab === 'roles' && t('server.rolesSubtitle')}
+                {activeTab === 'bans' && t('server.bansSubtitle')}
+                {activeTab === 'audit' && t('server.auditSubtitle')}
+                {activeTab === 'danger' && t('server.dangerSubtitle')}
               </p>
             </div>
 
@@ -541,7 +541,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
               <div
                 className={styles.iconPreviewWrapper}
                 onClick={() => fileInputRef.current?.click()}
-                title={t('server.changeIcon', 'Alterar ícone do servidor')}
+                title={t('server.changeIcon')}
               >
                 {getMediaUrl(iconPreview) && !iconError ? (
                   <img
@@ -560,17 +560,17 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                 </div>
               </div>
               <span className={styles.iconUploadHint}>
-                {t('server.iconChangeHint', 'Clique para alterar o ícone')}
+                {t('server.iconChangeHint')}
               </span>
             </div>
 
-            <label className={styles.label}>{t('server.serverName', 'Nome do Servidor')}</label>
+            <label className={styles.label}>{t('server.serverName')}</label>
             <input
               type="text"
               className={styles.input}
               value={serverName}
               onChange={(e) => setServerName(e.target.value)}
-              placeholder={t('server.serverNamePlaceholder', 'Ex: Comunidade Gamer')}
+              placeholder={t('server.serverNamePlaceholder')}
               disabled={isSaving}
             />
 
@@ -581,7 +581,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                 onClick={onClose}
                 disabled={isSaving}
               >
-                {t('common.cancel', 'Cancelar')}
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
@@ -589,7 +589,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                 disabled={isSaving}
               >
                 {isSaving ? <span className={styles.spinner} /> : <Check size={16} />}
-                <span>{isSaving ? t('common.saving', 'Salvando...') : t('common.save', 'Salvar Alterações')}</span>
+                <span>{isSaving ? t('common.saving') : t('common.saveChanges')}</span>
               </button>
             </div>
           </form>
@@ -600,7 +600,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
           <div className={styles.inputGroup}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
-                {t('server.moderationSubtitle', 'Configure as permissões de moderação para cada cargo do servidor:')}
+                {t('server.moderationSubtitle')}
               </span>
             </div>
 
@@ -611,21 +611,21 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                 className={`${styles.roleBtn} ${selectedRole === 'ADMIN' ? styles.roleBtnActive : ''}`}
                 onClick={() => setSelectedRole('ADMIN')}
               >
-                🛡️ Administrador
+                {t('server.roleAdmin')}
               </button>
               <button
                 type="button"
                 className={`${styles.roleBtn} ${selectedRole === 'MODERATOR' ? styles.roleBtnActive : ''}`}
                 onClick={() => setSelectedRole('MODERATOR')}
               >
-                ⚔️ Moderador
+                {t('server.roleModerator')}
               </button>
               <button
                 type="button"
                 className={`${styles.roleBtn} ${selectedRole === 'MEMBER' ? styles.roleBtnActive : ''}`}
                 onClick={() => setSelectedRole('MEMBER')}
               >
-                👤 Membro Padrão
+                {t('server.roleMember')}
               </button>
             </div>
 
@@ -633,8 +633,8 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
             <div className={styles.permissionsList}>
               <div className={styles.permissionItem}>
                 <div className={styles.permissionInfo}>
-                  <span className={styles.permissionTitle}>Convidar Amigos</span>
-                  <span className={styles.permissionDesc}>Permite adicionar ou convidar amigos para o servidor</span>
+                  <span className={styles.permissionTitle}>{t('server.permissions.inviteTitle')}</span>
+                  <span className={styles.permissionDesc}>{t('server.permissions.inviteDesc')}</span>
                 </div>
                 <input
                   type="checkbox"
@@ -646,8 +646,8 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
 
               <div className={styles.permissionItem}>
                 <div className={styles.permissionInfo}>
-                  <span className={styles.permissionTitle}>Excluir Mensagens</span>
-                  <span className={styles.permissionDesc}>Permite apagar mensagens de outros usuários nos chats</span>
+                  <span className={styles.permissionTitle}>{t('server.permissions.deleteMessagesTitle')}</span>
+                  <span className={styles.permissionDesc}>{t('server.permissions.deleteMessagesDesc')}</span>
                 </div>
                 <input
                   type="checkbox"
@@ -659,8 +659,8 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
 
               <div className={styles.permissionItem}>
                 <div className={styles.permissionInfo}>
-                  <span className={styles.permissionTitle}>Expulsar Membros</span>
-                  <span className={styles.permissionDesc}>Permite remover usuários do servidor</span>
+                  <span className={styles.permissionTitle}>{t('server.permissions.kickTitle')}</span>
+                  <span className={styles.permissionDesc}>{t('server.permissions.kickDesc')}</span>
                 </div>
                 <input
                   type="checkbox"
@@ -672,8 +672,8 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
 
               <div className={styles.permissionItem}>
                 <div className={styles.permissionInfo}>
-                  <span className={styles.permissionTitle}>Banir Membros</span>
-                  <span className={styles.permissionDesc}>Permite banir permanentemente usuários deste servidor</span>
+                  <span className={styles.permissionTitle}>{t('server.permissions.banTitle')}</span>
+                  <span className={styles.permissionDesc}>{t('server.permissions.banDesc')}</span>
                 </div>
                 <input
                   type="checkbox"
@@ -685,8 +685,8 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
 
               <div className={styles.permissionItem}>
                 <div className={styles.permissionInfo}>
-                  <span className={styles.permissionTitle}>Gerenciar Canais</span>
-                  <span className={styles.permissionDesc}>Permite criar, renomear e excluir canais de texto e voz</span>
+                  <span className={styles.permissionTitle}>{t('server.permissions.manageChannelsTitle')}</span>
+                  <span className={styles.permissionDesc}>{t('server.permissions.manageChannelsDesc')}</span>
                 </div>
                 <input
                   type="checkbox"
@@ -698,8 +698,8 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
 
               <div className={styles.permissionItem}>
                 <div className={styles.permissionInfo}>
-                  <span className={styles.permissionTitle}>Gerenciar Servidor</span>
-                  <span className={styles.permissionDesc}>Permite alterar configurações e editar permissões</span>
+                  <span className={styles.permissionTitle}>{t('server.permissions.manageServerTitle')}</span>
+                  <span className={styles.permissionDesc}>{t('server.permissions.manageServerDesc')}</span>
                 </div>
                 <input
                   type="checkbox"
@@ -718,7 +718,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                 disabled={isSavingPermissions}
               >
                 {isSavingPermissions ? <span className={styles.spinner} /> : <Check size={16} />}
-                <span>Salvar Permissões de {selectedRole}</span>
+                <span>{t('server.savePermissionsForRole', { role: selectedRole })}</span>
               </button>
             </div>
           </div>
@@ -728,7 +728,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
         {activeTab === 'bans' && (
           <div className={styles.inputGroup}>
             <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
-              Usuários banidos não podem reentrar no servidor mesmo com link de convite.
+              {t('server.bansNotice')}
             </span>
 
             {isLoadingBans ? (
@@ -736,14 +736,14 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                 <div className={styles.emptyBansIcon}>
                   <Loader2 size={24} className={styles.spinnerIcon} />
                 </div>
-                <span className={styles.emptyBansText}>Carregando banimentos...</span>
+                <span className={styles.emptyBansText}>{t('server.loadingBans')}</span>
               </div>
             ) : bans.length === 0 ? (
               <div className={styles.emptyBansState}>
                 <div className={styles.emptyBansIcon}>
                   <UserX size={26} />
                 </div>
-                <span className={styles.emptyBansText}>Nenhum usuário banido neste servidor.</span>
+                <span className={styles.emptyBansText}>{t('server.noBannedUsers')}</span>
               </div>
             ) : (
               <div className={styles.friendsList} style={{ maxHeight: 'none' }}>
@@ -766,7 +766,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                           {ban.user?.displayName || ban.user?.username}
                         </span>
                         <span className={styles.friendUsername}>
-                          @{ban.user?.username} {ban.reason ? `• Motivo: ${ban.reason}` : ''}
+                          @{ban.user?.username} {ban.reason ? `• ${t('server.auditReason')} ${ban.reason}` : ''}
                         </span>
                       </div>
                     </div>
@@ -775,7 +775,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                       className={styles.unbanBtn}
                       onClick={() => handleUnbanUser(ban.userId)}
                     >
-                      Desbanir
+                      {t('server.unban')}
                     </button>
                   </div>
                 ))}
@@ -789,7 +789,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
           <div className={styles.inputGroup}>
             {/* Filter Bar */}
             <div className={styles.auditFilterBar}>
-              <span className={styles.label} style={{ marginBottom: 0 }}>Filtrar Evento:</span>
+              <span className={styles.label} style={{ marginBottom: 0 }}>{t('server.auditFilterLabel')}</span>
               <select
                 className={styles.auditSelect}
                 value={auditActionFilter}
@@ -799,7 +799,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                   loadAuditLogs(val);
                 }}
               >
-                <option value="ALL">Todos os Eventos</option>
+                <option value="ALL">{t('server.allEvents')}</option>
                 <option value={AuditLogActionEnum.SERVER_CREATED}>Criação de Servidor</option>
                 <option value={AuditLogActionEnum.STREAM_STARTED}>Transmissão ao Vivo</option>
                 <option value={AuditLogActionEnum.MEMBER_MUTED}>Membro Silenciado</option>
@@ -816,14 +816,14 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                 <div className={styles.emptyBansIcon}>
                   <Loader2 size={24} className={styles.spinnerIcon} />
                 </div>
-                <span className={styles.emptyBansText}>Carregando logs de auditoria...</span>
+                <span className={styles.emptyBansText}>{t('server.loadingAudit')}</span>
               </div>
             ) : auditLogs.length === 0 ? (
               <div className={styles.emptyBansState}>
                 <div className={styles.emptyBansIcon}>
                   <FileText size={26} />
                 </div>
-                <span className={styles.emptyBansText}>Nenhum registro de auditoria encontrado.</span>
+                <span className={styles.emptyBansText}>{t('server.noAuditLogs')}</span>
               </div>
             ) : (
               <div className={styles.auditList}>
@@ -866,7 +866,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                     <div className={styles.auditDetailsRow}>
                       {log.targetUser && (
                         <div>
-                          <span className={styles.auditTargetText}>Usuário afetado: </span>
+                          <span className={styles.auditTargetText}>{t('server.auditTargetUser')} </span>
                           <span className={styles.auditTargetHighlight}>
                             {log.targetUser.displayName || log.targetUser.username} (@{log.targetUser.username})
                           </span>
@@ -875,7 +875,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
 
                       {log.action === AuditLogActionEnum.STREAM_STARTED && log.metadata?.channelName && (
                         <div>
-                          <span className={styles.auditTargetText}>Canal: </span>
+                          <span className={styles.auditTargetText}>{t('server.auditChannel')} </span>
                           <span className={styles.auditTargetHighlight}>
                             🔊 #{log.metadata.channelName}
                           </span>
@@ -884,9 +884,9 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
 
                       {log.metadata?.durationMinutes && (
                         <div>
-                          <span className={styles.auditTargetText}>Duração: </span>
+                          <span className={styles.auditTargetText}>{t('server.auditDuration')} </span>
                           <span className={styles.auditTargetHighlight}>
-                            {log.metadata.durationMinutes} minutos
+                            {log.metadata.durationMinutes} {t('server.minutes')}
                           </span>
                         </div>
                       )}
@@ -894,7 +894,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
 
                     {log.reason && (
                       <div className={styles.auditReasonBox}>
-                        Motivo: {log.reason}
+                        {t('server.auditReason')} {log.reason}
                       </div>
                     )}
                   </div>
@@ -910,11 +910,10 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
             <div className={styles.dangerCard}>
               <div className={styles.dangerTitle}>
                 <Trash2 size={18} />
-                <span>Excluir Servidor</span>
+                <span>{t('server.tabDanger')}</span>
               </div>
               <p className={styles.dangerDesc}>
-                Excluir este servidor desativará imediatamente o acesso de todos os membros e canais (soft delete).
-                Essa ação é irreversível para os membros comuns.
+                {t('server.dangerDesc')}
               </p>
 
               {!showDeleteConfirm ? (
@@ -924,12 +923,12 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                   onClick={() => setShowDeleteConfirm(true)}
                 >
                   <Trash2 size={16} />
-                  <span>Excluir este Servidor</span>
+                  <span>{t('server.deleteServerBtn')}</span>
                 </button>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
                   <label style={{ fontSize: '0.8rem', color: '#fca5a5', fontWeight: 600 }}>
-                    Para confirmar a exclusão, digite o nome do servidor:{' '}
+                    {t('server.confirmDeletePrompt')}{' '}
                     <span style={{ color: '#ffffff', background: 'rgba(0,0,0,0.4)', padding: '2px 6px', borderRadius: 4 }}>
                       {server.name}
                     </span>
@@ -952,7 +951,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                       }}
                       disabled={isDeleting}
                     >
-                      Cancelar
+                      {t('common.cancel')}
                     </button>
                     <button
                       type="button"
@@ -961,7 +960,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
                       disabled={isDeleting || deleteConfirmationText.trim().toLowerCase() !== server.name.trim().toLowerCase()}
                     >
                       {isDeleting ? <span className={styles.spinner} /> : <Trash2 size={16} />}
-                      <span>{isDeleting ? 'Excluindo...' : 'Confirmar Exclusão'}</span>
+                      <span>{isDeleting ? t('server.deleting') : t('server.confirmDeleteBtn')}</span>
                     </button>
                   </div>
                 </div>

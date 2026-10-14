@@ -71,7 +71,7 @@ export const InviteServerModal: React.FC<InviteServerModalProps> = ({
 
   const handleCopy = () => {
     navigator.clipboard.writeText(server.inviteCode || server.id);
-    toast.success(t('server.inviteCopied', 'Código de convite copiado para a área de transferência!'));
+    toast.success(t('server.inviteCopied'));
   };
 
   const toggleSelectFriend = (friendId: string) => {
@@ -99,8 +99,8 @@ export const InviteServerModal: React.FC<InviteServerModalProps> = ({
 
       toast.success(
         userIdsToAdd.length === 1
-          ? t('server.friendAddedSuccess', 'Amigo adicionado ao servidor com sucesso!')
-          : t('server.friendsAddedSuccess', `${userIdsToAdd.length} amigos adicionados ao servidor!`)
+          ? t('server.friendAddedSuccess')
+          : t('server.friendsAddedSuccess', { count: userIdsToAdd.length })
       );
 
       // Atualiza os membros locais
@@ -130,7 +130,7 @@ export const InviteServerModal: React.FC<InviteServerModalProps> = ({
 
       onMembersUpdated?.();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || t('server.addFriendError', 'Erro ao adicionar amigo ao servidor.'));
+      toast.error(err.response?.data?.message || t('server.addFriendError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -148,7 +148,7 @@ export const InviteServerModal: React.FC<InviteServerModalProps> = ({
       <div className={styles.modalContentWide} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 className={styles.title}>
-            {t('server.inviteTitle', 'Convidar para')} {server.name}
+            {t('server.inviteToServer', { name: server.name })}
           </h2>
           <button
             type="button"
@@ -168,7 +168,7 @@ export const InviteServerModal: React.FC<InviteServerModalProps> = ({
             onClick={() => setActiveTab('friends')}
           >
             <Users size={16} />
-            <span>{t('server.tabAddFriends', 'Amigos')}</span>
+            <span>{t('server.tabAddFriends')}</span>
           </button>
           <button
             type="button"
@@ -176,7 +176,7 @@ export const InviteServerModal: React.FC<InviteServerModalProps> = ({
             onClick={() => setActiveTab('link')}
           >
             <Link2 size={16} />
-            <span>{t('server.tabInviteLink', 'Link de Convite')}</span>
+            <span>{t('server.tabInviteLink')}</span>
           </button>
         </div>
 
@@ -187,7 +187,7 @@ export const InviteServerModal: React.FC<InviteServerModalProps> = ({
               <input
                 type="text"
                 className={styles.input}
-                placeholder={t('server.searchFriendsPlaceholder', 'Buscar amigos por nome ou @usuário...')}
+                placeholder={t('server.searchFriendsPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{ paddingLeft: '2.4rem' }}
@@ -203,13 +203,13 @@ export const InviteServerModal: React.FC<InviteServerModalProps> = ({
             {isLoading ? (
               <div className={styles.emptyFriends}>
                 <Loader2 size={24} className={styles.spinner} style={{ margin: '0 auto 8px' }} />
-                <span>{t('common.loading', 'Carregando amigos...')}</span>
+                <span>{t('server.loadingFriends')}</span>
               </div>
             ) : filteredFriends.length === 0 ? (
               <div className={styles.emptyFriends}>
                 {friends.length === 0
-                  ? t('server.noFriendsFound', 'Você ainda não possui amigos adicionados.')
-                  : t('server.noFriendsMatch', 'Nenhum amigo encontrado com essa busca.')}
+                  ? t('server.noFriendsFound')
+                  : t('server.noFriendsMatch')}
               </div>
             ) : (
               <div className={styles.friendsList}>
@@ -255,7 +255,7 @@ export const InviteServerModal: React.FC<InviteServerModalProps> = ({
 
                       {isMember ? (
                         <span className={styles.alreadyMemberBadge}>
-                          {t('server.alreadyMember', 'No servidor')}
+                          {t('server.alreadyMember')}
                         </span>
                       ) : (
                         <button
@@ -268,7 +268,7 @@ export const InviteServerModal: React.FC<InviteServerModalProps> = ({
                           disabled={isSubmitting}
                         >
                           <UserPlus size={14} />
-                          <span>{t('server.addFriend', 'Adicionar')}</span>
+                          <span>{t('server.addFriend')}</span>
                         </button>
                       )}
                     </div>
@@ -292,7 +292,7 @@ export const InviteServerModal: React.FC<InviteServerModalProps> = ({
                 }}
               >
                 <span style={{ fontSize: '0.85rem', color: '#f1f5f9', fontWeight: 600 }}>
-                  {selectedFriendIds.size} {selectedFriendIds.size === 1 ? 'amigo selecionado' : 'amigos selecionados'}
+                  {t('server.selectedFriendsCount', { count: selectedFriendIds.size })}
                 </span>
                 <button
                   type="button"
@@ -302,21 +302,21 @@ export const InviteServerModal: React.FC<InviteServerModalProps> = ({
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? <span className={styles.spinner} /> : <Check size={16} />}
-                  <span>{t('server.addSelectedFriends', 'Adicionar Selecionados')}</span>
+                  <span>{t('server.addSelectedFriends', { count: selectedFriendIds.size })}</span>
                 </button>
               </div>
             )}
           </div>
         ) : (
           <div className={styles.inputGroup}>
-            <label className={styles.label}>{t('server.inviteSubtitle', 'Compartilhe este código ou link com quem você deseja convidar')}</label>
+            <label className={styles.label}>{t('server.inviteSubtitle')}</label>
             <input
               type="text"
               className={`${styles.input} ${styles.inviteCodeBox}`}
               readOnly
               value={server.inviteCode || server.id}
               onClick={handleCopy}
-              title={t('server.copyInvite', 'Copiar código')}
+              title={t('server.copyInvite')}
             />
             <div className={styles.actions} style={{ justifyContent: 'center', marginTop: '0.5rem' }}>
               <button
@@ -325,7 +325,7 @@ export const InviteServerModal: React.FC<InviteServerModalProps> = ({
                 style={{ width: '100%' }}
                 onClick={handleCopy}
               >
-                {t('server.copyInvite', 'Copiar Código de Convite')}
+                {t('server.copyInvite')}
               </button>
             </div>
           </div>

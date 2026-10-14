@@ -58,7 +58,7 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({
         <div className={styles.subcardContent}>
           <div className={styles.subcardTitle}>{t('settings.alertSounds')}</div>
           <div className={styles.subcardDesc}>
-            Tocar sons curtos para mensagens, pedidos e menções
+            {t('settings.notifications.soundDesc')}
           </div>
         </div>
         <div className={styles.subcardActions}>
@@ -68,7 +68,7 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({
             onClick={handleTestSound}
             leftIcon={<Volume2 size={13} />}
           >
-            {isTestingNotifSound ? 'Tocando...' : 'Ouvir Som'}
+            {isTestingNotifSound ? t('settings.notifications.testing') : t('settings.notifications.testSound')}
           </Button>
           <div
             className={`${styles.checkbox} ${
@@ -84,13 +84,12 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({
       <div className={styles.infoBanner}>
         <AlertCircle size={16} className={styles.infoBannerIcon} />
         <span>
-          Os sons de notificação são automaticamente pausados enquanto você estiver em um canal de
-          voz ativo ou com o status definido como <strong>Não Perturbe (DND)</strong>.
+          {t('settings.notifications.dndNotice')}
         </span>
       </div>
 
       {/* Categorias Específicas */}
-      <div className={styles.sectionHeader}>Categorias de Notificação</div>
+      <div className={styles.sectionHeader}>{t('settings.notifications.categories')}</div>
 
       <div className={styles.categoriesGrid}>
         {/* Mensagens Diretas */}
@@ -99,8 +98,8 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({
           onClick={() => updateNotifSettings({ directMessages: !notifSettings.directMessages })}
         >
           <div className={styles.subcardContent}>
-            <div className={styles.subcardTitle}>Mensagens Diretas (DMs)</div>
-            <div className={styles.subcardDesc}>Avisos na tela para novas conversas privadas</div>
+            <div className={styles.subcardTitle}>{t('settings.notifications.dms')}</div>
+            <div className={styles.subcardDesc}>{t('settings.notifications.dmsDesc')}</div>
           </div>
           <div
             className={`${styles.checkbox} ${
@@ -116,8 +115,8 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({
           onClick={() => updateNotifSettings({ dmSound: !notifSettings.dmSound })}
         >
           <div className={styles.subcardContent}>
-            <div className={styles.subcardTitle}>Som para DMs</div>
-            <div className={styles.subcardDesc}>Efeito sonoro em mensagens diretas</div>
+            <div className={styles.subcardTitle}>{t('settings.notifications.dmSound')}</div>
+            <div className={styles.subcardDesc}>{t('settings.notifications.dmSoundDesc')}</div>
           </div>
           <div
             className={`${styles.checkbox} ${notifSettings.dmSound ? styles.checkboxChecked : ''}`}
@@ -132,8 +131,8 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({
           onClick={() => updateNotifSettings({ friendRequests: !notifSettings.friendRequests })}
         >
           <div className={styles.subcardContent}>
-            <div className={styles.subcardTitle}>Convites de Amizade</div>
-            <div className={styles.subcardDesc}>Alertas de convites recebidos e aceitos</div>
+            <div className={styles.subcardTitle}>{t('settings.notifications.friends')}</div>
+            <div className={styles.subcardDesc}>{t('settings.notifications.friendsDesc')}</div>
           </div>
           <div
             className={`${styles.checkbox} ${
@@ -149,8 +148,8 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({
           onClick={() => updateNotifSettings({ friendSound: !notifSettings.friendSound })}
         >
           <div className={styles.subcardContent}>
-            <div className={styles.subcardTitle}>Som de Amizade</div>
-            <div className={styles.subcardDesc}>Efeito sonoro para eventos de amigos</div>
+            <div className={styles.subcardTitle}>{t('settings.notifications.friendSound')}</div>
+            <div className={styles.subcardDesc}>{t('settings.notifications.friendSoundDesc')}</div>
           </div>
           <div
             className={`${styles.checkbox} ${notifSettings.friendSound ? styles.checkboxChecked : ''}`}
@@ -165,8 +164,8 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({
           onClick={() => updateNotifSettings({ mentions: !notifSettings.mentions })}
         >
           <div className={styles.subcardContent}>
-            <div className={styles.subcardTitle}>Menções (@você e @everyone)</div>
-            <div className={styles.subcardDesc}>Avisos quando alguém citar seu nome em canais</div>
+            <div className={styles.subcardTitle}>{t('settings.notifications.mentions')}</div>
+            <div className={styles.subcardDesc}>{t('settings.notifications.mentionsDesc')}</div>
           </div>
           <div
             className={`${styles.checkbox} ${notifSettings.mentions ? styles.checkboxChecked : ''}`}
@@ -180,8 +179,8 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({
           onClick={() => updateNotifSettings({ mentionSound: !notifSettings.mentionSound })}
         >
           <div className={styles.subcardContent}>
-            <div className={styles.subcardTitle}>Som para Menções</div>
-            <div className={styles.subcardDesc}>Efeito sonoro ao ser mencionado</div>
+            <div className={styles.subcardTitle}>{t('settings.notifications.mentionSound')}</div>
+            <div className={styles.subcardDesc}>{t('settings.notifications.mentionSoundDesc')}</div>
           </div>
           <div
             className={`${styles.checkbox} ${
@@ -196,9 +195,9 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({
       {/* Executar em Segundo Plano */}
       <div className={styles.subcard} onClick={onToggleRunInBackground}>
         <div className={styles.subcardContent}>
-          <div className={styles.subcardTitle}>Executar em segundo plano</div>
+          <div className={styles.subcardTitle}>{t('settings.notifications.background')}</div>
           <div className={styles.subcardDesc}>
-            Ao fechar a janela, manter o Voxy ativo no ícone perto do relógio do Windows.
+            {t('settings.notifications.backgroundDesc')}
           </div>
         </div>
         <div

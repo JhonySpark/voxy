@@ -161,7 +161,7 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
             style={{ opacity: showControls ? 1 : 0 }}
           >
             {participant.isLocal && typeof participant.streamViewersCount === "number" && (
-              <div className={styles.viewerBadge} title={`${participant.streamViewersCount} assistindo`}>
+              <div className={styles.viewerBadge} title={t('voice.streamViewers', { count: participant.streamViewersCount })}>
                 <Eye size={13} />
                 <span>{participant.streamViewersCount}</span>
               </div>
@@ -199,7 +199,7 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
                   onRestoreGrid();
                 }}
                 className={styles.controlButton}
-                title="Fechar prévia"
+                title={t('voice.closePreview')}
               >
                 <X size={20} />
               </button>
@@ -210,10 +210,7 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
               <button
                 onClick={() => setShowSettings(!showSettings)}
                 className={styles.controlButton}
-                title={t(
-                  "voice.streamSettings",
-                  "Configurações da Transmissão",
-                )}
+                title={t("voice.streamSettings")}
               >
                 <Settings size={20} />
               </button>
@@ -223,7 +220,7 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
             <button
               onClick={() => setShowDiagnostics((prev) => !prev)}
               className={styles.controlButton}
-              title="Diagnóstico da Transmissão (F8)"
+              title={t('voice.streamDiagnostics')}
               style={showDiagnostics ? { color: "#38bdf8" } : undefined}
             >
               <Activity size={20} />
@@ -233,11 +230,7 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
           <button
             onClick={toggleFullscreen}
             className={styles.controlButton}
-            title={
-              isFullscreen
-                ? t("voice.exitFullscreen", "Sair da Tela Cheia")
-                : t("voice.fullscreen", "Tela Cheia")
-            }
+            title={isFullscreen ? t("voice.exitFullscreen") : t("voice.fullscreen")}
           >
             {isFullscreen ? <Minimize size={20} /> : <Fullscreen size={20} />}
           </button>
@@ -245,7 +238,7 @@ export const MaximizedStreamView: React.FC<MaximizedStreamViewProps> = ({
           <button
             onClick={onRestoreGrid}
             className={styles.controlButton}
-            title={t("voice.restoreGrid", "Restaurar Grid")}
+            title={t("voice.restoreGrid")}
           >
             <Minimize size={20} />
           </button>

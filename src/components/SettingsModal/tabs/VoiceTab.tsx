@@ -71,7 +71,7 @@ export const VoiceTab: React.FC<VoiceTabProps> = ({
                 <option value="">{t('settings.defaultDevice')}</option>
                 {audioInputs.map((device) => (
                   <option key={device.deviceId} value={device.deviceId}>
-                    {device.label || `Microfone (${device.deviceId.slice(0, 5)}...)`}
+                    {device.label || t('settings.defaultMicLabel', { id: device.deviceId.slice(0, 5) })}
                   </option>
                 ))}
               </select>
@@ -127,7 +127,7 @@ export const VoiceTab: React.FC<VoiceTabProps> = ({
                 <option value="">{t('settings.defaultDevice')}</option>
                 {audioOutputs.map((device) => (
                   <option key={device.deviceId} value={device.deviceId}>
-                    {device.label || `Alto-falante (${device.deviceId.slice(0, 5)}...)`}
+                    {device.label || t('settings.defaultSpeakerLabel', { id: device.deviceId.slice(0, 5) })}
                   </option>
                 ))}
               </select>
@@ -180,7 +180,7 @@ export const VoiceTab: React.FC<VoiceTabProps> = ({
           <div className={styles.neuralInfo}>
             <div className={styles.neuralTitleRow}>
               <span className={styles.neuralTitle}>{t('settings.noiseSuppression')}</span>
-              <span className={styles.neuralBadge}>RECOMENDADO</span>
+              <span className={styles.neuralBadge}>{t('common.recommended')}</span>
             </div>
             <div className={styles.neuralDesc}>{t('settings.noiseSuppressionDesc')}</div>
           </div>
@@ -188,7 +188,7 @@ export const VoiceTab: React.FC<VoiceTabProps> = ({
             type="button"
             className={`${styles.switch} ${noiseSuppression ? styles.switchActive : ''}`}
             onClick={onToggleNoiseSuppression}
-            aria-label="Alternar Crisp AI Noise Suppression"
+            aria-label={t('settings.noiseSuppressionAria')}
           >
             <span className={styles.switchThumb} />
           </button>
@@ -228,7 +228,7 @@ export const VoiceTab: React.FC<VoiceTabProps> = ({
             onClick={onRestoreDefaults}
           >
             <RotateCcw size={14} />
-            <span>{t('settings.resetFilters', 'Restaurar padrões de áudio')}</span>
+            <span>{t('settings.resetFilters')}</span>
           </button>
         </div>
       )}
