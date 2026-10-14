@@ -6,7 +6,6 @@ import {
   Plus,
   Sparkles,
   Link2,
-  X,
   Clipboard,
   ArrowRight,
   CheckCircle2,
@@ -214,17 +213,6 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
         <div className={styles.glowEffect} />
-
-        {/* Botão de Fechar */}
-        <button
-          type="button"
-          className={styles.closeButton}
-          onClick={onClose}
-          disabled={isCreating || isJoining}
-          title={t('common.close')}
-        >
-          <X size={18} />
-        </button>
 
         {/* Barra de Abas (Criar vs Entrar) */}
         <div className={styles.tabBar}>
