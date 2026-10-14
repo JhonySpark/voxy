@@ -12,7 +12,7 @@ const manifestPath = path.resolve(__dirname, '../electron/native_manifest.json')
 const targetBinaries = [
   'vx_rt_b18e.exe',
   'vx_rt_c831.exe',
-  'vx_rt_a94f.exe',
+  'voxy_transmission_audio.exe',
   'vx_rt_f52d.exe',
 ];
 

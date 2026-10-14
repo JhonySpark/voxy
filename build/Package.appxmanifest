@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap6="http://schemas.microsoft.com/appx/manifest/uap/windows10/6"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap6 desktop rescap">
+
+  <!-- Identidade oficial registrada no Microsoft Partner Center -->
+  <Identity
+    Name="${identityName}"
+    ProcessorArchitecture="${arch}"
+    Publisher='${publisher}'
+    Version="${version}" />
+
+  <Properties>
+    <DisplayName>${displayName}</DisplayName>
+    <PublisherDisplayName>${publisherDisplayName}</PublisherDisplayName>
+    <Description>${description}</Description>
+    <Logo>${logo}</Logo>
+  </Properties>
+
+  <Resources>
+    ${resourceLanguages}
+  </Resources>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.0" />
+  </Dependencies>
+
+  <!-- Capacidades explícitas do aplicativo Voxy -->
+  <Capabilities>
+    <!-- Capacidade restrita Win32 Desktop Bridge: Execução de binários nativos auxiliares -->
+    <rescap:Capability Name="runFullTrust" />
+
+    <!-- Conectividade de Rede: HTTP, WebSockets e WebRTC (ICE P2P e Servidor) -->
+    <Capability Name="internetClient" />
+    <Capability Name="internetClientServer" />
+    <Capability Name="privateNetworkClientServer" />
+
+    <!-- Captura Moderna de Tela e Streaming de Janelas de Jogos (WGC) -->
+    <uap6:Capability Name="graphicsCapture" />
+
+    <!-- Dispositivos Sensíveis: Microfone e Câmera (Comunicação de voz e vídeo) -->
+    <DeviceCapability Name="microphone" />
+  </Capabilities>
+
+  <Applications>
+    <Application Id="${applicationId}" Executable="${executable}" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        BackgroundColor="${backgroundColor}"
+        DisplayName="${displayName}"
+        Square150x150Logo="${square150x150Logo}"
+        Square44x44Logo="${square44x44Logo}"
+        Description="${description}">
+        ${lockScreen}
+        ${defaultTile}
+        ${splashScreen}
+      </uap:VisualElements>
+      ${extensions}
+    </Application>
+  </Applications>
+</Package>

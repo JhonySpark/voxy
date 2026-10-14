@@ -9,7 +9,7 @@ const __dirname = dirname(__filename);
 
 export const NATIVE_BINARIES = {
   GAME_DETECTOR: 'vx_rt_c831.exe',
-  NATIVE_STREAMER: 'vx_rt_a94f.exe',
+  NATIVE_STREAMER: 'voxy_transmission_audio.exe',
   WGC_CAPTURE: 'vx_rt_f52d.exe',
   AGE_SIGNAL: 'vx_rt_b18e.exe',
 } as const;

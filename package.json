@@ -1,7 +1,7 @@
 {
   "name": "voxy",
   "private": true,
-  "version": "0.5.18",
+  "version": "0.5.19",
   "type": "module",
   "main": "dist-electron/main.js",
   "author": "D4rk Side",
@@ -12,12 +12,13 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "dist": "npm run build && dotenv -e .env -- electron-builder --win",
+    "dist:msix": "dotenv -e .env -- node scripts/build_msix.js",
     "dist:publish": "dotenv -e .env -- node scripts/ensure-tag.js && npm run build && dotenv -e .env -- electron-builder --win --publish always"
   },
   "build": {
     "appId": "br.com.d4rkside.voxy",
     "productName": "Voxy",
-    "artifactName": "Voxy-Setup-${version}.${ext}",
+    "artifactName": "Voxy-Setup.${ext}",
     "copyright": "Copyright © 2026 D4rk Side",
     "icon": "build/icon.ico",
     "directories": {
@@ -34,6 +35,32 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Voxy",
       "deleteAppDataOnUninstall": false
+    },
+    "appx": {
+      "identityName": "D4rkSideStudio.Voxy",
+      "publisher": "CN=231BC552-998F-44F4-A169-33B27F93DB71",
+      "publisherDisplayName": "D4rk Side Studio",
+      "applicationId": "D4rkSideStudio.Voxy",
+      "displayName": "Voxy",
+      "backgroundColor": "#1e1e2e",
+      "showNameOnTiles": true,
+      "addAutoLaunchExtension": true,
+      "customManifestPath": "build/Package.appxmanifest",
+      "artifactName": "${productName}_x64.msix",
+      "minVersion": "10.0.17763.0",
+      "maxVersionTested": "10.0.22621.0",
+      "languages": [
+        "pt-BR",
+        "en-US"
+      ],
+      "capabilities": [
+        "runFullTrust",
+        "microphone",
+        "internetClient",
+        "internetClientServer",
+        "privateNetworkClientServer",
+        "graphicsCapture"
+      ]
     },
     "files": [
       "dist/**/*",

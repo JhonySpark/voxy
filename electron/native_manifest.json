@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-10-12T22:45:13.617Z",
+  "generatedAt": "2026-10-13T23:58:52.140Z",
   "binaries": {
     "vx_rt_b18e.exe": {
       "sha256": "da019236cb13950532a78a781712e82430c9d5d1735e9a6f226676718b8a96f4",
@@ -10,9 +10,9 @@
       "sha256": "b7350d45dc12ad01c0bb2f6ee08e7690e7bad9dbc8191d5e18f740a244d20b4c",
       "sizeBytes": 283136
     },
-    "vx_rt_a94f.exe": {
-      "sha256": "dc03a0a8f35f55a343c8707c0e5c55dcd369b07071ee51752c7cc587c726b943",
-      "sizeBytes": 366592
+    "voxy_transmission_audio.exe": {
+      "sha256": "10560018f3ca80ff4a67703b1c4ac73f9080ebc90d8af34a66ae47d6decd4018",
+      "sizeBytes": 638976
     },
     "vx_rt_f52d.exe": {
       "sha256": "24a7c0638991ddce3c266b5a78da84a0bcc45373c1a0cad216026547e19c1119",

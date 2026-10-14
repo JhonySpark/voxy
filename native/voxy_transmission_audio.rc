@@ -1,0 +1,45 @@
+#include <windows.h>
+
+// Definir icone oficial da aplicacao
+1 ICON "..\\build\\icon.ico"
+
+// Definir informacoes de versao e descricao para o Windows Mixer de Audio
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     0,5,19,0
+PRODUCTVERSION  0,5,19,0
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+FILEFLAGS       0
+FILEOS          VOS_NT_WINDOWS32
+FILETYPE        VFT_APP
+FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "041604B0" // Portugues (Brasil) - Unicode
+        BEGIN
+            VALUE "CompanyName",      "D4rk Side Studio\0"
+            VALUE "FileDescription",  "Voxy Transmission Audio\0"
+            VALUE "FileVersion",      "0.5.19.0\0"
+            VALUE "InternalName",     "voxy_transmission_audio\0"
+            VALUE "LegalCopyright",   "Copyright (C) 2026 D4rk Side Studio\0"
+            VALUE "OriginalFilename", "voxy_transmission_audio.exe\0"
+            VALUE "ProductName",      "Voxy Transmission Audio\0"
+            VALUE "ProductVersion",   "0.5.19.0\0"
+        END
+        BLOCK "040904B0" // Ingles (EUA) - Unicode
+        BEGIN
+            VALUE "CompanyName",      "D4rk Side Studio\0"
+            VALUE "FileDescription",  "Voxy Transmission Audio\0"
+            VALUE "FileVersion",      "0.5.19.0\0"
+            VALUE "InternalName",     "voxy_transmission_audio\0"
+            VALUE "LegalCopyright",   "Copyright (C) 2026 D4rk Side Studio\0"
+            VALUE "OriginalFilename", "voxy_transmission_audio.exe\0"
+            VALUE "ProductName",      "Voxy Transmission Audio\0"
+            VALUE "ProductVersion",   "0.5.19.0\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0416, 0x04B0, 0x0409, 0x04B0
+    END
+END
