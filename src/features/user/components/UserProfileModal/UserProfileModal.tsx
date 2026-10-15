@@ -254,7 +254,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             {isSelf ? (
               <button
                 type="button"
-                className={styles.primaryActionBtn}
+                className={styles.selfEditBtn}
                 onClick={() => {
                   onClose();
                   onOpenEditProfile?.();

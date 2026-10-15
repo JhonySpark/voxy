@@ -202,7 +202,9 @@ export const AccountTab: React.FC<AccountTabProps> = ({
                 src={currentUser?.avatarUrl}
                 displayName={currentUser?.displayName || currentUser?.username}
                 frameSlug={currentUser?.equippedFrameSlug}
-                size="lg"
+                size="xl"
+                animated={true}
+                circleClassName={styles.avatarBorderCutout}
               />
             </div>
             <div className={styles.profileInfo}>
