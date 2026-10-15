@@ -72,7 +72,8 @@ export interface VoiceRoomProps {
   myId: string;
   myUsername: string;
   userRole?: string;
-  userAgeClassification?: 'UNKNOWN' | 'CHILD' | 'TEEN' | 'ADULT';
+  userAgeClassification?: 'UNKNOWN' | 'CHILD' | 'TEEN' | 'ADULT' | 'DIVERGENT';
+  canShareScreen?: boolean;
   isMuted?: boolean;
   onDisconnect: () => void;
   onParticipantsChange: (participants: { id: string; username: string; isMuted?: boolean }[]) => void;
@@ -243,6 +244,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
   livekitUrl,
   channelId,
   userAgeClassification,
+  canShareScreen,
   userRole,
   onViewUserProfile,
   isMuted: isMutedProp,
@@ -575,6 +577,15 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
   };
 
   const toggleScreenShare = async () => {
+    if (
+      userAgeClassification === 'UNKNOWN' ||
+      canShareScreen === false ||
+      userAgeClassification !== 'ADULT'
+    ) {
+      alert(t('voice.screenShareRestricted', 'Compartilhamento de tela permitido apenas para maiores de 18 anos com idade validada.'));
+      return;
+    }
+
     if (isNativeStreaming) {
       try {
         await ipcRenderer?.invoke('STOP_NATIVE_STREAM');

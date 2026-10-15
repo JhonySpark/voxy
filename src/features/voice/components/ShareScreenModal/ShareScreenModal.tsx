@@ -13,7 +13,7 @@ export interface DesktopSource {
 
 interface ShareScreenModalProps {
   isOpen: boolean;
-  userAgeClassification?: 'UNKNOWN' | 'CHILD' | 'TEEN' | 'ADULT';
+  userAgeClassification?: 'UNKNOWN' | 'CHILD' | 'TEEN' | 'ADULT' | 'DIVERGENT';
   categorizedSources: {
     games: DesktopSource[];
     windows: DesktopSource[];

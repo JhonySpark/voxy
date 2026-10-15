@@ -210,6 +210,7 @@ export const AgeClassificationEnum = {
   CHILD: 'CHILD',
   TEEN: 'TEEN',
   ADULT: 'ADULT',
+  DIVERGENT: 'DIVERGENT',
 } as const;
 export type AgeClassificationEnum = (typeof AgeClassificationEnum)[keyof typeof AgeClassificationEnum];
 

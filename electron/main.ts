@@ -505,6 +505,9 @@ app.whenReady().then(() => {
     }
     const binPath = resolveNativeBinary(NATIVE_BINARIES.AGE_SIGNAL);
     if (!binPath) {
+      console.warn(
+        "[AgeSignal] Sonda nativa (vx_rt_b18e.exe) não localizada nos caminhos padrão.",
+      );
       return { available: false, reason: "Probe_Not_Found" };
     }
 
@@ -512,34 +515,73 @@ app.whenReady().then(() => {
     const timestamp = Date.now();
 
     return new Promise((resolve) => {
+      let settled = false;
       const child = spawn(binPath, [nonce, String(timestamp)], {
         windowsHide: true,
-        stdio: ["ignore", "pipe", "ignore"],
+        stdio: ["ignore", "pipe", "pipe"],
       });
 
       let stdout = "";
+      let stderr = "";
       child.stdout?.on("data", (d) => {
         stdout += d.toString();
       });
+      child.stderr?.on("data", (d) => {
+        stderr += d.toString();
+      });
+
       child.on("close", (code) => {
+        if (settled) return;
+        settled = true;
         if (code === 0 && stdout.trim()) {
           try {
             const data = JSON.parse(stdout.trim());
             return resolve(data);
-          } catch (_) {}
+          } catch (parseErr) {
+            console.error(
+              "[AgeSignal] Erro ao parsear JSON de saída da sonda:",
+              parseErr,
+              stdout,
+            );
+          }
         }
-        resolve({ available: false, reason: "Execution_Failed" });
+        console.warn(
+          `[AgeSignal] Sonda encerrou com código ${code}. stderr=${stderr.trim()}, stdout=${stdout.trim()}`,
+        );
+
+        resolve({
+          available: false,
+          reason: "Execution_Failed",
+          code,
+          stderr: stderr.trim(),
+        });
       });
-      child.on("error", () => {
-        resolve({ available: false, reason: "Process_Error" });
+
+      child.on("error", (err) => {
+        if (settled) return;
+        settled = true;
+        console.error(
+          "[AgeSignal] Erro ao executar processo da sonda nativa:",
+          err,
+        );
+        resolve({
+          available: false,
+          reason: "Process_Error",
+          error: err.message,
+        });
       });
 
       setTimeout(() => {
+        if (settled) return;
+        settled = true;
         try {
           child.kill();
         } catch (_) {}
+        console.warn(
+          "[AgeSignal] Timeout de 8s excedido ao executar sonda nativa.",
+        );
         resolve({ available: false, reason: "Timeout" });
-      }, 4000);
+      }, 8000);
     });
   });
 

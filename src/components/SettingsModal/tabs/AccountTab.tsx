@@ -65,7 +65,7 @@ export const AccountTab: React.FC<AccountTabProps> = ({
         success: boolean;
         user: UserProfileData;
         changed: boolean;
-      }>(ApiRoutes.AUTH_SYNC_AGE_SIGNAL, { signal: osSignal });
+      }>(ApiRoutes.AUTH_SYNC_AGE_SIGNAL, osSignal);
 
       if (res?.success && res.user) {
         const updatedUser = res.user;
@@ -91,6 +91,8 @@ export const AccountTab: React.FC<AccountTabProps> = ({
             ? t('user.agePillAdult')
             : newClass === 'TEEN'
             ? t('user.agePillTeen')
+            : newClass === 'DIVERGENT'
+            ? t('user.agePillDivergent', 'Divergente')
             : newClass;
 
         if (oldClass !== newClass) {
@@ -168,6 +170,9 @@ export const AccountTab: React.FC<AccountTabProps> = ({
     }
     if (currentUser?.ageClassification === 'CHILD') {
       return <span className={`${styles.agePill} ${styles.agePillChild}`}>{t('user.agePillChild')}</span>;
+    }
+    if (currentUser?.ageClassification === 'DIVERGENT') {
+      return <span className={`${styles.agePill} ${styles.agePillChild}`}>{t('user.agePillDivergent', 'Divergente')}</span>;
     }
     return <span className={`${styles.agePill} ${styles.agePillUnknown}`}>{t('user.agePillUnknown')}</span>;
   };
@@ -255,11 +260,30 @@ export const AccountTab: React.FC<AccountTabProps> = ({
 
         <div className={styles.infoBox}>
           <div className={styles.infoRow}>
+            <span className={styles.infoLabel}>Chamadas de Voz</span>
+            <span
+              className={`${styles.infoValue} ${
+                currentUser?.canJoinVoice !== false &&
+                currentUser?.ageClassification !== 'UNKNOWN' &&
+                currentUser?.ageClassification !== 'CHILD'
+                  ? styles.valueAllowed
+                  : styles.valueBlocked
+              }`}
+            >
+              {currentUser?.canJoinVoice !== false &&
+              currentUser?.ageClassification !== 'UNKNOWN' &&
+              currentUser?.ageClassification !== 'CHILD'
+                ? 'Liberado'
+                : 'Bloqueado (Requer validação de idade)'}
+            </span>
+          </div>
+
+          <div className={styles.infoRow}>
             <span className={styles.infoLabel}>{t('user.streamPermissions')}</span>
             <span className={styles.infoValue}>
               {currentUser?.ageClassification === 'ADULT'
                 ? t('user.streamPermAdult')
-                : currentUser?.ageClassification === 'TEEN'
+                : currentUser?.ageClassification === 'TEEN' || currentUser?.ageClassification === 'DIVERGENT'
                 ? t('user.streamPermTeen')
                 : t('user.streamPermRestricted')}
             </span>

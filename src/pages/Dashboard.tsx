@@ -16,6 +16,7 @@ import {
   ApiRoutes,
   UserStatusEnum,
   IpcChannels,
+  AgeClassificationEnum,
 } from '../core/enums';
 import { httpClient } from '../infrastructure/adapters/http/http-client.adapter';
 import { preloadMedia } from '../core/utils/media.util';
@@ -238,11 +239,44 @@ export default function Dashboard() {
         ]);
         if (meRes.status === 'fulfilled' && meRes.value) {
           if (meRes.value.ageClassification === 'CHILD') {
-            localStorage.removeItem('token');
+            localStorage.removeItem(StorageKeys.AUTH_TOKEN);
             navigate('/login?error=child_blocked');
             return;
           }
           setCurrentUserProfile(meRes.value);
+
+          // Auto-execução em background se o usuário estiver UNKNOWN
+          if (
+            meRes.value.ageClassification === 'UNKNOWN' &&
+            typeof window !== 'undefined' &&
+            (window as any).require
+          ) {
+            try {
+              const ipc = (window as any).require('electron').ipcRenderer;
+              if (ipc) {
+                ipc.invoke(IpcChannels.GET_OS_AGE_SIGNAL).then(async (ageSignal: any) => {
+                  if (ageSignal && ageSignal.available) {
+                    try {
+                      const syncRes = await httpClient.post<{ success: boolean; user: UserProfileData }>(
+                        ApiRoutes.AUTH_SYNC_AGE_SIGNAL,
+                        ageSignal
+                      );
+                      if (syncRes?.user) {
+                        if (syncRes.user.ageClassification === 'CHILD') {
+                          localStorage.removeItem(StorageKeys.AUTH_TOKEN);
+                          navigate('/login?error=child_blocked');
+                          return;
+                        }
+                        setCurrentUserProfile(syncRes.user);
+                      }
+                    } catch (e) {
+                      console.warn('[AgeSignal] Background auto-sync failed:', e);
+                    }
+                  }
+                }).catch(() => {});
+              }
+            } catch (_) {}
+          }
         }
       } catch (err) {
         console.error('Error in initial load', err);
@@ -817,6 +851,13 @@ export default function Dashboard() {
             onSelectChannel={(ch) => setActiveChannel(ch)}
             onConnectVoice={(ch) => {
               if (connectedVoiceChannel?.channelId === ch.id) return;
+              if (
+                currentUserProfile?.ageClassification === AgeClassificationEnum.UNKNOWN ||
+                currentUserProfile?.canJoinVoice === false
+              ) {
+                toast.warning('Usuários sem validação de idade não podem entrar em chamadas de voz. Apenas chat de texto está liberado.');
+                return;
+              }
               setConnectedVoiceChannel({
                 channelId: ch.id,
                 serverId: activeServer.id,
@@ -906,6 +947,7 @@ export default function Dashboard() {
             myUsername={myUsername}
             userRole={currentUserProfile?.role || myRole}
             userAgeClassification={currentUserProfile?.ageClassification}
+            canShareScreen={currentUserProfile?.canShareScreen}
             isMuted={isVoiceMuted}
             onDisconnect={() => {
               setConnectedVoiceChannel(null);

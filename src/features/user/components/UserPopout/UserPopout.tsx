@@ -23,8 +23,9 @@ export interface UserProfileData {
   customStatus?: string | null;
   birthDate?: string | null;
   isEmailVerified?: boolean;
-  ageClassification?: 'UNKNOWN' | 'CHILD' | 'TEEN' | 'ADULT';
+  ageClassification?: 'UNKNOWN' | 'CHILD' | 'TEEN' | 'ADULT' | 'DIVERGENT';
   ageSignalSource?: 'NONE' | 'WINDOWS_OS' | 'DECLARED';
+  canJoinVoice?: boolean;
   canShareScreen?: boolean;
   canStreamGames?: boolean;
   canAccess18Plus?: boolean;
