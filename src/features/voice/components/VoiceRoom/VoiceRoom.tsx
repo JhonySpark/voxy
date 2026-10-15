@@ -952,11 +952,13 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
 
       let avatarUrl: string | null = null;
       let displayName: string | null = null;
+      let equippedFrameSlug: string | null = null;
       try {
         if (p.metadata) {
           const meta = JSON.parse(p.metadata);
           avatarUrl = meta.avatarUrl || null;
           displayName = meta.displayName || null;
+          equippedFrameSlug = meta.equippedFrameSlug || null;
         }
       } catch (_) {}
       if (!avatarUrl && p.identity && !p.identity.endsWith('#screen')) {
@@ -977,6 +979,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
         username: p.isLocal ? t('chat.you') : p.name || p.identity,
         displayName: displayName || (p.isLocal ? t('chat.you') : p.name || p.identity),
         avatarUrl,
+        equippedFrameSlug,
         isLocal: p.isLocal,
         track: activeTrack,
         isStreaming,

@@ -4,8 +4,7 @@ import { useTranslation } from 'react-i18next';
 import styles from './UserProfileBar.module.css';
 import { UserPopout, type UserProfileData } from '../UserPopout/UserPopout';
 import { SettingsTabEnum, UserStatusEnum } from '../../../../core/enums';
-import { getMediaUrl, handleMediaError } from '../../../../core/utils/media.util';
-import { StatusDot } from '../../../../components/common/StatusDot/StatusDot';
+import { Avatar } from '../../../../components/common/Avatar';
 
 export interface ConnectedVoiceChannelInfo {
   channelId: string;
@@ -42,14 +41,8 @@ export const UserProfileBar: React.FC<UserProfileBarProps> = ({
 }) => {
   const { t } = useTranslation();
   const [isPopoutOpen, setIsPopoutOpen] = useState(false);
-  const [avatarError, setAvatarError] = useState(false);
 
   const displayName = user.displayName || user.username || 'User';
-  const avatarMedia = getMediaUrl(user.avatarUrl);
-
-  React.useEffect(() => {
-    setAvatarError(false);
-  }, [avatarMedia]);
 
   return (
     <div className={styles.container}>
@@ -106,23 +99,14 @@ export const UserProfileBar: React.FC<UserProfileBarProps> = ({
           title={t('user.viewProfile')}
         >
           <div className={styles.avatarWrapper}>
-            {avatarMedia && !avatarError ? (
-              <img
-                src={avatarMedia}
-                alt={displayName}
-                className={styles.avatarImg}
-                onError={(e) => handleMediaError(e, () => setAvatarError(true))}
-              />
-            ) : (
-              <div className={styles.avatar}>
-                {displayName.charAt(0).toUpperCase()}
-              </div>
-            )}
-            <StatusDot
+            <Avatar
+              src={user.avatarUrl}
+              displayName={displayName}
+              frameSlug={user.equippedFrameSlug}
               status={currentStatus || user.status || UserStatusEnum.ONLINE}
               activity={currentActivity || user.customStatus}
+              showStatus
               size="sm"
-              className={styles.statusDot}
             />
           </div>
           <div className={styles.userInfo}>

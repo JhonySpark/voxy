@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="100%" height="100%">
+  <defs>
+    <linearGradient id="cyberCyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#0369a1" />
+    </linearGradient>
+    <filter id="cyanGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <style>
+    @keyframes circuitPulse {
+      0%, 100% { opacity: 0.8; filter: drop-shadow(0 0 3px #38bdf8); }
+      50% { opacity: 1; filter: drop-shadow(0 0 10px #38bdf8); }
+    }
+    @keyframes circuitSpin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .circuit-main {
+      animation: circuitPulse 2.8s ease-in-out infinite;
+    }
+    .circuit-rotate {
+      transform-origin: 150px 150px;
+      animation: circuitSpin 24s linear infinite;
+    }
+  </style>
+
+  <g class="circuit-main" filter="url(#cyanGlow)">
+    <!-- Trilhas Circulares da Placa -->
+    <circle cx="150" cy="150" r="126" fill="none" stroke="rgba(56, 189, 248, 0.25)" stroke-width="2" />
+    <circle cx="150" cy="150" r="114" fill="none" stroke="rgba(56, 189, 248, 0.4)" stroke-width="2.5" stroke-dasharray="25 15 45 10 15 20" />
+
+    <!-- Elementos Rotativos de Dados -->
+    <g class="circuit-rotate">
+      <!-- Pistas Chanfradas em Ângulos de 45 Graus -->
+      <path d="M 150 22 L 175 22 L 185 32 L 205 32" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" />
+      <circle cx="205" cy="32" r="3.5" fill="#38bdf8" />
+
+      <path d="M 278 150 L 278 175 L 268 185 L 268 205" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" />
+      <circle cx="268" cy="205" r="3.5" fill="#38bdf8" />
+
+      <path d="M 150 278 L 125 278 L 115 268 L 95 268" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" />
+      <circle cx="95" cy="268" r="3.5" fill="#38bdf8" />
+
+      <path d="M 22 150 L 22 125 L 32 115 L 32 95" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" />
+      <circle cx="32" cy="95" r="3.5" fill="#38bdf8" />
+
+      <!-- Nós Hexagonais nos Cantos -->
+      <polygon points="230,70 236,73 236,80 230,83 224,80 224,73" fill="none" stroke="#7dd3fc" stroke-width="1.5" />
+      <polygon points="70,230 76,233 76,240 70,243 64,240 64,233" fill="none" stroke="#7dd3fc" stroke-width="1.5" />
+    </g>
+
+    <!-- Borda Interna para o Avatar -->
+    <circle cx="150" cy="150" r="106" fill="none" stroke="rgba(56, 189, 248, 0.6)" stroke-width="1.8" />
+  </g>
+</svg>

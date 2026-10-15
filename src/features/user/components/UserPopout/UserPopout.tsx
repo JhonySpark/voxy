@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { getMediaUrl } from '../../../../core/utils/media.util';
 import { UserStatusEnum } from '../../../../core/enums';
 import { StatusDot, getStatusLabel } from '../../../../components/common/StatusDot/StatusDot';
+import { Avatar } from '../../../../components/common/Avatar';
 import { useDialog } from '../../../../components/common/Dialog/DialogContext';
 
 export interface UserProfileData {
@@ -17,6 +18,7 @@ export interface UserProfileData {
   avatarUrl?: string | null;
   bannerUrl?: string | null;
   bannerColor?: string | null;
+  equippedFrameSlug?: string | null;
   status?: UserStatusEnum | string | null;
   customStatus?: string | null;
   birthDate?: string | null;
@@ -58,17 +60,10 @@ export const UserPopout: React.FC<UserPopoutProps> = ({
   const [selectedStatus, setSelectedStatus] = useState<UserStatusEnum | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<string | null | undefined>(undefined);
 
-  const avatarMedia = getMediaUrl(user.avatarUrl);
   const bannerMedia = getMediaUrl(user.bannerUrl);
-  const [avatarError, setAvatarError] = React.useState(false);
 
   const activeStatus = (selectedStatus || currentStatus || user.status || UserStatusEnum.ONLINE).toUpperCase() as UserStatusEnum;
   const activeActivity = selectedActivity !== undefined ? selectedActivity : (currentActivity !== undefined ? currentActivity : user.customStatus);
-
-  // Reseta o erro caso a URL do avatar mude
-  useEffect(() => {
-    setAvatarError(false);
-  }, [avatarMedia]);
 
   // Fecha ao clicar fora
   useEffect(() => {
@@ -139,23 +134,17 @@ export const UserPopout: React.FC<UserPopoutProps> = ({
         {/* Avatar e Pensamento / Status */}
         <div className={styles.avatarRow}>
           <div className={styles.avatarWrapper}>
-            <div className={styles.avatarCircle}>
-              {avatarMedia && !avatarError ? (
-                <img
-                  src={avatarMedia}
-                  alt={displayName}
-                  className={styles.avatarImg}
-                  onError={() => setAvatarError(true)}
-                />
-              ) : (
-                <div className={styles.avatarPlaceholder}>
-                  {displayName.charAt(0).toUpperCase()}
-                </div>
-              )}
-            </div>
-            <div className={styles.statusBadge}>
-              <StatusDot status={activeStatus} size="xl" activity={activeActivity} />
-            </div>
+            <Avatar
+              src={user.avatarUrl}
+              displayName={displayName}
+              frameSlug={user.equippedFrameSlug}
+              status={activeStatus}
+              activity={activeActivity}
+              showStatus
+              size="xl"
+              animated={true}
+              circleClassName={styles.avatarBorderCutout}
+            />
           </div>
 
         {/* Balão de Pensamento / Bio */}

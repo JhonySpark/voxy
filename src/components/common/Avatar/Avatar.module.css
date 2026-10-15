@@ -1,0 +1,338 @@
+/* =========================================================================
+   Avatar.module.css - Componente Avatar Unificado com Molduras (Obsidian Mint)
+   ========================================================================= */
+
+.avatarRoot {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  user-select: none;
+  aspect-ratio: 1 / 1;
+  box-sizing: border-box;
+}
+
+/* Tamanhos Padronizados */
+.size-xs {
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
+}
+
+.size-sm {
+  width: 32px;
+  height: 32px;
+  font-size: 13px;
+}
+
+.size-md {
+  width: 40px;
+  height: 40px;
+  font-size: 16px;
+}
+
+.size-lg {
+  width: 56px;
+  height: 56px;
+  font-size: 22px;
+}
+
+.size-xl {
+  width: 80px;
+  height: 80px;
+  font-size: 32px;
+}
+
+.size-xxl {
+  width: 120px;
+  height: 120px;
+  font-size: 46px;
+}
+
+/* Círculo Principal do Avatar */
+.avatarCircle {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: var(--bg-tertiary, #1e293b);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.avatarFallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95));
+  color: var(--text-primary, #f8fafc);
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Moldura Cosmética (Layering Z-Index 3) */
+.frameContainer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 136%;
+  height: 136%;
+  pointer-events: none;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.frameContainer svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  display: block;
+}
+
+/* Animação pausada por padrão (estática, ultra leve para CPU/GPU) */
+.frameContainer svg * {
+  animation-play-state: paused !important;
+}
+
+/* Ao passar o mouse sobre o Avatar, ativa a animação */
+.avatarRoot:hover .frameContainer:not(.frameStatic) svg * {
+  animation-play-state: running !important;
+}
+
+/* Sempre animado quando explicitamente solicitado (ex: tela de perfil) */
+.frameAnimated svg * {
+  animation-play-state: running !important;
+}
+
+/* Forçado como estático mesmo no hover (ex: em chamadas de voz) */
+.frameStatic svg * {
+  animation-play-state: paused !important;
+}
+
+.frameImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* Moldura Exclusiva do Beta (Raster 3D + Aura + Gemas) */
+.betaFrameContainer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 149.3%;
+  height: 149.3%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.betaFrameImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.betaAura {
+  position: absolute;
+  inset: 7%;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(170, 60, 255, 0.6), 0 0 20px rgba(132, 25, 225, 0.3);
+  opacity: 0.45;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.betaGem {
+  position: absolute;
+  left: 48%;
+  width: 4%;
+  height: 5%;
+  background: #dca3ff;
+  border-radius: 50%;
+  filter: blur(1.5px);
+  opacity: 0.28;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.betaGemTop {
+  top: 6%;
+}
+
+.betaGemBottom {
+  bottom: 4%;
+  width: 3%;
+  height: 3%;
+  left: 48.5%;
+}
+
+.betaSpark {
+  position: absolute;
+  width: 2%;
+  aspect-ratio: 1;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 4px #ffffff, 0 0 8px #ab51ff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.betaSpark1 {
+  top: 30%;
+  left: 8%;
+}
+
+.betaSpark2 {
+  top: 54%;
+  right: 7%;
+}
+
+.betaSpark3 {
+  bottom: 21%;
+  left: 17%;
+}
+
+/* Animações da Moldura Beta (Pausadas por padrão) */
+.betaFrameContainer .betaAura,
+.betaFrameContainer .betaGem,
+.betaFrameContainer .betaSpark {
+  animation-play-state: paused !important;
+}
+
+/* Ativa ao passar o mouse ou em telas de perfil (animated={true}) */
+.avatarRoot:hover .betaFrameContainer:not(.frameStatic) .betaAura,
+.frameAnimated .betaAura {
+  animation: voxyBetaAura 3.5s ease-in-out infinite;
+  animation-play-state: running !important;
+}
+
+.avatarRoot:hover .betaFrameContainer:not(.frameStatic) .betaGem,
+.frameAnimated .betaGem {
+  animation: voxyBetaCrystal 2.8s ease-in-out infinite;
+  animation-play-state: running !important;
+}
+
+.avatarRoot:hover .betaFrameContainer:not(.frameStatic) .betaGemBottom,
+.frameAnimated .betaGemBottom {
+  animation-delay: -0.9s;
+}
+
+.avatarRoot:hover .betaFrameContainer:not(.frameStatic) .betaSpark,
+.frameAnimated .betaSpark {
+  animation: voxyBetaStar 5s ease-in-out infinite;
+  animation-play-state: running !important;
+}
+
+.avatarRoot:hover .betaFrameContainer:not(.frameStatic) .betaSpark2,
+.frameAnimated .betaSpark2 {
+  animation-delay: -1.7s;
+}
+
+.avatarRoot:hover .betaFrameContainer:not(.frameStatic) .betaSpark3,
+.frameAnimated .betaSpark3 {
+  animation-delay: -3.3s;
+}
+
+.frameStatic .betaAura,
+.frameStatic .betaGem,
+.frameStatic .betaSpark {
+  animation-play-state: paused !important;
+}
+
+@keyframes voxyBetaAura {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.99);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes voxyBetaCrystal {
+  0%, 100% {
+    opacity: 0.15;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes voxyBetaStar {
+  0%, 74%, 100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  82% {
+    opacity: 0.95;
+    transform: scale(1.3);
+  }
+  90% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+}
+
+/* Glow e Efeitos Visuais das Molduras */
+.frameGlowPulse {
+  filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.4));
+  transition: filter 0.3s ease;
+}
+
+/* Indicador de Status (Z-Index 4) */
+.statusBadgeWrapper {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  z-index: 4;
+  transform: translate(12%, 12%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Interatividade */
+.clickable {
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.clickable:hover {
+  transform: scale(1.04);
+}
+
+.clickable:hover .avatarCircle {
+  border-color: var(--brand-primary, #34d399);
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.25);
+}

@@ -7,7 +7,8 @@ import { realtimeClient } from '../../../../infrastructure/adapters/realtime/soc
 import { RealtimeEvents, UserStatusEnum, ReportTargetTypeEnum } from '../../../../core/enums';
 import { getMediaUrl } from '../../../../core/utils/media.util';
 import type { UserProfileData } from '../UserPopout/UserPopout';
-import { StatusDot, getStatusLabel } from '../../../../components/common/StatusDot/StatusDot';
+import { getStatusLabel } from '../../../../components/common/StatusDot/StatusDot';
+import { Avatar } from '../../../../components/common/Avatar';
 import { useDialog } from '../../../../components/common/Dialog/DialogContext';
 import { ReportModal } from '../../../moderation/components/ReportModal/ReportModal';
 
@@ -54,14 +55,12 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     hasBlocked: boolean;
   } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [avatarError, setAvatarError] = useState(false);
   const [friendRequested, setFriendRequested] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !userId) {
       setProfile(null);
-      setAvatarError(false);
       setFriendRequested(false);
       return;
     }
@@ -75,6 +74,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         avatarUrl: initialData.avatarUrl ?? prev?.avatarUrl ?? null,
         bannerUrl: initialData.bannerUrl ?? prev?.bannerUrl ?? null,
         bannerColor: initialData.bannerColor ?? prev?.bannerColor ?? null,
+        equippedFrameSlug: initialData.equippedFrameSlug ?? prev?.equippedFrameSlug ?? null,
         bio: initialData.bio ?? prev?.bio ?? null,
         createdAt: (initialData as any).createdAt ?? (prev as any)?.createdAt ?? null,
       } as any));
@@ -96,7 +96,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           if (relData) {
             setRelationship(relData);
           }
-          setAvatarError(false);
         }
       } catch (err: any) {
         if (err?.response?.status === 404) {
@@ -118,10 +117,10 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       bannerUrl?: string | null;
       bannerColor?: string | null;
       bio?: string | null;
+      equippedFrameSlug?: string | null;
     }) => {
       if (data.userId === userId) {
         setProfile((prev) => (prev ? { ...prev, ...data } : null));
-        setAvatarError(false);
       }
     };
 
@@ -195,27 +194,17 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         <div className={styles.profileBody}>
           <div className={styles.avatarRow}>
             <div className={styles.avatarWrapper}>
-              <div className={styles.avatarCircle}>
-                {avatarMedia && !avatarError ? (
-                  <img
-                    src={avatarMedia}
-                    alt={displayName}
-                    className={styles.avatarImg}
-                    onError={() => setAvatarError(true)}
-                  />
-                ) : (
-                  <div className={styles.avatarPlaceholder}>
-                    {displayName.charAt(0).toUpperCase()}
-                  </div>
-                )}
-              </div>
-              <div className={styles.statusBadge}>
-                <StatusDot
-                  status={userStatus || profile?.status}
-                  activity={userActivity || profile?.customStatus}
-                  size="xl"
-                />
-              </div>
+              <Avatar
+                src={avatarMedia}
+                displayName={displayName}
+                frameSlug={profile?.equippedFrameSlug || initialData?.equippedFrameSlug}
+                status={userStatus || profile?.status}
+                activity={userActivity || profile?.customStatus}
+                showStatus
+                size="xl"
+                animated={true}
+                circleClassName={styles.avatarCircle}
+              />
             </div>
 
             {/* Badges de Identificação */}

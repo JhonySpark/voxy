@@ -5,3 +5,5 @@ export * from './Badge';
 export * from './StatusDot/StatusDot';
 export * from './Toast/ToastContext';
 export * from './Dialog/DialogContext';
+export * from './Avatar';
+

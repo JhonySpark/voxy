@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KeyRound, RefreshCw, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
 import { ipcRenderer } from 'electron';
@@ -8,6 +8,7 @@ import { getMediaUrl } from '../../../core/utils/media.util';
 import type { UserProfileData } from '../../../features/user/components/UserPopout/UserPopout';
 import { Input } from '../../common/Input';
 import { Badge } from '../../common/Badge';
+import { Avatar } from '../../common/Avatar';
 import styles from './AccountTab.module.css';
 
 export interface AccountTabProps {
@@ -26,7 +27,6 @@ export const AccountTab: React.FC<AccountTabProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation();
-  const [avatarError, setAvatarError] = useState(false);
 
   // Alteração de Senha
   const [currentPassword, setCurrentPassword] = useState('');
@@ -44,10 +44,6 @@ export const AccountTab: React.FC<AccountTabProps> = ({
     type: 'success' | 'error' | 'info';
     message: string;
   } | null>(null);
-
-  useEffect(() => {
-    setAvatarError(false);
-  }, [currentUser?.avatarUrl]);
 
   const handleRevalidateAge = async () => {
     setIsRevalidatingAge(true);
@@ -197,18 +193,12 @@ export const AccountTab: React.FC<AccountTabProps> = ({
         <div className={styles.profileBody}>
           <div className={styles.profileLeft}>
             <div className={styles.avatarWrapper}>
-              {getMediaUrl(currentUser?.avatarUrl) && !avatarError ? (
-                <img
-                  src={getMediaUrl(currentUser?.avatarUrl)}
-                  alt={currentUser?.displayName || currentUser?.username}
-                  className={styles.avatarImg}
-                  onError={() => setAvatarError(true)}
-                />
-              ) : (
-                <span className={styles.avatarPlaceholder}>
-                  {(currentUser?.displayName || currentUser?.username || 'U').charAt(0).toUpperCase()}
-                </span>
-              )}
+              <Avatar
+                src={currentUser?.avatarUrl}
+                displayName={currentUser?.displayName || currentUser?.username}
+                frameSlug={currentUser?.equippedFrameSlug}
+                size="lg"
+              />
             </div>
             <div className={styles.profileInfo}>
               <div className={styles.usernameRow}>

@@ -1,0 +1,351 @@
+/* =========================================================================
+   CosmeticsInventoryModal.module.css - Modal de Coleção de Molduras (Obsidian Mint)
+   ========================================================================= */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2500;
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modalContent {
+  background-color: var(--bg-primary, #0b0f17);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: 18px;
+  width: 92%;
+  max-width: 680px;
+  max-height: 85vh;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 24px rgba(52, 211, 153, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: scaleUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes scaleUp {
+  from {
+    transform: scale(0.96) translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.header {
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.headerTitleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.headerIcon {
+  color: var(--brand-primary, #34d399);
+}
+
+.title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary, #f8fafc);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #94a3b8);
+  margin-top: 2px;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #94a3b8);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.closeBtn:hover {
+  color: var(--text-primary, #ffffff);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Barra de Filtros e Busca */
+.toolbar {
+  padding: 14px 24px 8px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.searchBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  color: var(--text-muted, #64748b);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  background-color: var(--bg-secondary, rgba(15, 23, 42, 0.65));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: 10px;
+  padding: 8px 14px 8px 36px;
+  color: var(--text-primary, #f8fafc);
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--brand-primary, #34d399);
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.2);
+}
+
+.rarityFilters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.rarityPill {
+  background: transparent;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  color: var(--text-secondary, #94a3b8);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.rarityPill:hover {
+  color: var(--text-primary, #ffffff);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.rarityPillActive {
+  background-color: rgba(52, 211, 153, 0.15);
+  border-color: var(--brand-primary, #34d399);
+  color: var(--brand-primary, #34d399);
+  font-weight: 600;
+}
+
+/* Área de Grid com rolagem suave */
+.body {
+  padding: 12px 24px 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 14px;
+}
+
+.itemCard {
+  position: relative;
+  background-color: var(--bg-secondary, rgba(15, 23, 42, 0.6));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: 14px;
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.itemCard:hover {
+  background-color: var(--bg-tertiary, rgba(30, 41, 59, 0.7));
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.itemCardActive {
+  border-color: var(--brand-primary, #34d399) !important;
+  background-color: rgba(52, 211, 153, 0.12) !important;
+  box-shadow: 0 0 16px rgba(52, 211, 153, 0.3) !important;
+}
+
+.noneCardIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 1px dashed var(--text-muted, #64748b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted, #64748b);
+}
+
+.avatarPreviewFrameBox {
+  width: 56px;
+  height: 56px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.itemName {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary, #f8fafc);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.itemRarityTag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rarityCommon {
+  background-color: rgba(148, 163, 184, 0.15);
+  color: #cbd5e1;
+}
+
+.rarityRare {
+  background-color: rgba(59, 130, 246, 0.18);
+  color: #60a5fa;
+}
+
+.rarityEpic {
+  background-color: rgba(168, 85, 247, 0.18);
+  color: #c084fc;
+}
+
+.rarityLegendary {
+  background-color: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+}
+
+.exclusiveBadge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.equippedCheck {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: var(--brand-primary, #34d399);
+  color: #0b0f17;
+  border-radius: 50%;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emptyState {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-muted, #64748b);
+  font-size: 0.9rem;
+}
+
+/* Rodapé */
+.footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  background-color: rgba(11, 15, 23, 0.6);
+}
+
+.cancelBtn {
+  background: transparent;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  color: var(--text-primary, #ffffff);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cancelBtn:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.confirmBtn {
+  background-color: var(--brand-primary, #34d399);
+  color: #0b0f17;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.confirmBtn:hover {
+  background-color: var(--brand-hover, #059669);
+  transform: translateY(-1px);
+}

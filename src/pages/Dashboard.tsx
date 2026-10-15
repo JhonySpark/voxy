@@ -348,6 +348,7 @@ export default function Dashboard() {
           avatarUrl: data.avatarUrl !== undefined ? data.avatarUrl : curr.avatarUrl,
           bannerUrl: data.bannerUrl !== undefined ? data.bannerUrl : curr.bannerUrl,
           bannerColor: data.bannerColor !== undefined ? data.bannerColor : curr.bannerColor,
+          equippedFrameSlug: data.equippedFrameSlug !== undefined ? data.equippedFrameSlug : (curr as any).equippedFrameSlug,
           bio: data.bio !== undefined ? data.bio : curr.bio,
         };
       });
@@ -1158,6 +1159,7 @@ export default function Dashboard() {
                   avatarUrl: userData.avatarUrl,
                   bannerUrl: userData.bannerUrl,
                   bannerColor: userData.bannerColor,
+                  equippedFrameSlug: userData.equippedFrameSlug,
                   bio: userData.bio,
                   email: userData.email || '',
                 });

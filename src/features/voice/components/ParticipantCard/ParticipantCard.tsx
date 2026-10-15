@@ -16,10 +16,10 @@ import { useIsSpeaking } from "@livekit/components-react";
 import { StreamSettingsMenu } from "../StreamSettingsMenu/StreamSettingsMenu";
 import { DevStreamDiagnostics } from "../../../../components/DevStreamDiagnostics";
 
-import { getMediaUrl } from "../../../../core/utils/media.util";
 import { StreamQualityBadge } from "../StreamQualityBadge/StreamQualityBadge";
 import { ReportModal } from "../../../moderation/components/ReportModal/ReportModal";
 import { ReportTargetTypeEnum } from "../../../../core/enums";
+import { Avatar } from "../../../../components/common/Avatar";
 
 interface ParticipantCardProps {
   participant: {
@@ -35,6 +35,7 @@ interface ParticipantCardProps {
     is18Plus?: boolean;
     lkParticipant: any;
     avatarUrl?: string | null;
+    equippedFrameSlug?: string | null;
     displayName?: string | null;
     nativeTelemetry?: any;
     streamViewersCount?: number;
@@ -69,13 +70,7 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
   const [showSettings, setShowSettings] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [isReportingStream, setIsReportingStream] = useState(false);
-  const [avatarFailed, setAvatarFailed] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const avatarMedia = getMediaUrl(p.avatarUrl);
-
-  useEffect(() => {
-    setAvatarFailed(false);
-  }, [p.avatarUrl]);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -241,31 +236,20 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
       ) : (
         /* Avatar Fallback */
         <div className={styles.avatarFallback}>
-          <div
-            className={`${styles.avatarCircle} ${onViewUserProfile ? styles.clickable : ''}`}
+          <Avatar
+            src={p.avatarUrl}
+            displayName={p.displayName || p.username}
+            frameSlug={p.equippedFrameSlug}
+            size={isMaximized ? "xxl" : "xl"}
+            animated={false}
+            clickable={!!onViewUserProfile}
             onClick={(e) => {
               if (onViewUserProfile) {
                 e.stopPropagation();
                 onViewUserProfile(p.id);
               }
             }}
-            title={t("user.viewProfileOf", { name: p.username })}
-          >
-            {avatarMedia && !avatarFailed ? (
-              <img
-                src={avatarMedia}
-                alt={p.username}
-                className={styles.avatarImg}
-                onError={() => setAvatarFailed(true)}
-              />
-            ) : (
-              <span className={styles.avatarInitials}>
-                {p.username === t("chat.you")
-                  ? "ME"
-                  : p.username.charAt(0).toUpperCase()}
-              </span>
-            )}
-          </div>
+          />
         </div>
       )}
 

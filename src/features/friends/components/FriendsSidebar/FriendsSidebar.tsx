@@ -15,9 +15,8 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { getMediaUrl } from '../../../../core/utils/media.util';
 import { UserStatusEnum } from '../../../../core/enums';
-import { StatusDot } from '../../../../components/common/StatusDot/StatusDot';
+import { Avatar } from '../../../../components/common/Avatar';
 import { useDialog } from '../../../../components/common/Dialog/DialogContext';
 
 export interface FriendUser {
@@ -29,6 +28,7 @@ export interface FriendUser {
   bannerUrl?: string | null;
   bannerColor?: string | null;
   bio?: string | null;
+  equippedFrameSlug?: string | null;
   status?: UserStatusEnum | string | null;
   customStatus?: string | null;
 }
@@ -70,7 +70,6 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
   const { confirm } = useDialog();
   const [searchTerm, setSearchTerm] = useState('');
   const [showBlocked, setShowBlocked] = useState(false);
-  const [failedAvatars, setFailedAvatars] = useState<Record<string, boolean>>({});
   const [activeMenuFriendId, setActiveMenuFriendId] = useState<string | null>(null);
   const [activeMenuBlockedId, setActiveMenuBlockedId] = useState<string | null>(null);
 
@@ -151,8 +150,6 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
           </div>
           <div>
             {filteredFriends.map((friend) => {
-              const avatarMedia = getMediaUrl(friend.avatarUrl);
-              const hasFailed = failedAvatars[friend.id];
               const nameToShow = friend.displayName || friend.username;
 
               return (
@@ -175,25 +172,14 @@ export const FriendsSidebar: React.FC<FriendsSidebarProps> = ({
                       style={{ cursor: onViewUserProfile ? 'pointer' : 'default' }}
                       title={`Ver perfil de ${nameToShow}`}
                     >
-                      {avatarMedia && !hasFailed ? (
-                        <img
-                          src={avatarMedia}
-                          alt={nameToShow}
-                          className={styles.avatarImg}
-                          onError={() =>
-                            setFailedAvatars((prev) => ({ ...prev, [friend.id]: true }))
-                          }
-                        />
-                      ) : (
-                        <div className={styles.avatar}>
-                          {nameToShow.charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                      <StatusDot
+                      <Avatar
+                        src={friend.avatarUrl}
+                        displayName={nameToShow}
+                        frameSlug={friend.equippedFrameSlug}
                         status={userStatuses?.[friend.id]?.status || friend.status}
                         activity={userStatuses?.[friend.id]?.customStatus || friend.customStatus}
+                        showStatus
                         size="sm"
-                        className={styles.statusDot}
                       />
                     </div>
                     <div className={styles.friendDetails}>

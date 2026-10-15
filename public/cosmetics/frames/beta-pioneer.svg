@@ -1,0 +1,215 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="100%" height="100%">
+  <defs>
+    <!-- Gradientes Metálicos Nobres (Ouro Imperial) -->
+    <linearGradient id="sovereignGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fffbeb" />
+      <stop offset="25%" stop-color="#fcd34d" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="75%" stop-color="#b45309" />
+      <stop offset="100%" stop-color="#78350f" />
+    </linearGradient>
+
+    <linearGradient id="goldGleam" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="45%" stop-color="#fef08a" />
+      <stop offset="50%" stop-color="#ffffff" />
+      <stop offset="55%" stop-color="#fef08a" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+
+    <!-- Gradiente de Obsidiana Celestial Profunda -->
+    <linearGradient id="obsidianArmor" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="40%" stop-color="#0f172a" />
+      <stop offset="70%" stop-color="#090d16" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+
+    <!-- Cristais de Energia Esmeralda / Mint do Voxy -->
+    <linearGradient id="emeraldCore" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ecfdf5" />
+      <stop offset="30%" stop-color="#6ee7b7" />
+      <stop offset="70%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
+
+    <linearGradient id="plasmaGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" stop-opacity="0.9" />
+      <stop offset="50%" stop-color="#10b981" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#059669" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Filtros de Brilho Bloom & Partículas -->
+    <filter id="divineBloom" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur1" />
+      <feGaussianBlur stdDeviation="8" result="blur2" />
+      <feMerge>
+        <feMergeNode in="blur2" />
+        <feMergeNode in="blur1" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <filter id="intenseGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3.5" result="glow" />
+      <feMerge>
+        <feMergeNode in="glow" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <style>
+    @keyframes orbitClockwise {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes orbitCounterClockwise {
+      from { transform: rotate(360deg); }
+      to { transform: rotate(0deg); }
+    }
+    @keyframes gemPulseBreath {
+      0%, 100% {
+        filter: drop-shadow(0 0 5px #34d399) drop-shadow(0 0 10px rgba(52, 211, 153, 0.6));
+        opacity: 0.92;
+      }
+      50% {
+        filter: drop-shadow(0 0 12px #6ee7b7) drop-shadow(0 0 22px rgba(110, 231, 183, 0.9));
+        opacity: 1;
+      }
+    }
+    @keyframes haloPulse {
+      0%, 100% { opacity: 0.45; transform: scale(0.995); }
+      50% { opacity: 0.85; transform: scale(1.01); }
+    }
+    @keyframes wingGleam {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; filter: drop-shadow(0 0 8px #fcd34d); }
+    }
+
+    .orbit-cw {
+      transform-origin: 150px 150px;
+      animation: orbitClockwise 9s linear infinite;
+    }
+    .orbit-ccw {
+      transform-origin: 150px 150px;
+      animation: orbitCounterClockwise 15s linear infinite;
+    }
+    .gem-pulse {
+      animation: gemPulseBreath 2.8s ease-in-out infinite;
+    }
+    .halo-layer {
+      transform-origin: 150px 150px;
+      animation: haloPulse 4s ease-in-out infinite;
+    }
+    .wings-glow {
+      animation: wingGleam 3.2s ease-in-out infinite;
+    }
+  </style>
+
+  <!-- 0. Aura de Energia de Fundo (Backlight) -->
+  <g class="halo-layer">
+    <circle cx="150" cy="150" r="114" fill="none" stroke="rgba(52, 211, 153, 0.35)" stroke-width="6" filter="url(#divineBloom)" />
+    <circle cx="150" cy="150" r="121" fill="none" stroke="rgba(251, 191, 36, 0.25)" stroke-width="1.5" stroke-dasharray="6 12 24 12" />
+  </g>
+
+  <!-- 1. Órbita Astral Rotativa: Partículas e Glifos de Luz -->
+  <g class="orbit-cw">
+    <circle cx="150" cy="150" r="122" fill="none" stroke="rgba(110, 231, 183, 0.4)" stroke-width="1.8" stroke-dasharray="80 30 15 20 5 30" stroke-linecap="round" />
+    <!-- Estrela Guia 1 -->
+    <g transform="translate(150, 28)">
+      <circle cx="0" cy="0" r="3.2" fill="#ffffff" filter="url(#intenseGlow)" />
+      <polygon points="0,-6 2,-1 7,0 2,1 0,6 -2,1 -7,0 -2,-1" fill="#fef08a" />
+    </g>
+    <!-- Estrela Guia 2 -->
+    <g transform="translate(272, 150)">
+      <circle cx="0" cy="0" r="2.5" fill="#6ee7b7" filter="url(#intenseGlow)" />
+    </g>
+    <!-- Estrela Guia 3 -->
+    <g transform="translate(28, 150)">
+      <circle cx="0" cy="0" r="2.5" fill="#6ee7b7" filter="url(#intenseGlow)" />
+    </g>
+  </g>
+
+  <!-- 2. Órbita Astral Secundária em Contra-Rotação -->
+  <g class="orbit-ccw">
+    <circle cx="150" cy="150" r="115.5" fill="none" stroke="rgba(252, 211, 77, 0.35)" stroke-width="1.2" stroke-dasharray="40 40 10 20" stroke-linecap="round" />
+    <circle cx="150" cy="265.5" r="2.8" fill="#ffffff" filter="url(#intenseGlow)" />
+  </g>
+
+  <!-- 3. Chassi Principal de Obsidiana & Metal Nobre (Ajuste Concentrico Perfeito R_interno = 107.5) -->
+  <g>
+    <!-- Base Sólida de Armadura de Obsidiana -->
+    <!-- R_interno: 107.5 | R_externo: 116 | Espessura: 8.5px elegante e imponente -->
+    <circle cx="150" cy="150" r="112" fill="none" stroke="url(#obsidianArmor)" stroke-width="8.5" />
+
+    <!-- Friso Interno de Ouro Polido (Encaixe Cirúrgico no Avatar) -->
+    <circle cx="150" cy="150" r="107.5" fill="none" stroke="url(#sovereignGold)" stroke-width="2.2" />
+
+    <!-- Friso Externo Chanfrado -->
+    <circle cx="150" cy="150" r="116.5" fill="none" stroke="url(#sovereignGold)" stroke-width="1.8" />
+
+    <!-- Ranhura Central de Plasma Rúnico -->
+    <circle cx="150" cy="150" r="112" fill="none" stroke="url(#plasmaGlow)" stroke-width="2" stroke-dasharray="28 14 10 14" />
+  </g>
+
+  <!-- 4. Asas e Lâminas Nobres Laterais (Posições 10h e 2h) -->
+  <g class="wings-glow">
+    <!-- Asa Direita (2h) -->
+    <path d="M 233 82 C 248 72 262 60 274 46 C 265 65 258 84 246 98 C 240 105 233 103 230 96 Z"
+          fill="url(#sovereignGold)" stroke="#78350f" stroke-width="1" filter="url(#intenseGlow)" />
+    <path d="M 235 84 C 246 75 256 66 266 54 C 259 70 252 85 243 96 Z"
+          fill="url(#obsidianArmor)" />
+    <circle cx="260" cy="62" r="2.2" fill="#6ee7b7" filter="url(#intenseGlow)" />
+
+    <!-- Asa Esquerda (10h - Simétrica) -->
+    <path d="M 67 82 C 52 72 38 60 26 46 C 35 65 42 84 54 98 C 60 105 67 103 70 96 Z"
+          fill="url(#sovereignGold)" stroke="#78350f" stroke-width="1" filter="url(#intenseGlow)" />
+    <path d="M 65 84 C 54 75 44 66 34 54 C 41 70 48 85 57 96 Z"
+          fill="url(#obsidianArmor)" />
+    <circle cx="40" cy="62" r="2.2" fill="#6ee7b7" filter="url(#intenseGlow)" />
+  </g>
+
+  <!-- 5. Brasão e Selo Inferior de Fundador (Keystone Dagger) -->
+  <g transform="translate(150, 260)">
+    <!-- Suporte Dourado -->
+    <polygon points="0,26 14,-2 0,5 -14,-2" fill="url(#sovereignGold)" stroke="#78350f" stroke-width="1" />
+    <polygon points="0,22 9,0 0,4 -9,0" fill="url(#obsidianArmor)" />
+    <!-- Joia Esmeralda Inferior -->
+    <polygon points="0,20 5,7 0,11 -5,7" fill="url(#emeraldCore)" filter="url(#intenseGlow)" />
+    <circle cx="0" cy="8" r="1.8" fill="#ffffff" />
+  </g>
+
+  <!-- 6. Coroa Imperial do Beta Pioneer (Apex Celestial Crown) -->
+  <g class="wings-glow" transform="translate(150, 22)">
+    <!-- Asas Superiores da Coroa (Direita) -->
+    <path d="M 8 24 C 24 16 44 8 62 -4 C 52 14 44 28 28 36 C 18 40 10 34 8 24 Z"
+          fill="url(#sovereignGold)" stroke="#78350f" stroke-width="1.2" />
+    <path d="M 12 23 C 26 16 42 10 54 2 C 46 16 38 27 26 33 Z"
+          fill="url(#obsidianArmor)" />
+
+    <!-- Asas Superiores da Coroa (Esquerda - Simétrica) -->
+    <path d="M -8 24 C -24 16 -44 8 -62 -4 C -52 14 -44 28 -28 36 C -18 40 -10 34 -8 24 Z"
+          fill="url(#sovereignGold)" stroke="#78350f" stroke-width="1.2" />
+    <path d="M -12 23 C -26 16 -42 10 -54 2 C -46 16 -38 27 -26 33 Z"
+          fill="url(#obsidianArmor)" />
+
+    <!-- Púlpito Central do Diadema -->
+    <polygon points="0,-14 16,18 0,10 -16,18" fill="url(#sovereignGold)" stroke="#78350f" stroke-width="1" />
+    <polygon points="0,-10 11,14 0,8 -11,14" fill="url(#obsidianArmor)" />
+
+    <!-- Gema Central Diamante dos Pioneiros (Apex Star Gem) -->
+    <g class="gem-pulse">
+      <polygon points="0,-16 12,0 0,16 -12,0" fill="url(#emeraldCore)" stroke="#fef08a" stroke-width="1" />
+      <!-- Facetas do Cristal -->
+      <polygon points="0,-16 0,16 6,0" fill="rgba(255, 255, 255, 0.45)" />
+      <polygon points="0,-16 -12,0 0,0" fill="rgba(255, 255, 255, 0.3)" />
+      <circle cx="0" cy="0" r="3" fill="#ffffff" filter="url(#intenseGlow)" />
+    </g>
+
+    <!-- Fagulhas Estelares no Topo -->
+    <circle cx="0" cy="-22" r="2" fill="#ffffff" filter="url(#intenseGlow)" />
+    <circle cx="-28" cy="4" r="1.8" fill="#6ee7b7" />
+    <circle cx="28" cy="4" r="1.8" fill="#6ee7b7" />
+  </g>
+</svg>

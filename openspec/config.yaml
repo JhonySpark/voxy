@@ -74,6 +74,13 @@ rules:
     - "Compatibilidade Desktop/Store: Tratar com segurança a presença ou ausência de APIs do Electron (ipcRenderer) e respeitar o ambiente da Microsoft Store (process.windowsStore), evitando abrir fluxos incompatíveis com sandbox."
     - "Aderência aos Padrões do Projeto: Manter estritamente os padrões estabelecidos de nomenclatura, arquitetura e desenvolvimento (Clean Code, SOLID, KISS, YAGNI, DRY). Nunca criar padrões paralelos sem alinhamento prévio."
 
+    # =========================================================================
+    # 4. BANCO DE DADOS, PRISMA E MIGRAÇÕES
+    # =========================================================================
+    - "Migrações Estritas Obrigatórias: Toda e qualquer alteração no esquema do banco de dados deve ser executada ESTRITAMENTE via migrações do Prisma (npx prisma migrate dev / deploy)."
+    - "Proibição Absoluta de db push: É terminantemente proibido utilizar prisma db push em qualquer ambiente que possua tabela de controle _prisma_migrations."
+    - "Validação de Status Pós-Migração: Toda tarefa de backend que envolva banco de dados obrigatoriamente deve executar npx prisma migrate status e atestar 0 migrações com falha antes da conclusão."
+
   # Regras para artefatos do OpenSpec
   proposal:
     - Sempre descrever o impacto na arquitetura de features (src/features/) e em arquivos de estilo (.module.css).

@@ -22,9 +22,9 @@ import { useTranslation } from 'react-i18next';
 import { httpClient } from '../../../../infrastructure/adapters/http/http-client.adapter';
 import { realtimeClient } from '../../../../infrastructure/adapters/realtime/socket-realtime.adapter';
 import { RealtimeEvents, UserStatusEnum, ReportTargetTypeEnum } from '../../../../core/enums';
-import { getMediaUrl, preloadMedia } from '../../../../core/utils/media.util';
+import { preloadMedia } from '../../../../core/utils/media.util';
 import { useToast } from '../../../../components/common/Toast/ToastContext';
-import { StatusDot } from '../../../../components/common/StatusDot/StatusDot';
+import { Avatar } from '../../../../components/common/Avatar';
 import { ReportModal } from '../../../moderation/components/ReportModal/ReportModal';
 
 export interface ServerMemberItem {
@@ -43,6 +43,7 @@ export interface ServerMemberItem {
     avatarUrl?: string | null;
     bannerUrl?: string | null;
     bannerColor?: string | null;
+    equippedFrameSlug?: string | null;
     bio?: string | null;
     createdAt?: string;
     status?: string | null;
@@ -365,6 +366,7 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
             avatarUrl: member.user.avatarUrl,
             bannerUrl: member.user.bannerUrl,
             bannerColor: member.user.bannerColor,
+            equippedFrameSlug: member.user.equippedFrameSlug,
             bio: member.user.bio,
             createdAt: member.user.createdAt,
           })
@@ -373,22 +375,14 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
       >
         <div className={styles.memberLeft}>
           <div className={styles.avatarWrapper}>
-            <div className={styles.avatar}>
-              {getMediaUrl(member.user?.avatarUrl) ? (
-                <img
-                  src={getMediaUrl(member.user?.avatarUrl)}
-                  alt={member.user.displayName || member.user.username}
-                  className={styles.avatarImg}
-                />
-              ) : (
-                <span>{(member.user?.displayName || member.user?.username || 'U').charAt(0).toUpperCase()}</span>
-              )}
-            </div>
-            <StatusDot
+            <Avatar
+              src={member.user?.avatarUrl}
+              displayName={member.user?.displayName || member.user?.username}
+              frameSlug={member.user?.equippedFrameSlug}
               status={userStatuses?.[member.userId]?.status || member.user?.status}
               activity={userStatuses?.[member.userId]?.customStatus || member.user?.customStatus}
+              showStatus
               size="sm"
-              className={styles.onlineBadge}
             />
           </div>
 
