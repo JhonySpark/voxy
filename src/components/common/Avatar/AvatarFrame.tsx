@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import styles from './Avatar.module.css';
+import {
+  getCosmeticAssetUrl,
+  resolveInlineFrameAssets,
+} from '../../../core/utils/cosmetic-assets.util';
 
 export interface AvatarFrameProps {
   frameSlug?: string | null;
@@ -21,7 +25,11 @@ export const AvatarFrame: React.FC<AvatarFrameProps> = ({
     : false;
 
   const frameSrc = frameSlug && frameSlug !== 'none' && !isRaster
-    ? (frameSlug.startsWith('/') || frameSlug.startsWith('http') ? frameSlug : `/cosmetics/frames/${frameSlug}.svg`)
+    ? getCosmeticAssetUrl(
+        frameSlug.startsWith('/') || frameSlug.startsWith('http')
+          ? frameSlug
+          : `cosmetics/frames/${frameSlug}.svg`,
+      )
     : null;
 
   const [svgContent, setSvgContent] = useState<string | null>(() => {
@@ -51,8 +59,9 @@ export const AvatarFrame: React.FC<AvatarFrameProps> = ({
       })
       .then((text) => {
         if (!isMounted) return;
-        svgCache.set(frameSrc, text);
-        setSvgContent(text);
+        const resolvedSvg = resolveInlineFrameAssets(text);
+        svgCache.set(frameSrc, resolvedSvg);
+        setSvgContent(resolvedSvg);
         setLoadError(false);
       })
       .catch(() => {
@@ -77,9 +86,11 @@ export const AvatarFrame: React.FC<AvatarFrameProps> = ({
       : '';
 
   if (isRaster) {
-    const src = frameSlug.startsWith('/') || frameSlug.startsWith('http')
-      ? frameSlug
-      : `/cosmetics/frames/${frameSlug}`;
+    const src = getCosmeticAssetUrl(
+      frameSlug.startsWith('/') || frameSlug.startsWith('http')
+        ? frameSlug
+        : `cosmetics/frames/${frameSlug}`,
+    );
 
     return (
       <div

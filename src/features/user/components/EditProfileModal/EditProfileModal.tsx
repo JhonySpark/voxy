@@ -8,6 +8,7 @@ import { ApiRoutes, RealtimeEvents } from '../../../../core/enums';
 import { realtimeClient } from '../../../../infrastructure/adapters/realtime/socket-realtime.adapter';
 import type { UserProfileData } from '../UserPopout/UserPopout';
 import { getMediaUrl } from '../../../../core/utils/media.util';
+import { getCosmeticAssetUrl } from '../../../../core/utils/cosmetic-assets.util';
 import { useCosmetics } from '../../hooks/useCosmetics';
 import { Avatar } from '../../../../components/common/Avatar';
 import { CosmeticsInventoryModal } from '../CosmeticsInventoryModal/CosmeticsInventoryModal';
@@ -340,7 +341,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   onClick={() => selectPreview(item.slug)}
                   title={`${item.name} (${t(`cosmetics.rarity.${item.rarity.toLowerCase()}`)})`}
                 >
-                  <img src={item.assetUrl} alt={item.name} className={styles.quickFrameImg} />
+                  <img src={getCosmeticAssetUrl(item.assetUrl)} alt={item.name} className={styles.quickFrameImg} />
                   <span className={styles.quickFrameName}>{item.name}</span>
                   {item.metadata?.exclusive && (
                     <span className={styles.quickExclusiveDot} title={t('cosmetics.exclusive')} />
