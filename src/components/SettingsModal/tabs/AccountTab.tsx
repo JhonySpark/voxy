@@ -266,14 +266,12 @@ export const AccountTab: React.FC<AccountTabProps> = ({
             <span
               className={`${styles.infoValue} ${
                 currentUser?.canJoinVoice !== false &&
-                currentUser?.ageClassification !== 'UNKNOWN' &&
                 currentUser?.ageClassification !== 'CHILD'
                   ? styles.valueAllowed
                   : styles.valueBlocked
               }`}
             >
               {currentUser?.canJoinVoice !== false &&
-              currentUser?.ageClassification !== 'UNKNOWN' &&
               currentUser?.ageClassification !== 'CHILD'
                 ? 'Liberado'
                 : 'Bloqueado (Requer validação de idade)'}

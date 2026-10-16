@@ -16,7 +16,6 @@ import {
   ApiRoutes,
   UserStatusEnum,
   IpcChannels,
-  AgeClassificationEnum,
 } from '../core/enums';
 import { httpClient } from '../infrastructure/adapters/http/http-client.adapter';
 import { preloadMedia } from '../core/utils/media.util';
@@ -255,23 +254,24 @@ export default function Dashboard() {
               const ipc = (window as any).require('electron').ipcRenderer;
               if (ipc) {
                 ipc.invoke(IpcChannels.GET_OS_AGE_SIGNAL).then(async (ageSignal: any) => {
-                  if (ageSignal && ageSignal.available) {
-                    try {
-                      const syncRes = await httpClient.post<{ success: boolean; user: UserProfileData }>(
-                        ApiRoutes.AUTH_SYNC_AGE_SIGNAL,
-                        ageSignal
-                      );
-                      if (syncRes?.user) {
-                        if (syncRes.user.ageClassification === 'CHILD') {
-                          localStorage.removeItem(StorageKeys.AUTH_TOKEN);
-                          navigate('/login?error=child_blocked');
-                          return;
-                        }
-                        setCurrentUserProfile(syncRes.user);
+                  // Envia inclusive falhas da sonda (reason/code/stderr) para telemetria no backend.
+                  // Como só roda para usuários UNKNOWN, uma falha não rebaixa ninguém.
+                  const payload = ageSignal || { available: false, reason: 'No_Response' };
+                  try {
+                    const syncRes = await httpClient.post<{ success: boolean; user: UserProfileData }>(
+                      ApiRoutes.AUTH_SYNC_AGE_SIGNAL,
+                      payload
+                    );
+                    if (syncRes?.user) {
+                      if (syncRes.user.ageClassification === 'CHILD') {
+                        localStorage.removeItem(StorageKeys.AUTH_TOKEN);
+                        navigate('/login?error=child_blocked');
+                        return;
                       }
-                    } catch (e) {
-                      console.warn('[AgeSignal] Background auto-sync failed:', e);
+                      setCurrentUserProfile(syncRes.user);
                     }
+                  } catch (e) {
+                    console.warn('[AgeSignal] Background auto-sync failed:', e);
                   }
                 }).catch(() => {});
               }
@@ -851,10 +851,7 @@ export default function Dashboard() {
             onSelectChannel={(ch) => setActiveChannel(ch)}
             onConnectVoice={(ch) => {
               if (connectedVoiceChannel?.channelId === ch.id) return;
-              if (
-                currentUserProfile?.ageClassification === AgeClassificationEnum.UNKNOWN ||
-                currentUserProfile?.canJoinVoice === false
-              ) {
+              if (currentUserProfile?.canJoinVoice === false) {
                 toast.warning('Usuários sem validação de idade não podem entrar em chamadas de voz. Apenas chat de texto está liberado.');
                 return;
               }
