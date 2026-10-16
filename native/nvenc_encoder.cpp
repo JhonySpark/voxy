@@ -115,12 +115,12 @@ bool NVENCEncoder::Initialize(ID3D11Device* device, uint32_t width, uint32_t hei
         m_encodeConfig.encodeCodecConfig.h264Config.maxNumRefFrames = 1;
         m_encodeConfig.encodeCodecConfig.h264Config.outputAUD = 1;
 
-        // 4. Rate Control: CBR estrito com buffer VBV de baixa latência (2 quadros)
-        // Isso impede explosão para 25 Mbps e garante taxa estável sem descarte no WebRTC
+        // 4. Rate Control: CBR estrito com buffer VBV de ~100ms (6 quadros)
+        // Isso impede oscilações extremas e elimina o macroblocking/pixelização em cenas rápidas
         m_encodeConfig.rcParams.rateControlMode = NV_ENC_PARAMS_RC_CBR;
         m_encodeConfig.rcParams.averageBitRate = m_bitrate;
         m_encodeConfig.rcParams.maxBitRate = m_bitrate;
-        m_encodeConfig.rcParams.vbvBufferSize = (m_bitrate * 2) / m_fps;
+        m_encodeConfig.rcParams.vbvBufferSize = (m_bitrate * 6) / m_fps;
         m_encodeConfig.rcParams.vbvInitialDelay = m_encodeConfig.rcParams.vbvBufferSize;
         m_encodeConfig.rcParams.zeroReorderDelay = 1;
 
@@ -129,9 +129,12 @@ bool NVENCEncoder::Initialize(ID3D11Device* device, uint32_t width, uint32_t hei
         m_encodeConfig.rcParams.aqStrength = 6;
         m_encodeConfig.rcParams.enableTemporalAQ = 0; // Desativa AQ temporal que conflita com CBR ultra-low latency
 
-        // 6. Deixa o rate control gerenciar QP sem travar teto (o teto anterior forçava picos de 25 Mbps)
+        // 6. Limita o QP máximo a 36 para impedir macroblocking/degradação visual severa
         m_encodeConfig.rcParams.enableMinQP = 0;
-        m_encodeConfig.rcParams.enableMaxQP = 0;
+        m_encodeConfig.rcParams.enableMaxQP = 1;
+        m_encodeConfig.rcParams.maxQP.qpInterP = 36;
+        m_encodeConfig.rcParams.maxQP.qpInterB = 36;
+        m_encodeConfig.rcParams.maxQP.qpIntra = 36;
     } else {
         std::cerr << "[NVENC] Aviso: nvEncGetEncodePresetConfigEx retornou: " << status << std::endl;
     }
@@ -276,8 +279,12 @@ bool NVENCEncoder::Reconfigure(uint32_t bitrateBps, uint32_t fps) {
     reconfigParams.reInitEncodeParams.encodeConfig = &m_encodeConfig;
     m_encodeConfig.rcParams.averageBitRate = m_bitrate;
     m_encodeConfig.rcParams.maxBitRate = m_bitrate;
-    m_encodeConfig.rcParams.vbvBufferSize = (m_bitrate * 2) / m_fps;
+    m_encodeConfig.rcParams.vbvBufferSize = (m_bitrate * 6) / m_fps;
     m_encodeConfig.rcParams.vbvInitialDelay = m_encodeConfig.rcParams.vbvBufferSize;
+    m_encodeConfig.rcParams.enableMaxQP = 1;
+    m_encodeConfig.rcParams.maxQP.qpInterP = 36;
+    m_encodeConfig.rcParams.maxQP.qpInterB = 36;
+    m_encodeConfig.rcParams.maxQP.qpIntra = 36;
     m_initParams.frameRateNum = m_fps;
 
     NVENCSTATUS status = m_nvenc.nvEncReconfigureEncoder(m_encoder, &reconfigParams);
