@@ -501,18 +501,25 @@ app.whenReady().then(() => {
   // IPC para verificação de Faixa Etária Nativa (Windows 11 Age Signals / WinRT com Assinatura Criptográfica HMAC)
   ipcMain.handle(IpcChannels.GET_OS_AGE_SIGNAL, async () => {
     if (process.platform !== "win32") {
-      return { available: false, reason: "Unsupported_Platform" };
+      console.log(`[AgeSignal] Plataforma não suportada: ${process.platform}`);
+      return { available: false, reason: "Unsupported_Platform", platform: process.platform };
     }
     const binPath = resolveNativeBinary(NATIVE_BINARIES.AGE_SIGNAL);
     if (!binPath) {
       console.warn(
         "[AgeSignal] Sonda nativa (vx_rt_b18e.exe) não localizada nos caminhos padrão.",
       );
-      return { available: false, reason: "Probe_Not_Found" };
+      return {
+        available: false,
+        reason: "Probe_Not_Found",
+        platform: process.platform,
+        osRelease: os.release(),
+      };
     }
 
     const nonce = randomBytes(16).toString("hex");
     const timestamp = Date.now();
+    console.log(`[AgeSignal] Iniciando sonda: ${binPath} [nonce=${nonce}, ts=${timestamp}]`);
 
     return new Promise((resolve) => {
       let settled = false;
@@ -533,9 +540,13 @@ app.whenReady().then(() => {
       child.on("close", (code) => {
         if (settled) return;
         settled = true;
+        console.log(`[AgeSignal] Sonda encerrou. code=${code}, stdout="${stdout.trim()}", stderr="${stderr.trim()}"`);
         if (code === 0 && stdout.trim()) {
           try {
             const data = JSON.parse(stdout.trim());
+            data.platform = process.platform;
+            data.osRelease = os.release();
+            data.osVersion = typeof os.version === 'function' ? os.version() : "";
             return resolve(data);
           } catch (parseErr) {
             console.error(
@@ -546,7 +557,7 @@ app.whenReady().then(() => {
           }
         }
         console.warn(
-          `[AgeSignal] Sonda encerrou com código ${code}. stderr=${stderr.trim()}, stdout=${stdout.trim()}`,
+          `[AgeSignal] Sonda encerrou com falha. code=${code}. stderr=${stderr.trim()}, stdout=${stdout.trim()}`,
         );
 
         resolve({
@@ -554,6 +565,9 @@ app.whenReady().then(() => {
           reason: "Execution_Failed",
           code,
           stderr: stderr.trim(),
+          stdout: stdout.trim(),
+          platform: process.platform,
+          osRelease: os.release(),
         });
       });
 
@@ -568,6 +582,8 @@ app.whenReady().then(() => {
           available: false,
           reason: "Process_Error",
           error: err.message,
+          platform: process.platform,
+          osRelease: os.release(),
         });
       });
 
@@ -580,7 +596,12 @@ app.whenReady().then(() => {
         console.warn(
           "[AgeSignal] Timeout de 8s excedido ao executar sonda nativa.",
         );
-        resolve({ available: false, reason: "Timeout" });
+        resolve({
+          available: false,
+          reason: "Timeout",
+          platform: process.platform,
+          osRelease: os.release(),
+        });
       }, 8000);
     });
   });

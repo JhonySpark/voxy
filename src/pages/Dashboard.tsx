@@ -253,15 +253,44 @@ export default function Dashboard() {
             try {
               const ipc = (window as any).require('electron').ipcRenderer;
               if (ipc) {
+                logger.info(`[AgeSignal][Dashboard] Disparando auto-validação em background para @${meRes.value.username}`, {
+                  tag: 'AgeSignal',
+                  flow: 'Dashboard',
+                  type: 'probe_start',
+                  userId: meRes.value.id,
+                  username: meRes.value.username,
+                  email: meRes.value.email,
+                });
+
                 ipc.invoke(IpcChannels.GET_OS_AGE_SIGNAL).then(async (ageSignal: any) => {
-                  // Envia inclusive falhas da sonda (reason/code/stderr) para telemetria no backend.
-                  // Como só roda para usuários UNKNOWN, uma falha não rebaixa ninguém.
                   const payload = ageSignal || { available: false, reason: 'No_Response' };
+
+                  logger.info(`[AgeSignal][Dashboard] Sinal capturado da sonda: available=${Boolean(payload?.available)}, status=${payload?.status || 'none'}, reason=${payload?.reason || 'none'}`, {
+                    tag: 'AgeSignal',
+                    flow: 'Dashboard',
+                    type: 'probe_result',
+                    userId: meRes.value.id,
+                    username: meRes.value.username,
+                    payload,
+                  });
+
                   try {
-                    const syncRes = await httpClient.post<{ success: boolean; user: UserProfileData }>(
+                    const syncRes = await httpClient.post<{ success: boolean; user: UserProfileData; outcome?: string; preservedPrevious?: boolean }>(
                       ApiRoutes.AUTH_SYNC_AGE_SIGNAL,
                       payload
                     );
+
+                    logger.info(`[AgeSignal][Dashboard] Retorno da sincronização com backend: outcome=${syncRes?.outcome || 'unknown'}, class=${syncRes?.user?.ageClassification || 'unknown'}, preserved=${Boolean(syncRes?.preservedPrevious)}`, {
+                      tag: 'AgeSignal',
+                      flow: 'Dashboard',
+                      type: 'backend_response',
+                      userId: meRes.value.id,
+                      username: meRes.value.username,
+                      outcome: syncRes?.outcome || null,
+                      classification: syncRes?.user?.ageClassification || null,
+                      preservedPrevious: Boolean(syncRes?.preservedPrevious),
+                    });
+
                     if (syncRes?.user) {
                       if (syncRes.user.ageClassification === 'CHILD') {
                         localStorage.removeItem(StorageKeys.AUTH_TOKEN);
@@ -270,10 +299,24 @@ export default function Dashboard() {
                       }
                       setCurrentUserProfile(syncRes.user);
                     }
-                  } catch (e) {
-                    console.warn('[AgeSignal] Background auto-sync failed:', e);
+                  } catch (e: any) {
+                    console.warn('[AgeSignal][Dashboard] Background auto-sync failed:', e);
+                    logger.error(`[AgeSignal][Dashboard] Erro na sincronização com o backend: ${e?.message || e}`, e, {
+                      tag: 'AgeSignal',
+                      flow: 'Dashboard',
+                      type: 'error',
+                      userId: meRes.value.id,
+                    });
                   }
-                }).catch(() => {});
+                }).catch((ipcErr: any) => {
+                  console.warn('[AgeSignal][Dashboard] Falha no invoke do IPC:', ipcErr);
+                  logger.error(`[AgeSignal][Dashboard] Falha ao invocar sonda nativa via IPC: ${ipcErr?.message || ipcErr}`, ipcErr, {
+                    tag: 'AgeSignal',
+                    flow: 'Dashboard',
+                    type: 'error',
+                    userId: meRes.value.id,
+                  });
+                });
               }
             } catch (_) {}
           }

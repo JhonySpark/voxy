@@ -110,7 +110,27 @@ export default function Login() {
 
       if (ipcRenderer) {
         try {
+          logger.info(`[AgeSignal][Login] Solicitando leitura de idade do SO para ${email}`, {
+            tag: 'AgeSignal',
+            flow: 'Login',
+            type: 'probe_start',
+            email,
+          });
+
           const ageSignal = await ipcRenderer.invoke(IpcChannels.GET_OS_AGE_SIGNAL);
+          
+          logger.info(`[AgeSignal][Login] Sinal recebido da sonda: available=${Boolean(ageSignal?.available)}, status=${ageSignal?.status || 'none'}, reason=${ageSignal?.reason || 'none'}`, {
+            tag: 'AgeSignal',
+            flow: 'Login',
+            type: 'probe_result',
+            email,
+            available: Boolean(ageSignal?.available),
+            reason: ageSignal?.reason || null,
+            status: ageSignal?.status || null,
+            lower: ageSignal?.lower ?? null,
+            upper: ageSignal?.upper ?? null,
+          });
+
           const syncRes = await api.post(
             ApiRoutes.AUTH_SYNC_AGE_SIGNAL,
             ageSignal,
@@ -118,6 +138,16 @@ export default function Login() {
               headers: { Authorization: `Bearer ${res.data.access_token}` },
             },
           );
+
+          logger.info(`[AgeSignal][Login] Retorno do backend: outcome=${syncRes.data?.outcome || 'unknown'}, class=${syncRes.data?.user?.ageClassification || 'unknown'}, preserved=${Boolean(syncRes.data?.preservedPrevious)}`, {
+            tag: 'AgeSignal',
+            flow: 'Login',
+            type: 'backend_response',
+            email,
+            outcome: syncRes.data?.outcome || null,
+            classification: syncRes.data?.user?.ageClassification || null,
+            preservedPrevious: Boolean(syncRes.data?.preservedPrevious),
+          });
 
           if (syncRes.data?.user?.ageClassification === "CHILD") {
             localStorage.removeItem(StorageKeys.AUTH_TOKEN);
@@ -129,7 +159,15 @@ export default function Login() {
             );
             return;
           }
-        } catch (_) {}
+        } catch (syncErr: any) {
+          console.warn('[AgeSignal][Login] Falha no sync inicial de idade:', syncErr);
+          logger.error(`[AgeSignal][Login] Erro no sync de idade: ${syncErr?.message || syncErr}`, syncErr, {
+            tag: 'AgeSignal',
+            flow: 'Login',
+            type: 'error',
+            email,
+          });
+        }
       }
 
       logger.logEvent('USER_LOGIN_SUCCESS', { email });

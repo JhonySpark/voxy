@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KeyRound, RefreshCw, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
-import { ipcRenderer } from 'electron';
 import { httpClient } from '../../../infrastructure/adapters/http/http-client.adapter';
 import { ApiRoutes, IpcChannels } from '../../../core/enums';
 import { getMediaUrl } from '../../../core/utils/media.util';
@@ -9,7 +8,19 @@ import type { UserProfileData } from '../../../features/user/components/UserPopo
 import { Input } from '../../common/Input';
 import { Badge } from '../../common/Badge';
 import { Avatar } from '../../common/Avatar';
+import { logger } from '../../../core/services/logger.service';
 import styles from './AccountTab.module.css';
+
+const getIpcRenderer = () => {
+  if (typeof window !== 'undefined' && (window as any).require) {
+    try {
+      return (window as any).require('electron').ipcRenderer;
+    } catch {
+      return null;
+    }
+  }
+  return (window as any).electron?.ipcRenderer ?? null;
+};
 
 export interface AccountTabProps {
   currentUser?: UserProfileData | null;
@@ -49,23 +60,57 @@ export const AccountTab: React.FC<AccountTabProps> = ({
     setIsRevalidatingAge(true);
     setAgeFeedback(null);
     try {
-      let osSignal = { available: false };
-      if (ipcRenderer) {
+      const ipc = getIpcRenderer();
+      let osSignal: any = { available: false, reason: 'Ipc_Unavailable' };
+      logger.info(`[AgeSignal][AccountTab] Revalidação manual solicitada pelo usuário @${currentUser?.username || 'desconhecido'}`, {
+        tag: 'AgeSignal',
+        flow: 'AccountTab',
+        type: 'probe_start',
+        userId: currentUser?.id,
+        username: currentUser?.username,
+      });
+
+      if (ipc) {
         try {
-          const raw = await ipcRenderer.invoke(IpcChannels.GET_OS_AGE_SIGNAL);
+          const raw = await ipc.invoke(IpcChannels.GET_OS_AGE_SIGNAL);
           if (raw) {
             osSignal = typeof raw === 'string' ? JSON.parse(raw) : raw;
           }
         } catch (ipcErr) {
-          console.warn('[Age Signals] Falha ao coletar sinal nativo:', ipcErr);
+          console.error('[AgeSignal][AccountTab] Falha ao coletar sinal nativo:', ipcErr);
+          osSignal = { available: false, reason: 'Ipc_Invoke_Error', error: String(ipcErr) };
         }
+      } else {
+        console.warn('[AgeSignal][AccountTab] IPC indisponível nesta sessão.');
       }
+
+      logger.info(`[AgeSignal][AccountTab] Sinal recebido da sonda: available=${Boolean(osSignal?.available)}, status=${osSignal?.status || 'none'}, reason=${osSignal?.reason || 'none'}`, {
+        tag: 'AgeSignal',
+        flow: 'AccountTab',
+        type: 'probe_result',
+        userId: currentUser?.id,
+        username: currentUser?.username,
+        osSignal,
+      });
 
       const res = await httpClient.post<{
         success: boolean;
         user: UserProfileData;
         changed: boolean;
+        outcome?: string;
+        preservedPrevious?: boolean;
       }>(ApiRoutes.AUTH_SYNC_AGE_SIGNAL, osSignal);
+
+      logger.info(`[AgeSignal][AccountTab] Retorno do backend: outcome=${res?.outcome || 'unknown'}, class=${res?.user?.ageClassification || 'unknown'}, preserved=${Boolean(res?.preservedPrevious)}`, {
+        tag: 'AgeSignal',
+        flow: 'AccountTab',
+        type: 'backend_response',
+        userId: currentUser?.id,
+        username: currentUser?.username,
+        outcome: res?.outcome || null,
+        classification: res?.user?.ageClassification || null,
+        preservedPrevious: Boolean(res?.preservedPrevious),
+      });
 
       if (res?.success && res.user) {
         const updatedUser = res.user;
@@ -95,15 +140,19 @@ export const AccountTab: React.FC<AccountTabProps> = ({
             ? t('user.agePillDivergent', 'Divergente')
             : newClass;
 
-        if (oldClass !== newClass) {
+        if (newClass !== 'UNKNOWN') {
           setAgeFeedback({
             type: 'success',
-            message: t('user.ageUpdatedSuccess', { classification: classificationLabel }),
+            message:
+              oldClass !== newClass
+                ? t('user.ageUpdatedSuccess', { classification: classificationLabel })
+                : t('user.ageAlreadySynced', { classification: classificationLabel }),
           });
         } else {
+          const detail = osSignal?.reason ? ` (${osSignal.reason})` : '';
           setAgeFeedback({
             type: 'info',
-            message: t('user.ageAlreadySynced', { classification: classificationLabel }),
+            message: `O Windows não reportou uma faixa etária registrada${detail}. Seus acessos continuam liberados normalmente.`,
           });
         }
       } else {
@@ -113,6 +162,8 @@ export const AccountTab: React.FC<AccountTabProps> = ({
         });
       }
     } catch (err: any) {
+      console.error('[AgeSignal][AccountTab] Erro na requisição:', err);
+      logger.error('CLIENT_AGE_SIGNAL_REVALIDATE_ERROR', err, { userId: currentUser?.id });
       setAgeFeedback({
         type: 'error',
         message: err.response?.data?.message || t('user.ageRevalidateError'),

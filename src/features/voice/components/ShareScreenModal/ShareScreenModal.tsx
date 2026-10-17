@@ -46,11 +46,13 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
   const [activeTab, setActiveTab] = React.useState<'games' | 'windows' | 'screens'>('games');
   const [is18Plus, setIs18Plus] = React.useState(false);
 
-  const isTeenOnly = userAgeClassification === 'TEEN';
+  // Apenas maiores de 18 anos (ADULT) podem transmitir a tela cheia ou janelas normais.
+  // Usuários TEEN, UNKNOWN ou DIVERGENT têm permissão exclusiva para transmitir JOGOS detectados.
+  const isGamesOnly = userAgeClassification !== 'ADULT';
 
   React.useEffect(() => {
     if (isOpen) {
-      if (isTeenOnly) {
+      if (isGamesOnly) {
         setActiveTab('games');
       } else if (categorizedSources.games.length > 0) {
         setActiveTab('games');
@@ -60,7 +62,7 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
         setActiveTab('screens');
       }
     }
-  }, [isOpen, isTeenOnly]);
+  }, [isOpen, isGamesOnly]);
 
   if (!isOpen) return null;
 
@@ -134,7 +136,7 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
           </div>
         </div>
 
-        {isTeenOnly && (
+        {isGamesOnly && (
           <div className={styles.teenWarning}>
             <ShieldAlert size={16} className={styles.shrinkIcon} />
             <span>{t('voice.teenRestrictedShare')}</span>
@@ -166,14 +168,14 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
           <button
             type="button"
             className={`${styles.tabBtn} ${activeTab === 'windows' ? styles.active : styles.inactive}`}
-            onClick={() => !isTeenOnly && setActiveTab('windows')}
-            disabled={isTeenOnly}
-            style={isTeenOnly ? { opacity: 0.35, cursor: 'not-allowed' } : undefined}
-            title={isTeenOnly ? t('voice.teenOnlyGamesTitle') : undefined}
+            onClick={() => !isGamesOnly && setActiveTab('windows')}
+            disabled={isGamesOnly}
+            style={isGamesOnly ? { opacity: 0.35, cursor: 'not-allowed' } : undefined}
+            title={isGamesOnly ? t('voice.teenOnlyGamesTitle') : undefined}
           >
             <AppWindow size={16} />
             <span>{t('voice.applications')}</span>
-            {!isTeenOnly && categorizedSources.windows.length > 0 && (
+            {!isGamesOnly && categorizedSources.windows.length > 0 && (
               <span className={styles.tabCount}>
                 {categorizedSources.windows.length}
               </span>
@@ -183,14 +185,14 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
           <button
             type="button"
             className={`${styles.tabBtn} ${activeTab === 'screens' ? styles.active : styles.inactive}`}
-            onClick={() => !isTeenOnly && setActiveTab('screens')}
-            disabled={isTeenOnly}
-            style={isTeenOnly ? { opacity: 0.35, cursor: 'not-allowed' } : undefined}
-            title={isTeenOnly ? t('voice.teenOnlyGamesTitle') : undefined}
+            onClick={() => !isGamesOnly && setActiveTab('screens')}
+            disabled={isGamesOnly}
+            style={isGamesOnly ? { opacity: 0.35, cursor: 'not-allowed' } : undefined}
+            title={isGamesOnly ? t('voice.teenOnlyGamesTitle') : undefined}
           >
             <Monitor size={16} />
             <span>{t('voice.screens')}</span>
-            {!isTeenOnly && categorizedSources.screens.length > 0 && (
+            {!isGamesOnly && categorizedSources.screens.length > 0 && (
               <span className={styles.tabCount}>
                 {categorizedSources.screens.length}
               </span>
@@ -210,7 +212,7 @@ export const ShareScreenModal: React.FC<ShareScreenModalProps> = ({
                 <Monitor size={42} className={styles.emptyIcon} />
               )}
               <p className={styles.emptyText}>
-                {activeTab === 'games' && isTeenOnly 
+                {activeTab === 'games' && isGamesOnly 
                   ? t('voice.noGamesDetected')
                   : t('voice.noSources')}
               </p>

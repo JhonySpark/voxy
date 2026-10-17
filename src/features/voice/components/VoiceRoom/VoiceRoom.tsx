@@ -244,7 +244,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
   livekitUrl,
   channelId,
   userAgeClassification,
-  canShareScreen,
+  canShareScreen: _canShareScreen,
   userRole,
   onViewUserProfile,
   isMuted: isMutedProp,
@@ -577,12 +577,8 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
   };
 
   const toggleScreenShare = async () => {
-    if (
-      userAgeClassification === 'UNKNOWN' ||
-      canShareScreen === false ||
-      userAgeClassification !== 'ADULT'
-    ) {
-      alert(t('voice.screenShareRestricted', 'Compartilhamento de tela permitido apenas para maiores de 18 anos com idade validada.'));
+    if (userAgeClassification === 'CHILD') {
+      alert(t('voice.screenShareRestrictedChild', 'Transmissão bloqueada para menores de 13 anos.'));
       return;
     }
 
@@ -614,6 +610,10 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
     if (ipcRenderer) {
       fetchDesktopSources();
     } else {
+      if (userAgeClassification !== 'ADULT') {
+        alert(t('voice.screenShareDesktopOnly', 'No navegador web, apenas maiores de 18 anos podem compartilhar tela. Para transmitir jogos com detecção automática, utilize o aplicativo Voxy Desktop.'));
+        return;
+      }
       try {
         const stream = await navigator.mediaDevices.getDisplayMedia({
           video: {
@@ -693,6 +693,12 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
   const selectSource = async (sourceId: string, shareAudio: boolean = false, is18Plus: boolean = false) => {
     setShowSources(false);
     console.log('[Voxy Stream] selectSource chamado para fonte:', sourceId, { shareAudio, is18Plus });
+
+    const isGame = categorizedSources.games.some((g: any) => g.id === sourceId);
+    if (userAgeClassification !== 'ADULT' && !isGame) {
+      alert(t('voice.teenRestrictedShare', 'Compartilhamento restrito: contas que não são Adulto verificado podem transmitir exclusivamente jogos detectados.'));
+      return;
+    }
 
     try {
       // Reaproveita a miniatura já gerada pelo seletor como pôster estático.
