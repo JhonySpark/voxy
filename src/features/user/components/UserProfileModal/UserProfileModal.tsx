@@ -192,6 +192,18 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
         {/* Corpo do Perfil */}
         <div className={styles.profileBody}>
+          {/* Badges de Identificação (Sempre posicionados abaixo do banner no canto direito) */}
+          {(isSelf || (!isSelf && (isFriend || relationship?.isFriend))) && (
+            <div className={styles.badgeRow}>
+              {isSelf && <span className={`${styles.badge} ${styles.badgeSelf}`}>{t('user.badgeYou')}</span>}
+              {!isSelf && (isFriend || relationship?.isFriend) && (
+                <span className={`${styles.badge} ${styles.badgeFriend}`}>
+                  {t('user.badgeFriend')}
+                </span>
+              )}
+            </div>
+          )}
+
           <div className={styles.avatarRow}>
             <div className={styles.avatarWrapper}>
               <Avatar
@@ -205,12 +217,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 animated={true}
                 circleClassName={styles.avatarCircle}
               />
-            </div>
-
-            {/* Badges de Identificação */}
-            <div className={styles.badgeRow}>
-              {isSelf && <span className={`${styles.badge} ${styles.badgeSelf}`}>{t('user.badgeYou')}</span>}
-              {!isSelf && isFriend && <span className={`${styles.badge} ${styles.badgeFriend}`}>{t('user.badgeFriend')}</span>}
             </div>
           </div>
 

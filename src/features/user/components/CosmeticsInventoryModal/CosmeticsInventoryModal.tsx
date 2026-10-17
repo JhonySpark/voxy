@@ -63,6 +63,22 @@ export const CosmeticsInventoryModal: React.FC<CosmeticsInventoryModalProps> = (
     }
   };
 
+  const getRarityCardClass = (rarity: string) => {
+    switch (rarity.toUpperCase()) {
+      case 'COMMON':
+        return styles.cardCommon;
+      case 'RARE':
+        return styles.cardRare;
+      case 'EPIC':
+        return styles.cardEpic;
+      case 'LEGENDARY':
+        return styles.cardLegendary;
+      default:
+        return styles.cardCommon;
+    }
+  };
+
+
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
@@ -71,7 +87,12 @@ export const CosmeticsInventoryModal: React.FC<CosmeticsInventoryModalProps> = (
           <div className={styles.headerTitleWrapper}>
             <Sparkles size={22} className={styles.headerIcon} />
             <div>
-              <h2 className={styles.title}>{t('cosmetics.inventoryTitle')}</h2>
+              <div className={styles.titleRow}>
+                <h2 className={styles.title}>{t('cosmetics.inventoryTitle')}</h2>
+                <span className={styles.itemCountBadge}>
+                  {items.length}
+                </span>
+              </div>
               <p className={styles.subtitle}>{t('cosmetics.inventorySubtitle')}</p>
             </div>
           </div>
@@ -111,71 +132,113 @@ export const CosmeticsInventoryModal: React.FC<CosmeticsInventoryModalProps> = (
 
         {/* Grid de Molduras */}
         <div className={styles.body}>
-          <div className={styles.grid}>
-            {/* Opção: Nenhuma Moldura */}
-            <div
-              className={`${styles.itemCard} ${!previewSlug ? styles.itemCardActive : ''}`}
-              onClick={() => onSelectPreview(null)}
-            >
-              <div className={styles.noneCardIcon}>
-                <Ban size={24} />
-              </div>
-              <span className={styles.itemName}>{t('cosmetics.none')}</span>
-              {!equippedSlug && (
-                <div className={styles.equippedCheck}>
-                  <Check size={12} />
-                </div>
-              )}
-            </div>
+          {(() => {
+            const showNoneOption = selectedRarity === 'ALL' && !searchTerm.trim();
 
-            {/* Lista Filtrada */}
-            {filteredItems.map((item) => {
-              const isSelected = previewSlug === item.slug;
-              const isEquipped = equippedSlug === item.slug;
-
+            if (filteredItems.length === 0 && !showNoneOption) {
               return (
-                <div
-                  key={item.slug}
-                  className={`${styles.itemCard} ${isSelected ? styles.itemCardActive : ''}`}
-                  onClick={() => onSelectPreview(item.slug)}
-                >
-                  {isEquipped && (
-                    <div className={styles.equippedCheck} title={t('cosmetics.equipped')}>
-                      <Check size={12} />
-                    </div>
-                  )}
-
-                  {item.metadata?.exclusive && (
-                    <span className={styles.exclusiveBadge}>{t('cosmetics.exclusive')}</span>
-                  )}
-
-                  <div className={styles.avatarPreviewFrameBox}>
-                    <Avatar
-                      src={userAvatarUrl}
-                      displayName={userDisplayName || 'User'}
-                      frameSlug={item.slug}
-                      size="lg"
-                      animated={true}
-                    />
-                  </div>
-
-                  <span className={styles.itemName} title={item.name}>
-                    {item.name}
-                  </span>
-
-                  <span className={`${styles.itemRarityTag} ${getRarityClass(item.rarity)}`}>
-                    {t(`cosmetics.rarity.${item.rarity.toLowerCase()}`)}
-                  </span>
+                <div className={styles.emptyState}>
+                  <p>{t('cosmetics.noFramesFound')}</p>
                 </div>
               );
-            })}
-          </div>
+            }
 
-          {filteredItems.length === 0 && (
-            <div className={styles.emptyState}>
-              <p>{t('cosmetics.noFramesFound')}</p>
-            </div>
-          )}
+            return (
+              <div className={styles.grid}>
+                {/* Opção: Nenhuma Moldura (Apenas na visão geral sem filtro ativo) */}
+                {showNoneOption && (
+                  <div
+                    className={`${styles.itemCard} ${!previewSlug ? styles.itemCardActive : ''}`}
+                    onClick={() => onSelectPreview(null)}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    {!equippedSlug && (
+                      <div className={styles.equippedCheck} title={t('cosmetics.equipped')}>
+                        <Check size={13} strokeWidth={3} />
+                      </div>
+                    )}
+
+                    <div className={styles.avatarPreviewFrameBox}>
+                      <div className={styles.noneAvatarWrapper}>
+                        <Avatar
+                          src={userAvatarUrl}
+                          displayName={userDisplayName || 'User'}
+                          frameSlug={null}
+                          size="xl"
+                          className={styles.inventoryAvatar}
+                        />
+                        <div className={styles.noneBanOverlay}>
+                          <Ban size={40} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className={styles.cardInfo}>
+                      <span className={styles.itemName} title={t('cosmetics.none')}>
+                        {t('cosmetics.none')}
+                      </span>
+                      <span className={`${styles.itemRarityTag} ${styles.rarityCommon}`}>
+                        {t('cosmetics.default')}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Lista Filtrada */}
+                {filteredItems.map((item) => {
+                  const isSelected = previewSlug === item.slug;
+                  const isEquipped = equippedSlug === item.slug;
+
+                  return (
+                    <div
+                      key={item.slug}
+                      className={`${styles.itemCard} ${isSelected ? styles.itemCardActive : ''} ${getRarityCardClass(item.rarity)}`}
+                      onClick={() => onSelectPreview(item.slug)}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      {isEquipped && (
+                        <div className={styles.equippedCheck} title={t('cosmetics.equipped')}>
+                          <Check size={13} strokeWidth={3} />
+                        </div>
+                      )}
+
+                      <div className={styles.avatarPreviewFrameBox}>
+                        <Avatar
+                          src={userAvatarUrl}
+                          displayName={userDisplayName || 'User'}
+                          frameSlug={item.slug}
+                          size="xl"
+                          animated={true}
+                          className={styles.inventoryAvatar}
+                        />
+                      </div>
+
+                      <div className={styles.cardInfo}>
+                        <span className={styles.itemName} title={item.name}>
+                          {item.name}
+                        </span>
+
+                        <div className={styles.tagRow}>
+                          <span className={`${styles.itemRarityTag} ${getRarityClass(item.rarity)}`}>
+                            {t(`cosmetics.rarity.${item.rarity.toLowerCase()}`)}
+                          </span>
+
+                          {item.metadata?.exclusive && (
+                            <span className={styles.exclusiveBottomTag} title={t('cosmetics.exclusive')}>
+                              <Sparkles size={8} strokeWidth={2.5} />
+                              <span>{t('cosmetics.exclusive')}</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Rodapé com botão de fechar */}

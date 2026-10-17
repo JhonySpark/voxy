@@ -738,6 +738,7 @@
   "voice.watchersCount": "{{count}} watching",
   "cosmetics.avatarDecoration": "Avatar Decoration",
   "cosmetics.none": "None",
+  "cosmetics.default": "Default",
   "cosmetics.exclusive": "Exclusive",
   "cosmetics.rarity.common": "Common",
   "cosmetics.rarity.rare": "Rare",
