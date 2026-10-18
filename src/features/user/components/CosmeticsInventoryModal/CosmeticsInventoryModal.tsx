@@ -169,7 +169,7 @@ export const CosmeticsInventoryModal: React.FC<CosmeticsInventoryModalProps> = (
                           className={styles.inventoryAvatar}
                         />
                         <div className={styles.noneBanOverlay}>
-                          <Ban size={40} />
+                          <Ban size={30} />
                         </div>
                       </div>
                     </div>
