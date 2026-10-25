@@ -334,9 +334,9 @@ export const AccountTab: React.FC<AccountTabProps> = ({
             <span className={styles.infoValue}>
               {currentUser?.ageClassification === 'ADULT'
                 ? t('user.streamPermAdult')
-                : currentUser?.ageClassification === 'TEEN' || currentUser?.ageClassification === 'DIVERGENT'
-                ? t('user.streamPermTeen')
-                : t('user.streamPermRestricted')}
+                : currentUser?.ageClassification === 'CHILD'
+                ? t('user.streamPermRestricted')
+                : t('user.streamPermTeen')}
             </span>
           </div>
 
