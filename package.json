@@ -1,7 +1,7 @@
 {
   "name": "voxy",
   "private": true,
-  "version": "0.6.71",
+  "version": "0.6.72",
   "type": "module",
   "main": "dist-electron/main.js",
   "author": "D4rk Side",
@@ -69,6 +69,7 @@
       "electron/native_manifest.json",
       "build/icon.ico",
       "build/icon.png",
+      "build/tray-icon.png",
       "build/icon_resized.png",
       "package.json"
     ],
@@ -87,7 +88,10 @@
     ],
     "asarUnpack": [
       "**/*.exe",
-      "build/icon.ico"
+      "build/icon.ico",
+      "build/icon.png",
+      "build/tray-icon.png",
+      "build/icon_resized.png"
     ],
     "publish": [
       {

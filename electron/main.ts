@@ -234,31 +234,61 @@ function refreshTrayMenu() {
   tray.setContextMenu(Menu.buildFromTemplate(menuItems));
 }
 
-function getAppIcon(): nativeImage {
+function getAppIconPath(): string {
   const candidates = [
     join(process.resourcesPath, "app.asar.unpacked/build/icon.ico"),
-    join(app.getAppPath(), "build/icon.ico"),
-    join(__dirname, "../build/icon.ico"),
-    join(process.cwd(), "build/icon.ico"),
-    join(process.resourcesPath, "app.asar.unpacked/build/icon_resized.png"),
     join(process.resourcesPath, "app.asar.unpacked/build/icon.png"),
-    join(app.getAppPath(), "build/icon_resized.png"),
+    join(process.resourcesPath, "app.asar.unpacked/build/icon_resized.png"),
+    join(app.getAppPath(), "build/icon.ico"),
     join(app.getAppPath(), "build/icon.png"),
+    join(app.getAppPath(), "build/icon_resized.png"),
+    join(__dirname, "../build/icon.ico"),
     join(__dirname, "../build/icon.png"),
+    join(__dirname, "../build/icon_resized.png"),
+    join(process.cwd(), "build/icon.ico"),
     join(process.cwd(), "build/icon.png"),
   ];
 
   for (const p of candidates) {
-    if (existsSync(p)) {
-      const img = nativeImage.createFromPath(p);
-      if (!img.isEmpty()) return img;
-    }
+    if (existsSync(p)) return p;
   }
-  return nativeImage.createFromPath(join(app.getAppPath(), "build/icon.ico"));
+  return join(app.getAppPath(), "build/icon.ico");
+}
+
+function getAppIcon(): nativeImage {
+  const p = getAppIconPath();
+  if (existsSync(p)) {
+    const img = nativeImage.createFromPath(p);
+    if (!img.isEmpty()) return img;
+  }
+  return nativeImage.createEmpty();
 }
 
 function getTrayIcon(): nativeImage {
-  return getAppIcon();
+  const trayCandidates = [
+    join(process.resourcesPath, "app.asar.unpacked/build/tray-icon.png"),
+    join(app.getAppPath(), "build/tray-icon.png"),
+    join(__dirname, "../build/tray-icon.png"),
+    join(process.cwd(), "build/tray-icon.png"),
+    join(process.resourcesPath, "app.asar.unpacked/build/icon_resized.png"),
+    join(app.getAppPath(), "build/icon_resized.png"),
+  ];
+
+  for (const p of trayCandidates) {
+    if (existsSync(p)) {
+      const img = nativeImage.createFromPath(p);
+      if (!img.isEmpty()) {
+        // Redimensiona garantindo proporção e nitidez cristalina no System Tray do Windows
+        return img.resize({ width: 32, height: 32, quality: "best" });
+      }
+    }
+  }
+
+  const appIcon = getAppIcon();
+  if (!appIcon.isEmpty()) {
+    return appIcon.resize({ width: 32, height: 32, quality: "best" });
+  }
+  return nativeImage.createEmpty();
 }
 
 function getVoxyLogoIcon(): nativeImage {
@@ -315,11 +345,12 @@ function createTray() {
 }
 
 async function createWindow() {
+  const iconPath = getAppIconPath();
   const icon = getAppIcon();
 
   win = new BrowserWindow({
     title: "Voxy",
-    icon: !icon.isEmpty() ? icon : undefined,
+    icon: existsSync(iconPath) ? iconPath : (!icon.isEmpty() ? icon : undefined),
     width: 1280,
     height: 800,
     minWidth: 800,
@@ -389,6 +420,10 @@ async function createWindow() {
 }
 
 app.whenReady().then(() => {
+  if (process.platform === "win32") {
+    app.setAppUserModelId("br.com.d4rkside.voxy");
+  }
+
   // 1. Startup Integrity Guard: Verifica presenca e SHA-256 dos binarios essenciais no Windows
   if (process.platform === "win32") {
     const integrity = performStartupIntegrityCheck();
