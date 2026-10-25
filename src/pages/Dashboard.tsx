@@ -4,6 +4,7 @@ import { Users, Volume2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import VoiceRoom from '../components/VoiceRoom';
 import { SettingsModal } from '../components/SettingsModal';
+import { AppLoader } from '../components/common/AppLoader/AppLoader';
 import { realtimeClient } from '../infrastructure/adapters/realtime/socket-realtime.adapter';
 
 import {
@@ -41,6 +42,7 @@ import { useToast } from '../components/common/Toast/ToastContext';
 import { useDialog } from '../components/common/Dialog/DialogContext';
 import { notificationService } from '../core/services/notification.service';
 import { soundService } from '../core/services/sound.service';
+import { useTitlebar } from '../contexts/TitlebarContext';
 
 // Custom Hooks refatorados da Fase 3
 import { useFriends } from '../features/friends/hooks/useFriends';
@@ -54,6 +56,7 @@ export default function Dashboard() {
   const { toast, showToast } = useToast();
   const { confirm, prompt } = useDialog();
   const navigate = useNavigate();
+  const { setCustomTitle } = useTitlebar();
 
   // Autenticação e Usuário
   const [myId, setMyId] = useState('');
@@ -196,6 +199,51 @@ export default function Dashboard() {
       setShowBetaModal(true);
     }
   }, []);
+
+  // Sincroniza dinamicamente o nome da tela/canal na Titlebar superior
+  useEffect(() => {
+    if (showSettingsModal) {
+      setCustomTitle('Configurações de Usuário');
+      return;
+    }
+    if (showServerSettingsModal && activeServer) {
+      setCustomTitle(`Configurações — ${activeServer.name}`);
+      return;
+    }
+    if (activeView === DashboardView.SERVER && activeServer) {
+      if (activeChannel) {
+        setCustomTitle(
+          activeChannel.type === ChannelTypeEnum.VOICE
+            ? `🔊 ${activeChannel.name} — ${activeServer.name}`
+            : `# ${activeChannel.name} — ${activeServer.name}`
+        );
+      } else {
+        setCustomTitle(activeServer.name);
+      }
+      return;
+    }
+    if (activeView === DashboardView.DM) {
+      if (activeFriend) {
+        setCustomTitle(`@ ${activeFriend.displayName || activeFriend.username}`);
+      } else {
+        setCustomTitle('Mensagens Diretas');
+      }
+      return;
+    }
+    setCustomTitle(null);
+
+    return () => {
+      setCustomTitle(null);
+    };
+  }, [
+    showSettingsModal,
+    showServerSettingsModal,
+    activeView,
+    activeServer,
+    activeChannel,
+    activeFriend,
+    setCustomTitle,
+  ]);
 
   // Dispositivos de Áudio
   const [selectedAudioInput, setSelectedAudioInput] = useState<string>(
@@ -821,11 +869,7 @@ export default function Dashboard() {
   };
 
   if (initialLoading) {
-    return (
-      <div className={styles.loadingContainer}>
-        <div className={`btn-spinner ${styles.loadingSpinner}`} />
-      </div>
-    );
+    return <AppLoader message={t('common.loading', 'Carregando...')} />;
   }
 
   return (

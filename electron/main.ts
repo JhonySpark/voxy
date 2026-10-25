@@ -322,6 +322,9 @@ async function createWindow() {
     icon: !icon.isEmpty() ? icon : undefined,
     width: 1280,
     height: 800,
+    minWidth: 800,
+    minHeight: 600,
+    frame: false,
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: true,
@@ -334,6 +337,13 @@ async function createWindow() {
   }
   win.removeMenu();
   win.maximize();
+
+  win.on("maximize", () => {
+    win?.webContents.send(IpcChannels.WINDOW_MAXIMIZE_CHANGE, true);
+  });
+  win.on("unmaximize", () => {
+    win?.webContents.send(IpcChannels.WINDOW_MAXIMIZE_CHANGE, false);
+  });
 
   win.on("close", (event) => {
     if (!isQuitting && getBackgroundSettings().keepRunningInBackground) {
@@ -420,6 +430,26 @@ app.whenReady().then(() => {
   });
   ipcMain.handle(IpcChannels.CLEAR_SAVED_CREDENTIALS, () => {
     return clearStoredCredentials();
+  });
+
+  // Controles de Janela para a Titlebar customizada
+  ipcMain.handle(IpcChannels.WINDOW_MINIMIZE, () => {
+    win?.minimize();
+  });
+  ipcMain.handle(IpcChannels.WINDOW_MAXIMIZE, () => {
+    if (win?.isMaximized()) {
+      win.unmaximize();
+      return false;
+    } else {
+      win?.maximize();
+      return true;
+    }
+  });
+  ipcMain.handle(IpcChannels.WINDOW_CLOSE, () => {
+    win?.close();
+  });
+  ipcMain.handle(IpcChannels.WINDOW_IS_MAXIMIZED, () => {
+    return win?.isMaximized() ?? false;
   });
 
   // Retorna fontes categorizadas (Jogos detectados, Janelas/Apps e Telas com ícones)

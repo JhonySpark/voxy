@@ -6,6 +6,9 @@ import Dashboard from './pages/Dashboard';
 import { ToastProvider } from './components/common/Toast/ToastContext';
 import { DialogProvider } from './components/common/Dialog/DialogContext';
 import { UpdateNotification } from './components/UpdateNotification';
+import { AppLoader } from './components/common/AppLoader/AppLoader';
+import { TitlebarProvider } from './contexts/TitlebarContext';
+import { Titlebar } from './components/layout/Titlebar/Titlebar';
 import { AppRoutes, StorageKeys, IpcChannels } from './core/enums';
 import './index.css';
 
@@ -38,35 +41,37 @@ function App() {
 
   const hasToken = () => !!localStorage.getItem(StorageKeys.AUTH_TOKEN);
 
-  if (!isInitialized) {
-    return (
-      <div
-        style={{
-          width: '100vw',
-          height: '100vh',
-          backgroundColor: '#0b0e14',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <div className="btn-spinner" style={{ width: 32, height: 32 }} />
-      </div>
-    );
-  }
-
   return (
     <ToastProvider>
       <DialogProvider>
         <HashRouter>
-          <UpdateNotification />
-          <Routes>
-            <Route path={AppRoutes.LOGIN} element={<Login />} />
-            <Route path={AppRoutes.REGISTER} element={<Register />} />
-            <Route path={AppRoutes.APP} element={<Dashboard />} />
-            <Route path={AppRoutes.ROOT} element={<Navigate to={hasToken() ? AppRoutes.APP : AppRoutes.LOGIN} replace />} />
-            <Route path="*" element={<Navigate to={hasToken() ? AppRoutes.APP : AppRoutes.LOGIN} replace />} />
-          </Routes>
+          <TitlebarProvider>
+            <div className="app-layout-root">
+              <Titlebar />
+              <div className="app-layout-body">
+                {!isInitialized ? (
+                  <AppLoader />
+                ) : (
+                  <>
+                    <UpdateNotification />
+                    <Routes>
+                      <Route path={AppRoutes.LOGIN} element={<Login />} />
+                      <Route path={AppRoutes.REGISTER} element={<Register />} />
+                      <Route path={AppRoutes.APP} element={<Dashboard />} />
+                      <Route
+                        path={AppRoutes.ROOT}
+                        element={<Navigate to={hasToken() ? AppRoutes.APP : AppRoutes.LOGIN} replace />}
+                      />
+                      <Route
+                        path="*"
+                        element={<Navigate to={hasToken() ? AppRoutes.APP : AppRoutes.LOGIN} replace />}
+                      />
+                    </Routes>
+                  </>
+                )}
+              </div>
+            </div>
+          </TitlebarProvider>
         </HashRouter>
       </DialogProvider>
     </ToastProvider>

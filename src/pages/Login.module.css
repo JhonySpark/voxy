@@ -2,8 +2,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  width: 100vw;
+  min-height: 100%;
+  height: 100%;
+  width: 100%;
   background-color: var(--bg-primary);
   padding: var(--space-4);
   position: relative;
@@ -34,9 +35,11 @@
 
 .logo {
   width: 110px;
+  height: 110px;
+  object-fit: contain;
   margin-top: -1.5rem;
   margin-bottom: var(--space-1);
-  filter: drop-shadow(0 0 12px rgba(52, 211, 153, 0.25));
+  filter: drop-shadow(0 0 16px rgba(52, 211, 153, 0.35));
 }
 
 .title {

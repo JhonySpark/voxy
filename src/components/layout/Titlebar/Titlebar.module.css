@@ -1,0 +1,101 @@
+.titlebar {
+  height: 32px;
+  width: 100%;
+  background-color: #080c13;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-app-region: drag;
+  position: relative;
+  z-index: 9999;
+  flex-shrink: 0;
+}
+
+.leftSection {
+  display: flex;
+  align-items: center;
+  padding-left: 14px;
+  height: 100%;
+}
+
+.brandTitle {
+  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary, #94a3b8);
+  text-transform: uppercase;
+  transition: color 0.2s ease;
+}
+
+.titlebar:hover .brandTitle {
+  color: var(--text-primary, #f8fafc);
+}
+
+.centerSection {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  max-width: 50vw;
+}
+
+.screenTitle {
+  font-family: var(--font-body, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(248, 250, 252, 0.88);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+}
+
+.controlsSection {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  -webkit-app-region: no-drag;
+}
+
+.controlButton {
+  width: 44px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #94a3b8);
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  padding: 0;
+  margin: 0;
+}
+
+.controlButton:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary, #f8fafc);
+}
+
+.controlButton:active {
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.closeButton:hover {
+  background-color: #e81123 !important;
+  color: #ffffff !important;
+}
+
+.closeButton:active {
+  background-color: #bf101d !important;
+  color: #ffffff !important;
+}

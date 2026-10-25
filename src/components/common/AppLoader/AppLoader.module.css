@@ -1,0 +1,55 @@
+.container {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-primary, #0b0e14);
+  z-index: 99999;
+  gap: var(--space-4, 1rem);
+  user-select: none;
+}
+
+.logoWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: logoBreathe 2.4s ease-in-out infinite;
+}
+
+.animatedLogo {
+  object-fit: contain;
+  display: block;
+}
+
+.message {
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  font-size: 0.95rem;
+  color: var(--text-secondary, #94a3b8);
+  letter-spacing: 0.02em;
+  margin: 0;
+  animation: messageFade 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes logoBreathe {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 16px rgba(52, 211, 153, 0.25));
+  }
+  50% {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 32px rgba(52, 211, 153, 0.45));
+  }
+}
+
+@keyframes messageFade {
+  0% {
+    opacity: 0.65;
+  }
+  100% {
+    opacity: 0.95;
+  }
+}

@@ -5,7 +5,7 @@ import { Eye, EyeOff, ShieldAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ApiRoutes, AppRoutes, StorageKeys, IpcChannels } from "../core/enums";
 import { getApiErrorMessage } from "../core/utils/error.util";
-import heroLogo from "../assets/logo.png";
+import animatedLogo from "../assets/logo-voxy-animado.svg";
 import { logger } from "../core/services/logger.service";
 import { Button } from "../components/common/Button";
 import { Input } from "../components/common/Input";
@@ -184,7 +184,7 @@ export default function Login() {
     <div className={styles.container}>
       <div className={styles.card}>
         <div className={styles.header}>
-          <img src={heroLogo} alt="Voxy Logo" className={styles.logo} />
+          <img src={animatedLogo} alt="Voxy Logo" className={styles.logo} />
           <h1 className={styles.title}>{t("auth.login.title")}</h1>
           <p className={styles.subtitle}>{t("auth.login.subtitle")}</p>
         </div>
