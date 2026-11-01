@@ -85,6 +85,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [runInBackground, setRunInBackground] = useState<boolean>(
     localStorage.getItem(StorageKeys.RUN_IN_BACKGROUND) !== 'false'
   );
+  const [autoLaunch, setAutoLaunch] = useState<boolean>(
+    localStorage.getItem(StorageKeys.AUTO_LAUNCH) !== 'false'
+  );
   const [gamePresence, setGamePresence] = useState<boolean>(
     localStorage.getItem(StorageKeys.GAME_PRESENCE) !== 'false'
   );
@@ -104,6 +107,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   useEffect(() => {
     ipcRenderer?.invoke(IpcChannels.GET_BACKGROUND_MODE)
       .then((enabled: boolean) => setRunInBackground(enabled !== false))
+      .catch(() => undefined);
+    ipcRenderer?.invoke(IpcChannels.GET_AUTO_LAUNCH)
+      .then((enabled: boolean) => setAutoLaunch(enabled !== false))
       .catch(() => undefined);
   }, []);
 
@@ -400,6 +406,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   setRunInBackground(next);
                   localStorage.setItem(StorageKeys.RUN_IN_BACKGROUND, next.toString());
                   ipcRenderer?.send(IpcChannels.SET_BACKGROUND_MODE, next);
+                }}
+                autoLaunch={autoLaunch}
+                onToggleAutoLaunch={() => {
+                  const next = !autoLaunch;
+                  setAutoLaunch(next);
+                  localStorage.setItem(StorageKeys.AUTO_LAUNCH, next.toString());
+                  ipcRenderer?.send(IpcChannels.SET_AUTO_LAUNCH, next);
                 }}
               />
             )}

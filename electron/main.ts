@@ -90,29 +90,68 @@ let win: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let isQuitting = false;
 
-type BackgroundSettings = { keepRunningInBackground: boolean };
+type BackgroundSettings = {
+  keepRunningInBackground: boolean;
+  autoLaunchWithWindows: boolean;
+};
 
 const backgroundSettingsPath = () =>
   join(app.getPath("userData"), "background-settings.json");
+
+function getAutoLaunchPath(): string {
+  if (app.isPackaged) return process.execPath;
+  const installedExe = join(
+    app.getPath("localAppData"),
+    "Programs",
+    "Voxy",
+    "Voxy.exe",
+  );
+  if (existsSync(installedExe)) {
+    return installedExe;
+  }
+  return process.execPath;
+}
+
+function applyAutoLaunch(enabled: boolean) {
+  if (process.platform !== "win32") return;
+  try {
+    const targetPath = getAutoLaunchPath();
+    app.setLoginItemSettings({
+      openAtLogin: enabled,
+      path: targetPath,
+      args: ["--hidden"],
+    });
+  } catch (err) {
+    console.error(
+      "[AutoLaunch] Falha ao configurar inicialização no Windows:",
+      err,
+    );
+  }
+}
 
 function getBackgroundSettings(): BackgroundSettings {
   try {
     const settings = JSON.parse(readFileSync(backgroundSettingsPath(), "utf8"));
     return {
       keepRunningInBackground: settings.keepRunningInBackground !== false,
+      autoLaunchWithWindows: settings.autoLaunchWithWindows !== false,
     };
   } catch {
-    return { keepRunningInBackground: true };
+    return {
+      keepRunningInBackground: true,
+      autoLaunchWithWindows: true,
+    };
   }
 }
 
-function saveBackgroundSettings(keepRunningInBackground: boolean) {
+function saveBackgroundSettings(partial: Partial<BackgroundSettings>) {
   try {
-    writeFileSync(
-      backgroundSettingsPath(),
-      JSON.stringify({ keepRunningInBackground }),
-      "utf8",
-    );
+    const current = getBackgroundSettings();
+    const updated = { ...current, ...partial };
+    writeFileSync(backgroundSettingsPath(), JSON.stringify(updated), "utf8");
+    if (partial.autoLaunchWithWindows !== undefined) {
+      applyAutoLaunch(partial.autoLaunchWithWindows);
+    }
   } catch (err) {
     console.error("[Background] Falha ao salvar configurações:", err);
   }
@@ -188,7 +227,7 @@ function clearStoredCredentials(): boolean {
 
 function showMainWindow() {
   if (!win) {
-    void createWindow();
+    void createWindow(false);
     return;
   }
   if (win.isMinimized()) win.restore();
@@ -219,7 +258,15 @@ function refreshTrayMenu() {
       label: "Manter o Voxy em segundo plano",
       type: "checkbox",
       checked: settings.keepRunningInBackground,
-      click: (item: any) => saveBackgroundSettings(item.checked),
+      click: (item: any) =>
+        saveBackgroundSettings({ keepRunningInBackground: item.checked }),
+    },
+    {
+      label: "Inicializar com o Windows",
+      type: "checkbox",
+      checked: settings.autoLaunchWithWindows,
+      click: (item: any) =>
+        saveBackgroundSettings({ autoLaunchWithWindows: item.checked }),
     },
     { type: "separator" },
     {
@@ -234,19 +281,13 @@ function refreshTrayMenu() {
   tray.setContextMenu(Menu.buildFromTemplate(menuItems));
 }
 
-function getAppIconPath(): string {
+function getAppIcoPath(): string {
   const candidates = [
     join(process.resourcesPath, "app.asar.unpacked/build/icon.ico"),
-    join(process.resourcesPath, "app.asar.unpacked/build/icon.png"),
-    join(process.resourcesPath, "app.asar.unpacked/build/icon_resized.png"),
     join(app.getAppPath(), "build/icon.ico"),
-    join(app.getAppPath(), "build/icon.png"),
-    join(app.getAppPath(), "build/icon_resized.png"),
     join(__dirname, "../build/icon.ico"),
-    join(__dirname, "../build/icon.png"),
-    join(__dirname, "../build/icon_resized.png"),
     join(process.cwd(), "build/icon.ico"),
-    join(process.cwd(), "build/icon.png"),
+    join(process.cwd(), "frontend/build/icon.ico"),
   ];
 
   for (const p of candidates) {
@@ -255,13 +296,96 @@ function getAppIconPath(): string {
   return join(app.getAppPath(), "build/icon.ico");
 }
 
+function getAppPngPath(): string {
+  const candidates = [
+    join(process.resourcesPath, "app.asar.unpacked/build/icon.png"),
+    join(process.resourcesPath, "app.asar.unpacked/build/icon_resized.png"),
+    join(app.getAppPath(), "build/icon.png"),
+    join(app.getAppPath(), "build/icon_resized.png"),
+    join(__dirname, "../build/icon.png"),
+    join(__dirname, "../build/icon_resized.png"),
+    join(process.cwd(), "build/icon.png"),
+    join(process.cwd(), "frontend/build/icon.png"),
+  ];
+
+  for (const p of candidates) {
+    if (existsSync(p)) return p;
+  }
+  return join(app.getAppPath(), "build/icon.png");
+}
+
+function getAppIconPath(): string {
+  const ico = getAppIcoPath();
+  if (existsSync(ico)) return ico;
+  return getAppPngPath();
+}
+
 function getAppIcon(): nativeImage {
-  const p = getAppIconPath();
-  if (existsSync(p)) {
-    const img = nativeImage.createFromPath(p);
+  // Carrega sempre primeiro o PNG de alta resolução (512x512) para que
+  // o NativeImage não fique limitado à menor camada (16x16) do .ico.
+  const pngPath = getAppPngPath();
+  if (existsSync(pngPath)) {
+    const img = nativeImage.createFromPath(pngPath);
+    if (!img.isEmpty()) return img;
+  }
+  const icoPath = getAppIcoPath();
+  if (existsSync(icoPath)) {
+    const img = nativeImage.createFromPath(icoPath);
     if (!img.isEmpty()) return img;
   }
   return nativeImage.createEmpty();
+}
+
+function setupWindowsAppIdentity() {
+  if (process.platform !== "win32") return;
+  const icoPath = getAppIcoPath();
+
+  try {
+    if (isDev) {
+      // Em modo dev, o processo executado é o electron.exe genérico.
+      // Criamos/atualizamos o atalho no menu Iniciar com o mesmo AUMID ("br.com.d4rkside.voxy")
+      // e o ícone oficial .ico do Voxy para que o Windows vincule a janela ao ícone oficial
+      // na barra de tarefas em vez do átomo azul do Electron.
+      const devShortcutPath = join(
+        app.getPath("appData"),
+        "Microsoft",
+        "Windows",
+        "Start Menu",
+        "Programs",
+        "Voxy (Dev).lnk",
+      );
+      shell.writeShortcutLink(
+        devShortcutPath,
+        existsSync(devShortcutPath) ? "update" : "create",
+        {
+          target: process.execPath,
+          args: `"${app.getAppPath()}"`,
+          appUserModelId: "br.com.d4rkside.voxy",
+          icon: icoPath,
+          iconIndex: 0,
+          description: "Voxy (Development Mode)",
+        },
+      );
+    } else {
+      const prodShortcutPath = join(
+        app.getPath("appData"),
+        "Microsoft",
+        "Windows",
+        "Start Menu",
+        "Programs",
+        "Voxy.lnk",
+      );
+      if (existsSync(prodShortcutPath)) {
+        shell.writeShortcutLink(prodShortcutPath, "update", {
+          appUserModelId: "br.com.d4rkside.voxy",
+          icon: icoPath,
+          iconIndex: 0,
+        });
+      }
+    }
+  } catch (err) {
+    console.warn("[Windows Identity] Falha ao sincronizar atalho AUMID:", err);
+  }
 }
 
 function getTrayIcon(): nativeImage {
@@ -344,18 +468,29 @@ function createTray() {
   }
 }
 
-async function createWindow() {
-  const iconPath = getAppIconPath();
+async function createWindow(hidden: boolean = false) {
+  const icoPath = getAppIcoPath();
+  const hasIco = existsSync(icoPath);
   const icon = getAppIcon();
+
+  // No Windows, passar o arquivo .ico nativo diretamente permite ao SO ler
+  // todas as camadas de resolução (16x16 a 256x256) na barra de tarefas e Alt+Tab.
+  const windowIcon =
+    process.platform === "win32" && hasIco
+      ? icoPath
+      : !icon.isEmpty()
+        ? icon
+        : undefined;
 
   win = new BrowserWindow({
     title: "Voxy",
-    icon: existsSync(iconPath) ? iconPath : (!icon.isEmpty() ? icon : undefined),
+    icon: windowIcon,
     width: 1280,
     height: 800,
     minWidth: 800,
     minHeight: 600,
     frame: false,
+    show: false,
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: true,
@@ -363,11 +498,19 @@ async function createWindow() {
       backgroundThrottling: false,
     },
   });
-  if (!icon.isEmpty()) {
+
+  if (process.platform === "win32" && hasIco) {
+    win.setIcon(icoPath);
+  } else if (!icon.isEmpty()) {
     win.setIcon(icon);
   }
+
   win.removeMenu();
-  win.maximize();
+
+  if (!hidden) {
+    win.maximize();
+    win.show();
+  }
 
   win.on("maximize", () => {
     win?.webContents.send(IpcChannels.WINDOW_MAXIMIZE_CHANGE, true);
@@ -422,6 +565,7 @@ async function createWindow() {
 app.whenReady().then(() => {
   if (process.platform === "win32") {
     app.setAppUserModelId("br.com.d4rkside.voxy");
+    setupWindowsAppIdentity();
   }
 
   // 1. Startup Integrity Guard: Verifica presenca e SHA-256 dos binarios essenciais no Windows
@@ -443,6 +587,9 @@ app.whenReady().then(() => {
     }
   }
 
+  const initialSettings = getBackgroundSettings();
+  applyAutoLaunch(initialSettings.autoLaunchWithWindows);
+
   createTray();
 
   ipcMain.handle(
@@ -450,7 +597,15 @@ app.whenReady().then(() => {
     () => getBackgroundSettings().keepRunningInBackground,
   );
   ipcMain.on(IpcChannels.SET_BACKGROUND_MODE, (_event, enabled: boolean) => {
-    saveBackgroundSettings(enabled === true);
+    saveBackgroundSettings({ keepRunningInBackground: enabled === true });
+  });
+
+  ipcMain.handle(
+    IpcChannels.GET_AUTO_LAUNCH,
+    () => getBackgroundSettings().autoLaunchWithWindows,
+  );
+  ipcMain.on(IpcChannels.SET_AUTO_LAUNCH, (_event, enabled: boolean) => {
+    saveBackgroundSettings({ autoLaunchWithWindows: enabled === true });
   });
 
   // IPC para cofre seguro de credenciais e persistência de sessão nativa
@@ -508,7 +663,8 @@ app.whenReady().then(() => {
     },
   );
 
-  createWindow();
+  const startHidden = process.argv.includes("--hidden");
+  createWindow(startHidden);
 
   // IPC para Notificações Desktop Nativas do Sistema Operacional
   ipcMain.handle(
@@ -567,7 +723,11 @@ app.whenReady().then(() => {
   ipcMain.handle(IpcChannels.GET_OS_AGE_SIGNAL, async () => {
     if (process.platform !== "win32") {
       console.log(`[AgeSignal] Plataforma não suportada: ${process.platform}`);
-      return { available: false, reason: "Unsupported_Platform", platform: process.platform };
+      return {
+        available: false,
+        reason: "Unsupported_Platform",
+        platform: process.platform,
+      };
     }
     const binPath = resolveNativeBinary(NATIVE_BINARIES.AGE_SIGNAL);
     if (!binPath) {
@@ -584,7 +744,9 @@ app.whenReady().then(() => {
 
     const nonce = randomBytes(16).toString("hex");
     const timestamp = Date.now();
-    console.log(`[AgeSignal] Iniciando sonda: ${binPath} [nonce=${nonce}, ts=${timestamp}]`);
+    console.log(
+      `[AgeSignal] Iniciando sonda: ${binPath} [nonce=${nonce}, ts=${timestamp}]`,
+    );
 
     return new Promise((resolve) => {
       let settled = false;
@@ -605,13 +767,16 @@ app.whenReady().then(() => {
       child.on("close", (code) => {
         if (settled) return;
         settled = true;
-        console.log(`[AgeSignal] Sonda encerrou. code=${code}, stdout="${stdout.trim()}", stderr="${stderr.trim()}"`);
+        console.log(
+          `[AgeSignal] Sonda encerrou. code=${code}, stdout="${stdout.trim()}", stderr="${stderr.trim()}"`,
+        );
         if (code === 0 && stdout.trim()) {
           try {
             const data = JSON.parse(stdout.trim());
             data.platform = process.platform;
             data.osRelease = os.release();
-            data.osVersion = typeof os.version === 'function' ? os.version() : "";
+            data.osVersion =
+              typeof os.version === "function" ? os.version() : "";
             return resolve(data);
           } catch (parseErr) {
             console.error(
@@ -977,6 +1142,6 @@ app.on("activate", () => {
   if (allWindows.length) {
     allWindows[0].focus();
   } else {
-    createWindow();
+    createWindow(false);
   }
 });

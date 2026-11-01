@@ -11,6 +11,8 @@ export interface NotificationsTabProps {
   updateNotifSettings: (updates: Partial<NotificationSettings>) => void;
   runInBackground: boolean;
   onToggleRunInBackground: () => void;
+  autoLaunch?: boolean;
+  onToggleAutoLaunch?: () => void;
 }
 
 export const NotificationsTab: React.FC<NotificationsTabProps> = ({
@@ -18,6 +20,8 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({
   updateNotifSettings,
   runInBackground,
   onToggleRunInBackground,
+  autoLaunch = true,
+  onToggleAutoLaunch,
 }) => {
   const { t } = useTranslation();
   const [isTestingNotifSound, setIsTestingNotifSound] = useState(false);
@@ -206,6 +210,23 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({
           <Check size={14} strokeWidth={3} />
         </div>
       </div>
+
+      {/* Inicializar com o Windows */}
+      {onToggleAutoLaunch && (
+        <div className={styles.subcard} onClick={onToggleAutoLaunch}>
+          <div className={styles.subcardContent}>
+            <div className={styles.subcardTitle}>{t('settings.notifications.autoLaunch')}</div>
+            <div className={styles.subcardDesc}>
+              {t('settings.notifications.autoLaunchDesc')}
+            </div>
+          </div>
+          <div
+            className={`${styles.checkbox} ${autoLaunch ? styles.checkboxChecked : ''}`}
+          >
+            <Check size={14} strokeWidth={3} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

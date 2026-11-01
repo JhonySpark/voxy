@@ -258,6 +258,8 @@
   "settings.notifications.mentionSoundDesc": "Efecto de sonido al ser mencionado",
   "settings.notifications.background": "Ejecutar en segundo plano",
   "settings.notifications.backgroundDesc": "Al cerrar la ventana, mantener Voxy activo en la bandeja del sistema de Windows.",
+  "settings.notifications.autoLaunch": "Iniciar con Windows",
+  "settings.notifications.autoLaunchDesc": "Inicia Voxy automáticamente al encender la computadora y lo mantiene en segundo plano.",
   "user.editProfile": "Editar Perfil",
   "user.editProfileTitle": "Editar Perfil",
   "user.accountDetails": "Datos de la Cuenta",

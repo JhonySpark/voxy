@@ -258,6 +258,8 @@
   "settings.notifications.mentionSoundDesc": "Sound effect when mentioned",
   "settings.notifications.background": "Run in Background",
   "settings.notifications.backgroundDesc": "When closing the window, keep Voxy running in the Windows system tray.",
+  "settings.notifications.autoLaunch": "Start with Windows",
+  "settings.notifications.autoLaunchDesc": "Automatically start Voxy when your computer boots and keep it in the background.",
   "user.editProfile": "Edit Profile",
   "user.editProfileTitle": "Edit Profile",
   "user.accountDetails": "Account Details",
