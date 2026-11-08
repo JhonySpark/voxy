@@ -806,5 +806,12 @@
   "channel.settings.noLimit": "No limit",
   "channel.settings.userSingular": "user",
   "channel.settings.userPlural": "users",
-  "voice.channelFull": "This voice channel has reached its maximum limit of {{limit}} users."
+  "voice.channelFull": "This voice channel has reached its maximum limit of {{limit}} users.",
+  "channel.createChannelSubtitle": "Choose the type and customize the new server channel",
+  "channel.typeTextCardTitle": "Text Channel",
+  "channel.typeTextCardDesc": "Send messages, images, voice notes and reactions in real time.",
+  "channel.typeVoiceCardTitle": "Voice Channel",
+  "channel.typeVoiceCardDesc": "Talk over low-latency voice and share your screen.",
+  "channel.voiceNamePlaceholder": "e.g. Gaming Lounge",
+  "channel.createFailed": "Could not create channel."
 }

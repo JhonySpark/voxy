@@ -806,5 +806,12 @@
   "channel.settings.noLimit": "Sem limite",
   "channel.settings.userSingular": "usuário",
   "channel.settings.userPlural": "usuários",
-  "voice.channelFull": "Este canal de voz atingiu o limite máximo de {{limit}} usuários."
+  "voice.channelFull": "Este canal de voz atingiu o limite máximo de {{limit}} usuários.",
+  "channel.createChannelSubtitle": "Escolha o tipo e personalize o novo canal do servidor",
+  "channel.typeTextCardTitle": "Canal de Texto",
+  "channel.typeTextCardDesc": "Envie mensagens, imagens, áudios e reações em tempo real.",
+  "channel.typeVoiceCardTitle": "Canal de Voz",
+  "channel.typeVoiceCardDesc": "Converse por voz com baixa latência e compartilhe a tela.",
+  "channel.voiceNamePlaceholder": "ex: Sala de Jogos",
+  "channel.createFailed": "Não foi possível criar o canal."
 }
