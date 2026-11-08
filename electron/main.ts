@@ -489,10 +489,10 @@ async function createWindow(hidden: boolean = false) {
     },
   });
 
-  if (!icon.isEmpty()) {
-    win.setIcon(icon);
-  } else if (process.platform === "win32" && hasIco) {
+  if (process.platform === "win32" && hasIco) {
     win.setIcon(icoPath);
+  } else if (!icon.isEmpty()) {
+    win.setIcon(icon);
   }
 
   win.removeMenu();
