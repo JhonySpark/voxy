@@ -33,17 +33,16 @@ import {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+const isDev = !app.isPackaged || process.env.NODE_ENV === "development";
+
 // Define o nome da aplicação e o Application User Model ID (AUMID) no Windows.
-// Deve ser exatamente idêntico ao appId configurado no electron-builder ("br.com.d4rkside.voxy")
-// para que a barra de tarefas do Windows e as notificações agrupem corretamente com o atalho e ícone oficial.
+// Em produção, deve ser idêntico ao appId ("br.com.d4rkside.voxy") para vincular ao atalho oficial.
+// Em desenvolvimento (yarn dev), deve ter sufixo isolado (".dev") para que o Windows não detecte
+// conflito com o atalho instalado do Voxy.exe e reverta o ícone para o electron.exe genérico.
 app.name = "Voxy";
 if (process.platform === "win32") {
-  app.setAppUserModelId("br.com.d4rkside.voxy");
+  app.setAppUserModelId(isDev ? "br.com.d4rkside.voxy.dev" : "br.com.d4rkside.voxy");
 }
-
-// Em desenvolvimento, permite abrir uma 2ª instância simultânea com pasta de sessão isolada.
-// Isso possibilita testar troca de mensagens e notificações entre 2 usuários diferentes no mesmo PC.
-const isDev = !app.isPackaged || process.env.NODE_ENV === "development";
 
 if (isDev) {
   const hasLock = app.requestSingleInstanceLock();
@@ -283,35 +282,35 @@ function refreshTrayMenu() {
 
 function getAppIcoPath(): string {
   const candidates = [
-    join(process.resourcesPath, "app.asar.unpacked/build/icon.ico"),
-    join(app.getAppPath(), "build/icon.ico"),
-    join(__dirname, "../build/icon.ico"),
-    join(process.cwd(), "build/icon.ico"),
-    join(process.cwd(), "frontend/build/icon.ico"),
+    join(process.resourcesPath, "app.asar.unpacked", "build", "icon.ico"),
+    join(app.getAppPath(), "build", "icon.ico"),
+    join(__dirname, "..", "build", "icon.ico"),
+    join(process.cwd(), "build", "icon.ico"),
+    join(process.cwd(), "frontend", "build", "icon.ico"),
   ];
 
   for (const p of candidates) {
     if (existsSync(p)) return p;
   }
-  return join(app.getAppPath(), "build/icon.ico");
+  return join(app.getAppPath(), "build", "icon.ico");
 }
 
 function getAppPngPath(): string {
   const candidates = [
-    join(process.resourcesPath, "app.asar.unpacked/build/icon.png"),
-    join(process.resourcesPath, "app.asar.unpacked/build/icon_resized.png"),
-    join(app.getAppPath(), "build/icon.png"),
-    join(app.getAppPath(), "build/icon_resized.png"),
-    join(__dirname, "../build/icon.png"),
-    join(__dirname, "../build/icon_resized.png"),
-    join(process.cwd(), "build/icon.png"),
-    join(process.cwd(), "frontend/build/icon.png"),
+    join(process.resourcesPath, "app.asar.unpacked", "build", "icon.png"),
+    join(process.resourcesPath, "app.asar.unpacked", "build", "icon_resized.png"),
+    join(app.getAppPath(), "build", "icon.png"),
+    join(app.getAppPath(), "build", "icon_resized.png"),
+    join(__dirname, "..", "build", "icon.png"),
+    join(__dirname, "..", "build", "icon_resized.png"),
+    join(process.cwd(), "build", "icon.png"),
+    join(process.cwd(), "frontend", "build", "icon.png"),
   ];
 
   for (const p of candidates) {
     if (existsSync(p)) return p;
   }
-  return join(app.getAppPath(), "build/icon.png");
+  return join(app.getAppPath(), "build", "icon.png");
 }
 
 function getAppIconPath(): string {
@@ -338,50 +337,41 @@ function getAppIcon(): nativeImage {
 
 function setupWindowsAppIdentity() {
   if (process.platform !== "win32") return;
-  const icoPath = getAppIcoPath();
 
   try {
-    if (isDev) {
-      // Em modo dev, o processo executado é o electron.exe genérico.
-      // Criamos/atualizamos o atalho no menu Iniciar com o mesmo AUMID ("br.com.d4rkside.voxy")
-      // e o ícone oficial .ico do Voxy para que o Windows vincule a janela ao ícone oficial
-      // na barra de tarefas em vez do átomo azul do Electron.
-      const devShortcutPath = join(
-        app.getPath("appData"),
-        "Microsoft",
-        "Windows",
-        "Start Menu",
-        "Programs",
-        "Voxy (Dev).lnk",
-      );
-      shell.writeShortcutLink(
-        devShortcutPath,
-        existsSync(devShortcutPath) ? "update" : "create",
-        {
-          target: process.execPath,
-          args: `"${app.getAppPath()}"`,
-          appUserModelId: "br.com.d4rkside.voxy",
-          icon: icoPath,
-          iconIndex: 0,
-          description: "Voxy (Development Mode)",
-        },
-      );
-    } else {
-      const prodShortcutPath = join(
-        app.getPath("appData"),
-        "Microsoft",
-        "Windows",
-        "Start Menu",
-        "Programs",
-        "Voxy.lnk",
-      );
-      if (existsSync(prodShortcutPath)) {
-        shell.writeShortcutLink(prodShortcutPath, "update", {
-          appUserModelId: "br.com.d4rkside.voxy",
-          icon: icoPath,
-          iconIndex: 0,
-        });
-      }
+    // 1. Remove qualquer atalho antigo de Dev no Start Menu que possa estar sequestrando o AUMID
+    const devShortcutPath = join(
+      app.getPath("appData"),
+      "Microsoft",
+      "Windows",
+      "Start Menu",
+      "Programs",
+      "Voxy (Dev).lnk",
+    );
+    if (existsSync(devShortcutPath)) {
+      try {
+        unlinkSync(devShortcutPath);
+      } catch (_) {}
+    }
+
+    // 2. No Windows, o atalho oficial do aplicativo instalado DEVE apontar o ícone para o próprio executável (Voxy.exe,0),
+    // pois o executável já contém o ícone oficial embutido em seus recursos PE (Win32).
+    // Apontar para .ico,0 quebra o extrator de ícones do Windows Shell porque arquivos .ico não são binários PE.
+    const prodShortcutPath = join(
+      app.getPath("appData"),
+      "Microsoft",
+      "Windows",
+      "Start Menu",
+      "Programs",
+      "Voxy.lnk",
+    );
+    if (!isDev && existsSync(prodShortcutPath)) {
+      shell.writeShortcutLink(prodShortcutPath, "update", {
+        target: process.execPath,
+        appUserModelId: "br.com.d4rkside.voxy",
+        icon: process.execPath,
+        iconIndex: 0,
+      });
     }
   } catch (err) {
     console.warn("[Windows Identity] Falha ao sincronizar atalho AUMID:", err);
@@ -473,14 +463,11 @@ async function createWindow(hidden: boolean = false) {
   const hasIco = existsSync(icoPath);
   const icon = getAppIcon();
 
-  // No Windows, passar o arquivo .ico nativo diretamente permite ao SO ler
-  // todas as camadas de resolução (16x16 a 256x256) na barra de tarefas e Alt+Tab.
-  const windowIcon =
-    process.platform === "win32" && hasIco
-      ? icoPath
-      : !icon.isEmpty()
-        ? icon
-        : undefined;
+  // Em BrowserWindow no Windows, o NativeImage (gerado a partir de PNG 512x512 ou ICO)
+  // garante que o Chromium inicialize a janela com bitmap HICON em alta resolução.
+  const windowIcon = !icon.isEmpty()
+    ? icon
+    : (hasIco ? icoPath : undefined);
 
   win = new BrowserWindow({
     title: "Voxy",
@@ -499,10 +486,10 @@ async function createWindow(hidden: boolean = false) {
     },
   });
 
-  if (process.platform === "win32" && hasIco) {
-    win.setIcon(icoPath);
-  } else if (!icon.isEmpty()) {
+  if (!icon.isEmpty()) {
     win.setIcon(icon);
+  } else if (process.platform === "win32" && hasIco) {
+    win.setIcon(icoPath);
   }
 
   win.removeMenu();
