@@ -32,6 +32,15 @@ export function useServers() {
         if (!curr) return null;
         return res.find((s) => s.id === curr.id) || null;
       });
+      // Sincroniza também o activeChannel para refletir mudanças de nome, ícone ou permissões
+      setActiveChannel((curr) => {
+        if (!curr) return null;
+        for (const s of res) {
+          const found = s.channels?.find((c) => c.id === curr.id);
+          if (found) return found;
+        }
+        return curr;
+      });
     } catch (err) {
       console.error('Error fetching servers', err);
     } finally {

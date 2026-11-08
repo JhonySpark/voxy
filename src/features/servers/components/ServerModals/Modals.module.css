@@ -965,5 +965,224 @@
   font-style: italic;
 }
 
+/* Channel Settings Modal Styles */
+.channelSettingsModal {
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  background-color: #111520;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 1.5rem 1.75rem;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.65);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  overflow-y: auto;
+  animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.channelModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.channelModalTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.channelModalIconPreview {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  color: var(--brand-primary, #34d399);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.channelModalSubtitle {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin: 0.15rem 0 0 0;
+}
+
+.iconGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.iconOptionBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.6rem 0.4rem;
+  border-radius: 10px;
+  background: rgba(11, 14, 23, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.iconOptionBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #f8fafc;
+}
+
+.iconOptionBtnActive {
+  background: rgba(52, 211, 153, 0.12) !important;
+  border-color: var(--brand-primary, #34d399) !important;
+  color: var(--brand-primary, #34d399) !important;
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.15);
+}
+
+.iconOptionLabel {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.permissionModeList {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.permissionModeCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 10px;
+  background: rgba(11, 14, 23, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.permissionModeCard:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.permissionModeCardActive {
+  background: rgba(52, 211, 153, 0.1) !important;
+  border-color: var(--brand-primary, #34d399) !important;
+}
+
+.permissionModeHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.permissionModeCardActive .permissionModeHeader {
+  color: var(--brand-primary, #34d399);
+}
+
+.permissionModeDesc {
+  font-size: 0.74rem;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
+.allowedRolesBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem;
+  border-radius: 10px;
+  background: rgba(11, 14, 23, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.allowedRoleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.allowedRoleRow:hover:not(.allowedRoleRowDisabled) {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.allowedRoleRowActive {
+  border-color: rgba(52, 211, 153, 0.35);
+  background: rgba(52, 211, 153, 0.07);
+}
+
+.allowedRoleRowDisabled {
+  opacity: 0.75;
+  cursor: default;
+}
+
+.allowedRoleInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.allowedRoleTitle {
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.allowedRoleSubtitle {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.roleCheckbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #05140d;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.roleCheckboxChecked {
+  background: var(--brand-primary, #34d399);
+  border-color: var(--brand-primary, #34d399);
+}
+
+
 
 

@@ -12,6 +12,9 @@ export interface ChannelItem {
   id: string;
   name: string;
   type: 'TEXT' | 'VOICE';
+  icon?: string | null;
+  isRestricted?: boolean;
+  allowedRoles?: string[];
 }
 
 export interface ServerItem {

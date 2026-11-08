@@ -11,6 +11,7 @@ import { getMediaUrl } from '../../../../core/utils/media.util';
 import { getCosmeticAssetUrl } from '../../../../core/utils/cosmetic-assets.util';
 import { useCosmetics } from '../../hooks/useCosmetics';
 import { Avatar } from '../../../../components/common/Avatar';
+import { ImageCropModal } from '../../../../components/common/ImageCropModal/ImageCropModal';
 import { CosmeticsInventoryModal } from '../CosmeticsInventoryModal/CosmeticsInventoryModal';
 
 interface EditProfileModalProps {
@@ -63,6 +64,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
+  const [cropAvatarFile, setCropAvatarFile] = useState<File | null>(null);
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -82,8 +84,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
@@ -91,8 +94,12 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       return;
     }
 
+    setCropAvatarFile(file);
+  };
+
+  const handleConfirmAvatarCrop = async (croppedFile: File) => {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', croppedFile);
 
     setIsUploadingAvatar(true);
     try {
@@ -109,6 +116,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         avatarUrl: url,
       });
       toast.success(t('user.avatarUpdated'));
+      setCropAvatarFile(null);
     } catch (err: any) {
       toast.error(err.response?.data?.message || t('errors.avatarUploadFailed'));
     } finally {
@@ -428,6 +436,13 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         onSelectPreview={selectPreview}
         userAvatarUrl={avatarMedia}
         userDisplayName={displayName || user.username}
+      />
+
+      <ImageCropModal
+        isOpen={Boolean(cropAvatarFile)}
+        imageFile={cropAvatarFile}
+        onClose={() => setCropAvatarFile(null)}
+        onCropComplete={handleConfirmAvatarCrop}
       />
     </div>
   );

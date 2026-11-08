@@ -22,10 +22,11 @@ import { httpClient } from '../infrastructure/adapters/http/http-client.adapter'
 import { preloadMedia } from '../core/utils/media.util';
 import { logger } from '../core/services/logger.service';
 
-import { ServerSidebar, type ServerItem } from '../features/servers/components/ServerSidebar/ServerSidebar';
+import { ServerSidebar, type ServerItem, type ChannelItem } from '../features/servers/components/ServerSidebar/ServerSidebar';
 import { ChannelList, type ServerPermissions } from '../features/servers/components/ChannelList/ChannelList';
 import { CreateServerModal } from '../features/servers/components/ServerModals/CreateServerModal';
 import { CreateChannelModal } from '../features/servers/components/ServerModals/CreateChannelModal';
+import { ChannelSettingsModal } from '../features/servers/components/ServerModals/ChannelSettingsModal';
 import { InviteServerModal } from '../features/servers/components/ServerModals/InviteServerModal';
 import { ServerSettingsModal } from '../features/servers/components/ServerModals/ServerSettingsModal';
 import { ServerMembersSidebar } from '../features/servers/components/ServerMembersSidebar/ServerMembersSidebar';
@@ -54,7 +55,7 @@ import styles from './Dashboard.module.css';
 export default function Dashboard() {
   const { t } = useTranslation();
   const { toast, showToast } = useToast();
-  const { confirm, prompt } = useDialog();
+  const { confirm } = useDialog();
   const navigate = useNavigate();
   const { setCustomTitle } = useTitlebar();
 
@@ -184,6 +185,7 @@ export default function Dashboard() {
   const [showServerSettingsModal, setShowServerSettingsModal] = useState(false);
   const [showFriendModal, setShowFriendModal] = useState(false);
   const [showChannelModal, setShowChannelModal] = useState(false);
+  const [editingChannel, setEditingChannel] = useState<ChannelItem | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
@@ -776,6 +778,18 @@ export default function Dashboard() {
     connectedVoiceChannel && activeChannel?.id === connectedVoiceChannel.channelId,
   );
 
+  const canWriteInActiveChannel = useMemo(() => {
+    if (!activeChannel || !activeChannel.isRestricted) return true;
+    const isOwner =
+      (activeServer && activeServer.ownerId === myId) ||
+      Boolean(activeServerPermissions?.isOwner) ||
+      activeServerPermissions?.role === 'OWNER';
+    if (isOwner) return true;
+    const myServerRole = activeServerPermissions?.role;
+    if (!myServerRole) return false;
+    return Boolean(activeChannel.allowedRoles?.includes(myServerRole));
+  }, [activeChannel, activeServer, myId, activeServerPermissions]);
+
   const handleMuteChange = (muted: boolean) => {
     setIsVoiceMuted(muted);
     if (connectedVoiceChannel) {
@@ -953,25 +967,8 @@ export default function Dashboard() {
             onOpenInviteModal={() => setShowInviteModal(true)}
             onOpenServerSettings={() => setShowServerSettingsModal(true)}
             onViewUserProfile={setViewingUserId}
-            onRenameChannel={async (channel) => {
-              const rawName = await prompt({
-                title: t('channel.renameTitle'),
-                message: t('channel.renamePrompt'),
-                defaultValue: channel.name,
-                placeholder: 'ex: geral',
-                confirmText: t('common.save'),
-              });
-              const name = rawName?.trim();
-              if (!name || name === channel.name) return;
-              try {
-                await httpClient.patch(`${ApiRoutes.CHANNELS}/${channel.id}`, { name });
-                await fetchServers();
-                realtimeClient.emit(RealtimeEvents.SERVER_UPDATED, { serverId: activeServer.id });
-                toast.success(t('channel.renameSuccess'));
-              } catch (error: any) {
-                toast.error(error.response?.data?.message || t('channel.renameFailed'));
-              }
-            }}
+            onOpenChannelSettings={(channel) => setEditingChannel(channel)}
+            onRenameChannel={(channel) => setEditingChannel(channel)}
             onDeleteChannel={async (channel) => {
               const ok = await confirm({
                 title: t('channel.deleteTitle'),
@@ -1123,6 +1120,7 @@ export default function Dashboard() {
                 onOpenUserProfile={setViewingUserId}
                 isMembersListOpen={isMembersListOpen}
                 onToggleMembersList={() => setIsMembersListOpen((prev) => !prev)}
+                canWriteMessage={canWriteInActiveChannel}
                 canDeleteAnyMessage={
                   Boolean(
                     (activeServer && activeServer.ownerId === myId) ||
@@ -1226,6 +1224,37 @@ export default function Dashboard() {
             onChannelSocketEmit={() =>
               realtimeClient.emit(RealtimeEvents.CHANNEL_CREATED, { serverId: activeServer.id })
             }
+          />
+
+          <ChannelSettingsModal
+            isOpen={Boolean(editingChannel)}
+            channel={editingChannel}
+            onClose={() => setEditingChannel(null)}
+            onChannelUpdated={fetchServers}
+            onChannelSocketEmit={() =>
+              realtimeClient.emit(RealtimeEvents.SERVER_UPDATED, { serverId: activeServer.id })
+            }
+            onDeleteChannel={async (channel) => {
+              const ok = await confirm({
+                title: t('channel.deleteTitle'),
+                message: t('channel.deleteConfirm', { name: channel.name }),
+                confirmText: t('channel.deleteChannel'),
+                variant: 'danger',
+              });
+              if (!ok) return;
+              try {
+                await httpClient.delete(`${ApiRoutes.CHANNELS}/${channel.id}`);
+                if (activeChannel?.id === channel.id) {
+                  const nextChannel = activeServer.channels.find((item) => item.id !== channel.id) || null;
+                  setActiveChannel(nextChannel);
+                }
+                await fetchServers();
+                realtimeClient.emit(RealtimeEvents.SERVER_UPDATED, { serverId: activeServer.id });
+                toast.success(t('channel.deletedSuccess'));
+              } catch (error: any) {
+                toast.error(error.response?.data?.message || t('channel.deleteFailed'));
+              }
+            }}
           />
 
           <InviteServerModal

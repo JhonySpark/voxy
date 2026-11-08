@@ -329,6 +329,45 @@
   color: #e2e8f0;
 }
 
+.channelRightArea {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.channelSettingsBtn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  padding: 3px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+
+.channelItem:hover .channelSettingsBtn,
+.voiceCardHeader:hover .channelSettingsBtn,
+.emptyChannelRow:hover .channelSettingsBtn {
+  opacity: 1;
+}
+
+.channelSettingsBtn:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.restrictedBadge {
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 .badge {
   background-color: var(--brand-primary, #34d399);
   color: #0b0f17;

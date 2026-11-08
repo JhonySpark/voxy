@@ -2,12 +2,13 @@ import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './ChatArea.module.css';
 import { 
-  Hash, Send, Mic, Paperclip, Smile, Trash2, Loader2, Users, User, UserMinus, 
-  Ban, MoreVertical, Reply, X, FileText, Pencil 
+  Send, Mic, Paperclip, Smile, Trash2, Loader2, Users, User, UserMinus, 
+  Ban, MoreVertical, Reply, X, FileText, Pencil, Lock 
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { FriendUser } from '../../../friends/components/FriendsSidebar/FriendsSidebar';
 import type { ChannelItem } from '../../../servers/components/ServerSidebar/ServerSidebar';
+import { ChannelTextIcon } from '../../../servers/utils/channelIcons';
 import { AttachmentRenderer } from '../AttachmentRenderer/AttachmentRenderer';
 import { EmojiPicker } from '../EmojiPicker/EmojiPicker';
 import { QuickReactionPicker } from '../QuickReactionPicker/QuickReactionPicker';
@@ -109,6 +110,7 @@ interface ChatAreaProps {
   myUsername?: string;
   serverId?: string;
   friends?: FriendUser[];
+  canWriteMessage?: boolean;
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({
@@ -137,6 +139,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   myUsername,
   serverId,
   friends = [],
+  canWriteMessage = true,
 }) => {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
@@ -499,6 +502,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
   // Captura de Imagem da Área de Transferência (CTRL+V)
   const handlePaste = (e: React.ClipboardEvent) => {
+    if (type === 'CHANNEL' && !canWriteMessage) return;
     const items = e.clipboardData?.items;
     if (!items) return;
 
@@ -724,7 +728,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             </div>
           ) : (
             <div className={styles.channelIconBox}>
-              <Hash size={18} />
+              <ChannelTextIcon icon={(target as ChannelItem).icon} size={18} />
             </div>
           )}
           <h1 
@@ -891,7 +895,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         ) : messages.length === 0 ? (
           <div className={styles.emptyMessagesContainer}>
             <div className={styles.emptyIconBox}>
-              {type === 'DM' ? targetName.charAt(0).toUpperCase() : <Hash size={30} />}
+              {type === 'DM' ? (
+                targetName.charAt(0).toUpperCase()
+              ) : (
+                <ChannelTextIcon icon={(target as ChannelItem).icon} size={30} />
+              )}
             </div>
             <h2>{type === 'DM' ? targetName : `#${targetName}`}</h2>
             <p>
@@ -1293,6 +1301,18 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
       {/* Input Form & Action Bar */}
       <div className={styles.inputArea} onPaste={handlePaste}>
+        {type === 'CHANNEL' && !canWriteMessage ? (
+          <div className={styles.restrictedInputBar}>
+            <Lock size={16} className={styles.restrictedInputIcon} />
+            <span>
+              {t(
+                'channel.noWritePermission',
+                'Você não tem permissão para enviar mensagens neste canal.',
+              )}
+            </span>
+          </div>
+        ) : (
+          <>
         {/* Emoji Picker Popover */}
         {showEmojiPicker && (
           <EmojiPicker
@@ -1560,6 +1580,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               <Send size={16} />
             </button>
           </form>
+        )}
+          </>
         )}
       </div>
 

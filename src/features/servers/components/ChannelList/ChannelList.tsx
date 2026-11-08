@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styles from './ChannelList.module.css';
-import { Hash, Volume2, VolumeX, Plus, UserPlus, Search, ChevronDown, Mic, MicOff, Settings, Pencil, Trash2, ShieldAlert, LogOut } from 'lucide-react';
+import { Volume2, VolumeX, Plus, UserPlus, Search, ChevronDown, Mic, MicOff, Settings, Trash2, ShieldAlert, LogOut, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import * as Slider from '@radix-ui/react-slider';
@@ -12,6 +12,7 @@ import type { VoiceParticipantState } from '../../hooks/useServers';
 import { StatusDot } from '../../../../components/common/StatusDot/StatusDot';
 import { ReportModal } from '../../../moderation/components/ReportModal/ReportModal';
 import { useClickOutside } from '../../../../hooks/useClickOutside';
+import { ChannelTextIcon } from '../../utils/channelIcons';
 
 export interface ServerPermissions {
   role?: string;
@@ -47,6 +48,7 @@ interface ChannelListProps {
   onViewUserProfile?: (userId: string) => void;
   onDeleteChannel?: (channel: ChannelItem) => void;
   onRenameChannel?: (channel: ChannelItem) => void;
+  onOpenChannelSettings?: (channel: ChannelItem) => void;
   onLeaveServer?: () => void;
 }
 
@@ -74,7 +76,7 @@ const ChannelActions: React.FC<ChannelActionsProps> = ({
       <ContextMenu.Portal>
         <ContextMenu.Content className="context-menu-content" style={{ zIndex: 9999 }}>
           <ContextMenu.Item className="context-menu-item" onClick={() => onRename?.(channel)}>
-            <Pencil size={14} /> {t('channel.editName')}
+            <Settings size={14} /> {t('channel.settings.openSettings', 'Configurações do canal')}
           </ContextMenu.Item>
           <ContextMenu.Item
             className="context-menu-item"
@@ -134,9 +136,11 @@ export const ChannelList: React.FC<ChannelListProps> = ({
   onViewUserProfile,
   onDeleteChannel,
   onRenameChannel,
+  onOpenChannelSettings,
   onLeaveServer,
   permissions,
 }) => {
+  const handleChannelSettings = onOpenChannelSettings || onRenameChannel;
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [failedAvatars, setFailedAvatars] = useState<Record<string, boolean>>({});
@@ -326,7 +330,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                   key={channel.id}
                   channel={channel}
                   isOwner={canManageChannels}
-                  onRename={onRenameChannel}
+                  onRename={handleChannelSettings}
                   onDelete={onDeleteChannel}
                 >
                   <div
@@ -334,14 +338,42 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                     onClick={() => onSelectChannel(channel)}
                   >
                     <div className={styles.channelContent}>
-                      <Hash size={16} color={isActive ? '#ffffff' : '#64748b'} />
+                      <ChannelTextIcon
+                        icon={channel.icon}
+                        size={16}
+                        color={isActive ? '#ffffff' : '#64748b'}
+                        style={{ flexShrink: 0 }}
+                      />
                       <span className={styles.channelName}>{channel.name}</span>
+                      {channel.isRestricted && (
+                        <span
+                          className={styles.restrictedBadge}
+                          title={t('channel.settings.restrictedTooltip', 'Escrita restrita a cargos selecionados')}
+                        >
+                          <Lock size={11} />
+                        </span>
+                      )}
                     </div>
-                    {isActive ? (
-                      <div className={styles.activeIndicator} />
-                    ) : unread > 0 ? (
-                      <div className={styles.badge}>{unread}</div>
-                    ) : null}
+                    <div className={styles.channelRightArea}>
+                      {canManageChannels && handleChannelSettings && (
+                        <button
+                          type="button"
+                          className={styles.channelSettingsBtn}
+                          title={t('channel.settings.openSettings', 'Configurações do canal')}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleChannelSettings(channel);
+                          }}
+                        >
+                          <Settings size={14} />
+                        </button>
+                      )}
+                      {isActive ? (
+                        <div className={styles.activeIndicator} />
+                      ) : unread > 0 ? (
+                        <div className={styles.badge}>{unread}</div>
+                      ) : null}
+                    </div>
                   </div>
                 </ChannelActions>
               );
@@ -366,7 +398,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                     <ChannelActions
                       channel={channel}
                       isOwner={canManageChannels}
-                      onRename={onRenameChannel}
+                      onRename={handleChannelSettings}
                       onDelete={onDeleteChannel}
                     >
                       <div
@@ -382,7 +414,22 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                             {channel.name}
                           </span>
                         </div>
-                        <LiveTimer startedAt={channelStartTimes[channel.id]} />
+                        <div className={styles.channelRightArea}>
+                          {canManageChannels && handleChannelSettings && (
+                            <button
+                              type="button"
+                              className={styles.channelSettingsBtn}
+                              title={t('channel.settings.openSettings', 'Configurações do canal')}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleChannelSettings(channel);
+                              }}
+                            >
+                              <Settings size={14} />
+                            </button>
+                          )}
+                          <LiveTimer startedAt={channelStartTimes[channel.id]} />
+                        </div>
                       </div>
                     </ChannelActions>
 
@@ -536,7 +583,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                   key={channel.id}
                   channel={channel}
                   isOwner={canManageChannels}
-                  onRename={onRenameChannel}
+                  onRename={handleChannelSettings}
                   onDelete={onDeleteChannel}
                 >
                   <div
@@ -552,7 +599,22 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                         {channel.name}
                       </span>
                     </div>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{t('channel.empty')}</span>
+                    <div className={styles.channelRightArea}>
+                      {canManageChannels && handleChannelSettings && (
+                        <button
+                          type="button"
+                          className={styles.channelSettingsBtn}
+                          title={t('channel.settings.openSettings', 'Configurações do canal')}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleChannelSettings(channel);
+                          }}
+                        >
+                          <Settings size={14} />
+                        </button>
+                      )}
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{t('channel.empty')}</span>
+                    </div>
                   </div>
                 </ChannelActions>
               );
