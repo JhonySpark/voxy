@@ -428,6 +428,17 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                               <Settings size={14} />
                             </button>
                           )}
+                          {channel.userLimit && channel.userLimit > 0 ? (
+                            <span
+                              className={`${styles.voiceLimitBadge} ${
+                                usersInChannel.length >= channel.userLimit
+                                  ? styles.voiceLimitBadgeFull
+                                  : ''
+                              }`}
+                            >
+                              {usersInChannel.length}/{channel.userLimit}
+                            </span>
+                          ) : null}
                           <LiveTimer startedAt={channelStartTimes[channel.id]} />
                         </div>
                       </div>
@@ -613,7 +624,13 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                           <Settings size={14} />
                         </button>
                       )}
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{t('channel.empty')}</span>
+                      {channel.userLimit && channel.userLimit > 0 ? (
+                        <span className={styles.voiceLimitBadge}>
+                          0/{channel.userLimit}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{t('channel.empty')}</span>
+                      )}
                     </div>
                   </div>
                 </ChannelActions>

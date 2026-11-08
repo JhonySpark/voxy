@@ -800,5 +800,11 @@
   "user.zoomOut": "Diminuir zoom",
   "user.rotateImage": "Girar 90°",
   "user.resetCrop": "Redefinir",
-  "user.applyCrop": "Aplicar"
+  "user.applyCrop": "Aplicar",
+  "channel.settings.userLimitLabel": "Limite de Usuários na Call",
+  "channel.settings.userLimitDesc": "Define o número máximo de participantes que podem entrar simultaneamente neste canal de voz.",
+  "channel.settings.noLimit": "Sem limite",
+  "channel.settings.userSingular": "usuário",
+  "channel.settings.userPlural": "usuários",
+  "voice.channelFull": "Este canal de voz atingiu o limite máximo de {{limit}} usuários."
 }

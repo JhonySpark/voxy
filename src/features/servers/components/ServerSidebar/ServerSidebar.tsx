@@ -15,6 +15,7 @@ export interface ChannelItem {
   icon?: string | null;
   isRestricted?: boolean;
   allowedRoles?: string[];
+  userLimit?: number;
 }
 
 export interface ServerItem {

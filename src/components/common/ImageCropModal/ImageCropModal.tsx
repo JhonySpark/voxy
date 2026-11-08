@@ -281,7 +281,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
           >
             <img
               src={imageSrc}
-              alt="Crop preview"
+              alt={t('user.cropAvatarTitle', 'Ajustar Imagem de Perfil')}
               onLoad={handleImageLoad}
               className={styles.cropImage}
               draggable={false}

@@ -956,6 +956,22 @@ export default function Dashboard() {
                 toast.warning('Usuários sem validação de idade não podem entrar em chamadas de voz. Apenas chat de texto está liberado.');
                 return;
               }
+              const currentUsersInVoice = serverVoiceStates[ch.id] || [];
+              const alreadyInRoom = currentUsersInVoice.some((u) => u.userId === myId);
+              if (
+                ch.userLimit &&
+                ch.userLimit > 0 &&
+                !alreadyInRoom &&
+                currentUsersInVoice.length >= ch.userLimit
+              ) {
+                toast.warning(
+                  t('voice.channelFull', {
+                    limit: ch.userLimit,
+                    defaultValue: `Este canal de voz atingiu o limite máximo de ${ch.userLimit} usuários.`,
+                  }),
+                );
+                return;
+              }
               setConnectedVoiceChannel({
                 channelId: ch.id,
                 serverId: activeServer.id,
