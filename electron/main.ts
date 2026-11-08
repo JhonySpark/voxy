@@ -463,11 +463,14 @@ async function createWindow(hidden: boolean = false) {
   const hasIco = existsSync(icoPath);
   const icon = getAppIcon();
 
-  // Em BrowserWindow no Windows, o NativeImage (gerado a partir de PNG 512x512 ou ICO)
-  // garante que o Chromium inicialize a janela com bitmap HICON em alta resolução.
-  const windowIcon = !icon.isEmpty()
-    ? icon
-    : (hasIco ? icoPath : undefined);
+  // No Windows, passar o arquivo .ico nativo diretamente permite ao SO ler
+  // todas as camadas de resolução (16x16, 24x24, 32x32, 48x48, 256x256) na barra de tarefas.
+  const windowIcon =
+    process.platform === "win32" && hasIco
+      ? icoPath
+      : !icon.isEmpty()
+        ? icon
+        : undefined;
 
   win = new BrowserWindow({
     title: "Voxy",
@@ -551,7 +554,7 @@ async function createWindow(hidden: boolean = false) {
 
 app.whenReady().then(() => {
   if (process.platform === "win32") {
-    app.setAppUserModelId("br.com.d4rkside.voxy");
+    app.setAppUserModelId(isDev ? "br.com.d4rkside.voxy.dev" : "br.com.d4rkside.voxy");
     setupWindowsAppIdentity();
   }
 
