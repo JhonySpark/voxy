@@ -90,7 +90,7 @@ async function ensureGitHubRelease() {
     }
   }
 
-  throw new Error(`Não foi possível criar a release ${tag} (HTTP ${created.status}).`);
+  throw new Error(`Não foi possível criar a release ${tag} (HTTP ${created.status}): ${created.body}`);
 }
 
 console.log(`[Voxy Release] Validando tag Git: ${tag}...`);
@@ -108,20 +108,53 @@ try {
     console.log(`[Voxy Release] Tag local ${tag} já existe.`);
   }
 
-  // 2. Verifica se a tag existe no repositório remoto
-  const remoteTagCheck = execSync(`git ls-remote --tags origin refs/tags/${tag}`, {
-    encoding: 'utf-8',
-  }).trim();
+  // 2. Tenta sincronizar a tag via Git (SSH porta 22 -> fallback SSH porta 443 -> fallback API HTTPS)
+  try {
+    const sshEnv22 = {
+      ...process.env,
+      GIT_SSH_COMMAND: 'ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new',
+    };
+    const remoteTagCheck = execSync(`git ls-remote --tags origin refs/tags/${tag}`, {
+      encoding: 'utf-8',
+      env: sshEnv22,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
 
-  if (!remoteTagCheck) {
-    console.log(`[Voxy Release] Enviando tag ${tag} para origin...`);
-    execSync(`git push origin ${tag}`, { stdio: 'inherit' });
-    console.log(`[Voxy Release] Tag ${tag} enviada com sucesso para o GitHub.`);
-  } else {
-    console.log(`[Voxy Release] Tag ${tag} já existe no repositório remoto.`);
+    if (!remoteTagCheck) {
+      console.log(`[Voxy Release] Enviando tag ${tag} para origin...`);
+      execSync(`git push origin ${tag}`, { stdio: 'inherit', env: sshEnv22 });
+      console.log(`[Voxy Release] Tag ${tag} enviada com sucesso para o GitHub.`);
+    } else {
+      console.log(`[Voxy Release] Tag ${tag} já existe no repositório remoto.`);
+    }
+  } catch {
+    console.log(`[Voxy Release] Porta 22 indisponível. Tentando via SSH sobre HTTPS (ssh.github.com:443)...`);
+    try {
+      const sshEnv443 = {
+        ...process.env,
+        GIT_SSH_COMMAND: 'ssh -o Hostname=ssh.github.com -p 443 -o ConnectTimeout=8 -o StrictHostKeyChecking=accept-new',
+      };
+      const remoteTagCheck443 = execSync(`git ls-remote --tags origin refs/tags/${tag}`, {
+        encoding: 'utf-8',
+        env: sshEnv443,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }).trim();
+
+      if (!remoteTagCheck443) {
+        console.log(`[Voxy Release] Enviando tag ${tag} para origin (porta 443)...`);
+        execSync(`git push origin ${tag}`, { stdio: 'inherit', env: sshEnv443 });
+        console.log(`[Voxy Release] Tag ${tag} enviada com sucesso para o GitHub.`);
+      } else {
+        console.log(`[Voxy Release] Tag ${tag} já existe no repositório remoto.`);
+      }
+    } catch {
+      console.log(
+        `[Voxy Release] SSH indisponível na rede atual. A tag ${tag} será criada diretamente via API HTTPS do GitHub.`,
+      );
+    }
   }
 } catch (err) {
-  console.error(`[Voxy Release] Erro ao preparar tag Git ${tag}:`, err.message);
+  console.error(`[Voxy Release] Erro ao preparar tag Git local ${tag}:`, err.message);
   process.exit(1);
 }
 
