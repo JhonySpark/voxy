@@ -792,6 +792,14 @@ export default function Dashboard() {
 
   const handleMuteChange = (muted: boolean) => {
     setIsVoiceMuted(muted);
+    if (muted) {
+      setActiveSpeakers((prev) => {
+        if (!prev.has(myId)) return prev;
+        const next = new Set(prev);
+        next.delete(myId);
+        return next;
+      });
+    }
     if (connectedVoiceChannel) {
       realtimeClient.emit(RealtimeEvents.UPDATE_VOICE_MUTE, {
         serverId: connectedVoiceChannel.serverId,
@@ -1019,6 +1027,7 @@ export default function Dashboard() {
           onDisconnectVoice={() => {
             setConnectedVoiceChannel(null);
             setIsVoiceMuted(false);
+            setActiveSpeakers(new Set());
           }}
           onOpenSettings={(tab) => {
             setSettingsInitialTab(tab || SettingsTabEnum.ACCOUNT);
@@ -1049,6 +1058,7 @@ export default function Dashboard() {
             onDisconnect={() => {
               setConnectedVoiceChannel(null);
               setIsVoiceMuted(false);
+              setActiveSpeakers(new Set());
             }}
             onParticipantsChange={(roomParticipants) => {
               if (connectedVoiceChannel) {

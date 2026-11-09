@@ -66,7 +66,9 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
   onViewUserProfile,
 }) => {
   const { t } = useTranslation();
-  const isSpeaking = useIsSpeaking(p.lkParticipant);
+  const rawIsSpeaking = useIsSpeaking(p.lkParticipant);
+  const isSpeaking =
+    rawIsSpeaking && !p.isMuted && Boolean(p.lkParticipant?.isMicrophoneEnabled);
   const [showSettings, setShowSettings] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [isReportingStream, setIsReportingStream] = useState(false);

@@ -449,7 +449,8 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                         const vol = userVolumes[p.userId] ?? 100;
                         const isMe = p.userId === myId;
                         const isMutedByMe = !isMe && vol <= 0;
-                        const isSpeaking = activeSpeakers.has(p.userId);
+                        const isSpeaking =
+                          !p.isMuted && !isMutedByMe && activeSpeakers.has(p.userId);
                         const avatarMedia = getMediaUrl(p.avatarUrl);
                         const displayName = p.displayName || p.username;
 

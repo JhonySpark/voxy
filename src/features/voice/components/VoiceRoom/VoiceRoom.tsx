@@ -12,6 +12,7 @@ import {
   LocalAudioTrack,
   VideoQuality,
   RoomEvent,
+  ConnectionState,
 } from 'livekit-client';
 import api from '../../../../api';
 import styles from './VoiceRoom.module.css';
@@ -191,6 +192,22 @@ export const VoiceRoom: React.FC<VoiceRoomProps> = (props) => {
     };
   }, [props.channelId]);
 
+  const initialMutedRef = useRef(Boolean(props.isMuted));
+  const audioConnectOptions = useMemo(() => {
+    if (initialMutedRef.current) return false;
+    return props.audioInput ? { deviceId: props.audioInput } : true;
+  }, [props.audioInput]);
+
+  const onDisconnectRef = useRef(props.onDisconnect);
+  onDisconnectRef.current = props.onDisconnect;
+
+  const handleDisconnected = useCallback(() => {
+    // A transmissão nativa é um processo independente do LiveKitRoom do
+    // renderer; encerra-o antes de limpar o estado da chamada.
+    void ipcRenderer?.invoke('STOP_NATIVE_STREAM').catch(() => undefined);
+    onDisconnectRef.current();
+  }, []);
+
   if (error) {
     return (
       <div className={styles.connectingOverlay}>
@@ -211,19 +228,12 @@ export const VoiceRoom: React.FC<VoiceRoomProps> = (props) => {
     );
   }
 
-  const handleDisconnected = () => {
-    // A transmissão nativa é um processo independente do LiveKitRoom do
-    // renderer; encerra-o antes de limpar o estado da chamada.
-    void ipcRenderer?.invoke('STOP_NATIVE_STREAM').catch(() => undefined);
-    props.onDisconnect();
-  };
-
   return (
     <LiveKitRoom
       token={token}
       serverUrl={livekitUrl}
       connect={true}
-      audio={props.audioInput ? { deviceId: props.audioInput } : true}
+      audio={audioConnectOptions}
       video={false}
       options={roomOptions}
       onDisconnected={handleDisconnected}
@@ -248,6 +258,7 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
   userRole,
   onViewUserProfile,
   isMuted: isMutedProp,
+  audioInput,
   maxBitrateKbps = 2500,
 }) => {
   const isSuperAdmin = userRole === 'SUPERADMIN';
@@ -263,12 +274,65 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
   const [nativeTelemetry, setNativeTelemetry] = useState<{ fps: number; mbps: number; encodeMs: number; totalFrames: number } | null>(null);
   const [internalMuted, setInternalMuted] = useState(false);
   const isMuted = typeof isMutedProp === 'boolean' ? isMutedProp : internalMuted;
+  const isMutedRef = useRef(isMuted);
+  isMutedRef.current = isMuted;
+
+  const syncMicrophoneState = useCallback(
+    async (muted: boolean) => {
+      if (!localParticipant || !room) return;
+      if (
+        room.state !== ConnectionState.Connected &&
+        room.state !== ConnectionState.Reconnecting
+      ) {
+        return;
+      }
+
+      try {
+        if (muted) {
+          await localParticipant.setMicrophoneEnabled(false);
+          for (const pub of localParticipant.audioTrackPublications.values()) {
+            if (pub.source === Track.Source.Microphone) {
+              if (!pub.isMuted) {
+                await pub.mute();
+              }
+              if (pub.track?.mediaStreamTrack) {
+                pub.track.mediaStreamTrack.enabled = false;
+              }
+            }
+          }
+          (localParticipant as any).audioLevel = 0;
+          if (typeof (localParticipant as any).setIsSpeaking === 'function') {
+            (localParticipant as any).setIsSpeaking(false);
+          }
+        } else {
+          await localParticipant.setMicrophoneEnabled(
+            true,
+            audioInput ? { deviceId: audioInput } : undefined,
+          );
+        }
+      } catch (err) {
+        console.error('[Voxy Voice] Erro ao sincronizar estado do microfone:', err);
+      }
+    },
+    [localParticipant, room, audioInput],
+  );
 
   useEffect(() => {
-    if (typeof isMutedProp === 'boolean' && localParticipant) {
-      localParticipant.setMicrophoneEnabled(!isMutedProp).catch(console.error);
-    }
-  }, [isMutedProp, localParticipant]);
+    void syncMicrophoneState(isMuted);
+  }, [isMuted, syncMicrophoneState]);
+
+  useEffect(() => {
+    if (!room) return;
+    const handleConnected = () => {
+      void syncMicrophoneState(isMutedRef.current);
+    };
+    room.on(RoomEvent.Connected, handleConnected);
+    room.on(RoomEvent.Reconnected, handleConnected);
+    return () => {
+      room.off(RoomEvent.Connected, handleConnected);
+      room.off(RoomEvent.Reconnected, handleConnected);
+    };
+  }, [room, syncMicrophoneState]);
   const [showSources, setShowSources] = useState(false);
   const [categorizedSources, setCategorizedSources] = useState<{ games: any[]; windows: any[]; screens: any[] }>({
     games: [],
@@ -345,15 +409,20 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
     };
   }, []);
 
+  const onParticipantsChangeRef = useRef(onParticipantsChange);
+  onParticipantsChangeRef.current = onParticipantsChange;
+  const onSpeakersChangeRef = useRef(onSpeakersChange);
+  onSpeakersChangeRef.current = onSpeakersChange;
+
   // Notifica participantes para a barra/sidebar e toca som ao conectar novo participante
   useEffect(() => {
     const realParticipants = participants.filter((p) => !p.identity.endsWith('#screen'));
 
-    onParticipantsChange(
+    onParticipantsChangeRef.current(
       realParticipants.map((p) => ({
         id: p.identity,
         username: p.name || p.identity,
-        isMuted: !p.isMicrophoneEnabled,
+        isMuted: p.isLocal ? isMuted : !p.isMicrophoneEnabled,
       }))
     );
 
@@ -375,21 +444,54 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
 
     prevParticipantsCount.current = realParticipants.length;
     isInitialLoad.current = false;
-  }, [participants, onParticipantsChange]);
+  }, [participants, isMuted, localParticipant]);
 
   // Escuta palestrantes ativos para feedback de fala
   useEffect(() => {
-    if (!room || !onSpeakersChange) return;
+    if (!room) return;
+
+    const filterActiveSpeakers = (speakers: any[]) => {
+      return speakers
+        .filter((s) => {
+          if (!s?.identity || s.identity.endsWith('#screen')) return false;
+          if (s.isLocal && isMutedRef.current) {
+            if (typeof s.setIsSpeaking === 'function') {
+              s.setIsSpeaking(false);
+            }
+            return false;
+          }
+          if (!s.isMicrophoneEnabled) return false;
+          const micPub =
+            typeof s.getTrackPublication === 'function'
+              ? s.getTrackPublication(Track.Source.Microphone)
+              : null;
+          if (!micPub || micPub.isMuted) return false;
+          return true;
+        })
+        .map((s) => s.identity);
+    };
 
     const handleSpeakersChanged = (speakers: any[]) => {
-      onSpeakersChange(speakers.map((s) => s.identity));
+      onSpeakersChangeRef.current?.(filterActiveSpeakers(speakers));
     };
 
+    const refreshCurrentSpeakers = () => {
+      handleSpeakersChanged(room.activeSpeakers || []);
+    };
+
+    refreshCurrentSpeakers();
+
     room.on(RoomEvent.ActiveSpeakersChanged, handleSpeakersChanged);
+    room.on(RoomEvent.TrackMuted, refreshCurrentSpeakers);
+    room.on(RoomEvent.TrackUnmuted, refreshCurrentSpeakers);
+    room.on(RoomEvent.LocalTrackUnpublished, refreshCurrentSpeakers);
     return () => {
       room.off(RoomEvent.ActiveSpeakersChanged, handleSpeakersChanged);
+      room.off(RoomEvent.TrackMuted, refreshCurrentSpeakers);
+      room.off(RoomEvent.TrackUnmuted, refreshCurrentSpeakers);
+      room.off(RoomEvent.LocalTrackUnpublished, refreshCurrentSpeakers);
     };
-  }, [room, onSpeakersChange]);
+  }, [room, isMuted]);
 
   // Gerenciamento de subscrição seletiva para economizar banda e cortar áudio não assistido
   useEffect(() => {
@@ -544,11 +646,10 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
     if (isMutedProp === undefined) {
       setInternalMuted(nextMuted);
     }
-    if (localParticipant) {
-      localParticipant.setMicrophoneEnabled(!nextMuted).catch(console.error);
-    }
     if (onMuteChange) {
       onMuteChange(nextMuted);
+    } else {
+      void syncMicrophoneState(nextMuted);
     }
   };
 
