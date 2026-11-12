@@ -14,7 +14,13 @@ import {
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn, ChildProcess } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  unlinkSync,
+  readdirSync,
+} from "node:fs";
 import { randomBytes } from "node:crypto";
 import { autoUpdater } from "electron-updater";
 import { getCategorizedSources } from "./gameDetector";
@@ -339,35 +345,59 @@ function setupWindowsAppIdentity() {
   if (process.platform !== "win32") return;
 
   try {
-    // 1. Remove qualquer atalho antigo de Dev no Start Menu que possa estar sequestrando o AUMID
-    const devShortcutPath = join(
+    const startMenuProgramsDir = join(
       app.getPath("appData"),
       "Microsoft",
       "Windows",
       "Start Menu",
       "Programs",
-      "Voxy (Dev).lnk",
     );
-    if (existsSync(devShortcutPath)) {
-      try {
-        unlinkSync(devShortcutPath);
-      } catch (_) {}
+
+    // 1. Remove qualquer atalho antigo de Dev ou "Electron.lnk" no Start Menu que esteja sequestrando o AUMID
+    // ("Electron.lnk" vem antes de "Voxy.lnk" em ordem alfabética e faz o Windows exibir o ícone do electron.exe na Taskbar)
+    const legacyShortcutNames = ["Voxy (Dev).lnk", "Electron.lnk"];
+    for (const name of legacyShortcutNames) {
+      const candidatePath = join(startMenuProgramsDir, name);
+      if (existsSync(candidatePath)) {
+        try {
+          unlinkSync(candidatePath);
+        } catch (_) {}
+      }
+    }
+
+    if (existsSync(startMenuProgramsDir)) {
+      const entries = readdirSync(startMenuProgramsDir);
+      for (const entry of entries) {
+        if (!entry.toLowerCase().endsWith(".lnk")) continue;
+        if (entry.toLowerCase() === "voxy.lnk") continue;
+
+        const fullPath = join(startMenuProgramsDir, entry);
+        try {
+          const details = shell.readShortcutLink(fullPath);
+          const targetLower = (details.target || "").toLowerCase();
+          const aumid = details.appUserModelId || "";
+          const isConflictingAumid =
+            aumid === "br.com.d4rkside.voxy" ||
+            aumid === "br.com.d4rkside.voxy.dev";
+          const isElectronDevTarget =
+            targetLower.endsWith("electron.exe") &&
+            targetLower.includes("voxy");
+
+          if (isConflictingAumid || isElectronDevTarget) {
+            unlinkSync(fullPath);
+          }
+        } catch (_) {}
+      }
     }
 
     // 2. No Windows, o atalho oficial do aplicativo instalado DEVE apontar o ícone para o próprio executável (Voxy.exe,0),
     // pois o executável já contém o ícone oficial embutido em seus recursos PE (Win32).
-    // Apontar para .ico,0 quebra o extrator de ícones do Windows Shell porque arquivos .ico não são binários PE.
-    const prodShortcutPath = join(
-      app.getPath("appData"),
-      "Microsoft",
-      "Windows",
-      "Start Menu",
-      "Programs",
-      "Voxy.lnk",
-    );
-    if (!isDev && existsSync(prodShortcutPath)) {
-      shell.writeShortcutLink(prodShortcutPath, "update", {
+    const prodShortcutPath = join(startMenuProgramsDir, "Voxy.lnk");
+    if (!isDev) {
+      const mode = existsSync(prodShortcutPath) ? "replace" : "create";
+      shell.writeShortcutLink(prodShortcutPath, mode, {
         target: process.execPath,
+        cwd: dirname(process.execPath),
         appUserModelId: "br.com.d4rkside.voxy",
         icon: process.execPath,
         iconIndex: 0,
@@ -488,6 +518,24 @@ async function createWindow(hidden: boolean = false) {
       backgroundThrottling: false,
     },
   });
+
+  if (process.platform === "win32") {
+    const aumid = isDev ? "br.com.d4rkside.voxy.dev" : "br.com.d4rkside.voxy";
+    const relaunchIcon = !isDev
+      ? process.execPath
+      : hasIco
+        ? icoPath
+        : process.execPath;
+    win.setAppDetails({
+      appId: aumid,
+      appIconPath: relaunchIcon,
+      appIconIndex: 0,
+      relaunchCommand: isDev
+        ? `"${process.execPath}" "${app.getAppPath()}"`
+        : `"${process.execPath}"`,
+      relaunchDisplayName: isDev ? "Voxy (Dev)" : "Voxy",
+    });
+  }
 
   if (process.platform === "win32" && hasIco) {
     win.setIcon(icoPath);
