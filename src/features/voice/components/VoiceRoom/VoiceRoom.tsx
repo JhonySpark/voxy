@@ -13,6 +13,7 @@ import {
   VideoQuality,
   RoomEvent,
   ConnectionState,
+  AudioPresets,
 } from 'livekit-client';
 import api from '../../../../api';
 import styles from './VoiceRoom.module.css';
@@ -25,6 +26,8 @@ import { ShareScreenModal } from '../ShareScreenModal/ShareScreenModal';
 import { SelectiveAudioRenderer } from '../SelectiveAudioRenderer';
 import { MaximizedStreamView } from '../MaximizedStreamView/MaximizedStreamView';
 import { ApiRoutes, IpcChannels, StreamFramerate, StreamResolution } from '../../../../core/enums';
+import { voiceAudioSettingsService } from '../../../../core/services/voice-audio-settings.service';
+import { VoxyNeuralAudioProcessor } from '../../services/voxy-neural-audio-processor';
 
 declare const window: any;
 const ipcRenderer = typeof window !== 'undefined' && window.require ? window.require('electron').ipcRenderer : null;
@@ -127,6 +130,10 @@ export const VoiceRoom: React.FC<VoiceRoomProps> = (props) => {
       adaptiveStream: true,
       dynacast: true,
       publishDefaults: {
+        audioPreset: AudioPresets.speech,
+        dtx: true,
+        red: true,
+        forceStereo: false,
         videoCodec: 'vp8' as const,
         degradationPreference: 'maintain-framerate' as RTCDegradationPreference,
         simulcast: false,
@@ -193,9 +200,34 @@ export const VoiceRoom: React.FC<VoiceRoomProps> = (props) => {
   }, [props.channelId]);
 
   const initialMutedRef = useRef(Boolean(props.isMuted));
+  const audioProcessorRef = useRef<VoxyNeuralAudioProcessor | null>(null);
+  const processorAudioCtxRef = useRef<AudioContext | null>(null);
+  if (!audioProcessorRef.current) {
+    audioProcessorRef.current = new VoxyNeuralAudioProcessor();
+  }
+
+  useEffect(() => {
+    return () => {
+      void audioProcessorRef.current?.destroy();
+      if (processorAudioCtxRef.current && processorAudioCtxRef.current.state !== 'closed') {
+        void processorAudioCtxRef.current.close().catch(() => undefined);
+      }
+    };
+  }, []);
+
   const audioConnectOptions = useMemo(() => {
     if (initialMutedRef.current) return false;
-    return props.audioInput ? { deviceId: props.audioInput } : true;
+    const audioSettings = voiceAudioSettingsService.getSettings();
+    const deviceId = props.audioInput || audioSettings.selectedInput || undefined;
+    return {
+      deviceId,
+      echoCancellation: audioSettings.echoCancellation,
+      noiseSuppression: audioSettings.noiseSuppression,
+      autoGainControl: audioSettings.autoGainControl,
+      voiceIsolation: audioSettings.noiseSuppression,
+      sampleRate: 48000,
+      channelCount: 1,
+    };
   }, [props.audioInput]);
 
   const onDisconnectRef = useRef(props.onDisconnect);
@@ -240,12 +272,24 @@ export const VoiceRoom: React.FC<VoiceRoomProps> = (props) => {
       data-lk-theme="default"
       className={styles.livekitRoomWrapper}
     >
-      <VoiceRoomInner {...props} maxBitrateKbps={maxBitrateKbps} livekitUrl={livekitUrl} />
+      <VoiceRoomInner
+        {...props}
+        maxBitrateKbps={maxBitrateKbps}
+        livekitUrl={livekitUrl}
+        audioProcessor={audioProcessorRef.current}
+        processorAudioCtxRef={processorAudioCtxRef}
+      />
     </LiveKitRoom>
   );
 };
 
-const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = ({
+const VoiceRoomInner: React.FC<
+  VoiceRoomProps & {
+    maxBitrateKbps?: number;
+    audioProcessor?: VoxyNeuralAudioProcessor | null;
+    processorAudioCtxRef?: React.MutableRefObject<AudioContext | null>;
+  }
+> = ({
   onDisconnect,
   onParticipantsChange,
   onMuteChange,
@@ -260,6 +304,8 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
   isMuted: isMutedProp,
   audioInput,
   maxBitrateKbps = 2500,
+  audioProcessor,
+  processorAudioCtxRef,
 }) => {
   const isSuperAdmin = userRole === 'SUPERADMIN';
   const canAccessDiagnostics = import.meta.env.DEV || isSuperAdmin;
@@ -305,17 +351,89 @@ const VoiceRoomInner: React.FC<VoiceRoomProps & { maxBitrateKbps?: number }> = (
             (localParticipant as any).setIsSpeaking(false);
           }
         } else {
-          await localParticipant.setMicrophoneEnabled(
-            true,
-            audioInput ? { deviceId: audioInput } : undefined,
-          );
+          const audioSettings = voiceAudioSettingsService.getSettings();
+          const targetDeviceId = audioInput || audioSettings.selectedInput || undefined;
+          await localParticipant.setMicrophoneEnabled(true, {
+            deviceId: targetDeviceId,
+            echoCancellation: audioSettings.echoCancellation,
+            noiseSuppression: audioSettings.noiseSuppression,
+            autoGainControl: audioSettings.autoGainControl,
+            voiceIsolation: audioSettings.noiseSuppression,
+            sampleRate: 48000,
+            channelCount: 1,
+          });
+
+          const micPub = localParticipant.getTrackPublication(Track.Source.Microphone);
+          const micTrack = micPub?.audioTrack as LocalAudioTrack | undefined;
+          if (micTrack && audioProcessor && (micTrack as any).processor !== audioProcessor) {
+            if (!(micTrack as any).audioContext) {
+              const roomAudioCtx = (room as any).audioContext as AudioContext | undefined;
+              if (roomAudioCtx && roomAudioCtx.state !== 'closed') {
+                micTrack.setAudioContext(roomAudioCtx);
+              } else {
+                if (
+                  !processorAudioCtxRef?.current ||
+                  processorAudioCtxRef.current.state === 'closed'
+                ) {
+                  const AudioCtx =
+                    window.AudioContext ||
+                    (window as unknown as { webkitAudioContext: typeof AudioContext })
+                      .webkitAudioContext;
+                  if (processorAudioCtxRef) {
+                    processorAudioCtxRef.current = new AudioCtx({ sampleRate: 48000 });
+                  }
+                }
+                if (processorAudioCtxRef?.current) {
+                  micTrack.setAudioContext(processorAudioCtxRef.current);
+                }
+              }
+            }
+            await micTrack.setProcessor(audioProcessor).catch((err) => {
+              console.warn('[Voxy DSP] Aviso ao anexar processador RNNoise:', err);
+            });
+          }
         }
       } catch (err) {
         console.error('[Voxy Voice] Erro ao sincronizar estado do microfone:', err);
       }
     },
-    [localParticipant, room, audioInput],
+    [localParticipant, room, audioInput, audioProcessor, processorAudioCtxRef],
   );
+
+  // Aplica mudanças de Cancelamento de Eco, Ganho Automático e Dispositivo de Entrada em tempo real durante a call
+  useEffect(() => {
+    const prevSettingsRef = { current: voiceAudioSettingsService.getSettings() };
+
+    return voiceAudioSettingsService.subscribe((updated) => {
+      const prev = prevSettingsRef.current;
+      prevSettingsRef.current = updated;
+
+      if (!localParticipant || !room || room.state !== ConnectionState.Connected) return;
+
+      const micPub = localParticipant.getTrackPublication(Track.Source.Microphone);
+      const micTrack = micPub?.audioTrack as LocalAudioTrack | undefined;
+
+      if (prev.selectedInput !== updated.selectedInput && updated.selectedInput) {
+        void room.switchActiveDevice('audioinput', updated.selectedInput).catch(() => undefined);
+      }
+
+      if (
+        micTrack &&
+        (prev.echoCancellation !== updated.echoCancellation ||
+          prev.noiseSuppression !== updated.noiseSuppression ||
+          prev.autoGainControl !== updated.autoGainControl)
+      ) {
+        void micTrack
+          .applyConstraints({
+            echoCancellation: updated.echoCancellation,
+            noiseSuppression: updated.noiseSuppression,
+            autoGainControl: updated.autoGainControl,
+            voiceIsolation: updated.noiseSuppression,
+          })
+          .catch(() => undefined);
+      }
+    });
+  }, [localParticipant, room]);
 
   useEffect(() => {
     void syncMicrophoneState(isMuted);

@@ -159,6 +159,11 @@
   dependencies:
     minipass "^7.0.4"
 
+"@jitsi/rnnoise-wasm@^0.2.1":
+  version "0.2.1"
+  resolved "https://pkgs.dev.azure.com/StixFidelidade/_packaging/Stix-package/npm/registry/@jitsi/rnnoise-wasm/-/rnnoise-wasm-0.2.1.tgz"
+  integrity sha512-iEj77www43pS2Yq+cfLZb+hFuI7L5ccisBzzPMcOjjLsG4/LAlkD1CY58/8gc84nHdLBGmD/OPIWGnvYnXvB0A==
+
 "@livekit/components-core@0.12.15":
   version "0.12.15"
   resolved "https://registry.npmjs.org/@livekit/components-core/-/components-core-0.12.15.tgz"

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useParticipants } from '@livekit/components-react';
 import { Track } from 'livekit-client';
+import { useVoiceAudioSettings } from '../hooks/useVoiceAudioSettings';
 
 interface SelectiveAudioRendererProps {
   watchingStreams: Set<string>;
@@ -14,7 +15,9 @@ export const SelectiveAudioRenderer: React.FC<SelectiveAudioRendererProps> = ({
   userVolumes,
 }) => {
   const participants = useParticipants();
+  const { settings: voiceAudioSettings } = useVoiceAudioSettings();
   const audioElementsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
+  const masterGainScale = Math.max(0, Math.min(1, voiceAudioSettings.outputVolume / 100));
 
   // Gerenciamento seletivo de áudio para cada participante remoto
   useEffect(() => {
@@ -33,10 +36,18 @@ export const SelectiveAudioRenderer: React.FC<SelectiveAudioRendererProps> = ({
           micPub.audioTrack.attach(el);
         }
         const userVol = userVolumes[p.identity] ?? 100;
-        const isMicMuted = userVol <= 0;
-        const targetMicVol = isMicMuted ? 0 : Math.max(0, Math.min(1.0, userVol / 100));
+        const isMicMuted = userVol <= 0 || masterGainScale <= 0;
+        const targetMicVol = isMicMuted
+          ? 0
+          : Math.max(0, Math.min(1.0, (userVol / 100) * masterGainScale));
         el.muted = isMicMuted;
         el.volume = targetMicVol;
+        if (
+          voiceAudioSettings.selectedOutput &&
+          typeof (el as any).setSinkId === 'function'
+        ) {
+          void (el as any).setSinkId(voiceAudioSettings.selectedOutput).catch(() => undefined);
+        }
         if (typeof (micPub.audioTrack as any).setVolume === 'function') {
           (micPub.audioTrack as any).setVolume(targetMicVol);
         }
@@ -66,11 +77,19 @@ export const SelectiveAudioRenderer: React.FC<SelectiveAudioRendererProps> = ({
             screenAudioPub.audioTrack.attach(el);
           }
           const streamVol = streamVolumes[streamOwnerId] ?? 100;
-          const isMuted = streamVol <= 0;
-          const targetVol = isMuted ? 0 : Math.max(0, Math.min(1.0, streamVol / 100));
+          const isMuted = streamVol <= 0 || masterGainScale <= 0;
+          const targetVol = isMuted
+            ? 0
+            : Math.max(0, Math.min(1.0, (streamVol / 100) * masterGainScale));
           
           el.muted = isMuted;
           el.volume = targetVol;
+          if (
+            voiceAudioSettings.selectedOutput &&
+            typeof (el as any).setSinkId === 'function'
+          ) {
+            void (el as any).setSinkId(voiceAudioSettings.selectedOutput).catch(() => undefined);
+          }
 
           // Aplica também em todos os elementos de áudio anexados pelo LiveKit (ex: RoomAudioRenderer)
           if (Array.isArray(screenAudioPub.audioTrack.attachedElements)) {
@@ -108,7 +127,14 @@ export const SelectiveAudioRenderer: React.FC<SelectiveAudioRendererProps> = ({
         audioElementsRef.current.delete(key);
       }
     });
-  }, [participants, watchingStreams, streamVolumes, userVolumes]);
+  }, [
+    participants,
+    watchingStreams,
+    streamVolumes,
+    userVolumes,
+    masterGainScale,
+    voiceAudioSettings.selectedOutput,
+  ]);
 
   // Limpeza ao desmontar a sala
   useEffect(() => {

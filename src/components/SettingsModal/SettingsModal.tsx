@@ -1,29 +1,31 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Mic, 
-  Palette, 
-  Bell, 
-  Shield, 
-  Keyboard, 
-  X, 
-  User, 
-  RefreshCw 
-} from 'lucide-react';
-import { ipcRenderer } from 'electron';
-import { useTranslation } from 'react-i18next';
-import packageJson from '../../../package.json';
-import { Button } from '../common/Button';
-import { SettingsTabEnum, StorageKeys, IpcChannels } from '../../core/enums';
-import type { UserProfileData } from '../../features/user/components/UserPopout/UserPopout';
-import { useNotificationSettings } from '../../features/user/hooks/useNotificationSettings';
-import { soundService } from '../../core/services/sound.service';
-import { VoiceTab } from './tabs/VoiceTab';
-import { AccountTab } from './tabs/AccountTab';
-import { AppearanceTab } from './tabs/AppearanceTab';
-import { NotificationsTab } from './tabs/NotificationsTab';
-import { PrivacyTab } from './tabs/PrivacyTab';
-import { KeybindsTab } from './tabs/KeybindsTab';
-import styles from './SettingsModal.module.css';
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Mic,
+  Palette,
+  Bell,
+  Shield,
+  Keyboard,
+  X,
+  User,
+  RefreshCw,
+} from "lucide-react";
+import { ipcRenderer } from "electron";
+import { useTranslation } from "react-i18next";
+import packageJson from "../../../package.json";
+import { Button } from "../common/Button";
+import { SettingsTabEnum, StorageKeys, IpcChannels } from "../../core/enums";
+import type { UserProfileData } from "../../features/user/components/UserPopout/UserPopout";
+import { useNotificationSettings } from "../../features/user/hooks/useNotificationSettings";
+import { useVoiceAudioSettings } from "../../features/voice/hooks/useVoiceAudioSettings";
+import { VoxyNeuralAudioProcessor } from "../../features/voice/services/voxy-neural-audio-processor";
+import { soundService } from "../../core/services/sound.service";
+import { VoiceTab } from "./tabs/VoiceTab";
+import { AccountTab } from "./tabs/AccountTab";
+import { AppearanceTab } from "./tabs/AppearanceTab";
+import { NotificationsTab } from "./tabs/NotificationsTab";
+import { PrivacyTab } from "./tabs/PrivacyTab";
+import { KeybindsTab } from "./tabs/KeybindsTab";
+import styles from "./SettingsModal.module.css";
 
 export interface SettingsModalProps {
   isOpen: boolean;
@@ -47,7 +49,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onLogout,
 }) => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<SettingsTabEnum>(initialTab || SettingsTabEnum.ACCOUNT);
+  const [activeTab, setActiveTab] = useState<SettingsTabEnum>(
+    initialTab || SettingsTabEnum.ACCOUNT,
+  );
 
   useEffect(() => {
     setActiveTab(initialTab || SettingsTabEnum.ACCOUNT);
@@ -58,46 +62,41 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   // Audio State & Settings
   const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([]);
   const [audioOutputs, setAudioOutputs] = useState<MediaDeviceInfo[]>([]);
-  const [selectedInput, setSelectedInput] = useState<string>(
-    localStorage.getItem(StorageKeys.AUDIO_INPUT) || ''
-  );
-  const [selectedOutput, setSelectedOutput] = useState<string>(
-    localStorage.getItem(StorageKeys.AUDIO_OUTPUT) || ''
-  );
-  const [inputSensitivity, setInputSensitivity] = useState<number>(
-    parseInt(localStorage.getItem(StorageKeys.INPUT_SENSITIVITY) || '72', 10)
-  );
-  const [outputVolume, setOutputVolume] = useState<number>(
-    parseInt(localStorage.getItem(StorageKeys.OUTPUT_VOLUME) || '85', 10)
-  );
-  const [noiseSuppression, setNoiseSuppression] = useState<boolean>(
-    localStorage.getItem(StorageKeys.NOISE_SUPPRESSION) !== 'false'
-  );
-  const [echoCancellation, setEchoCancellation] = useState<boolean>(
-    localStorage.getItem(StorageKeys.ECHO_CANCELLATION) !== 'false'
-  );
-  const [autoGainControl, setAutoGainControl] = useState<boolean>(
-    localStorage.getItem(StorageKeys.AUTO_GAIN) !== 'false'
-  );
+  const {
+    settings: voiceSettings,
+    updateSettings: updateVoiceSettings,
+    restoreDefaults: restoreVoiceDefaults,
+  } = useVoiceAudioSettings();
+  const {
+    selectedInput,
+    selectedOutput,
+    inputSensitivity,
+    outputVolume,
+    noiseSuppression,
+    echoCancellation,
+    autoGainControl,
+  } = voiceSettings;
 
   // Notifications & Background
-  const { settings: notifSettings, updateSettings: updateNotifSettings } = useNotificationSettings();
+  const { settings: notifSettings, updateSettings: updateNotifSettings } =
+    useNotificationSettings();
   const [runInBackground, setRunInBackground] = useState<boolean>(
-    localStorage.getItem(StorageKeys.RUN_IN_BACKGROUND) !== 'false'
+    localStorage.getItem(StorageKeys.RUN_IN_BACKGROUND) !== "false",
   );
   const [autoLaunch, setAutoLaunch] = useState<boolean>(
-    localStorage.getItem(StorageKeys.AUTO_LAUNCH) !== 'false'
+    localStorage.getItem(StorageKeys.AUTO_LAUNCH) !== "false",
   );
   const [gamePresence, setGamePresence] = useState<boolean>(
-    localStorage.getItem(StorageKeys.GAME_PRESENCE) !== 'false'
+    localStorage.getItem(StorageKeys.GAME_PRESENCE) !== "false",
   );
 
   // Audio Meter
-  const [dbLevel, setDbLevel] = useState<string>('-48.0 dB');
+  const [dbLevel, setDbLevel] = useState<string>("-48.0 dB");
   const [audioLevel, setAudioLevel] = useState<number>(0);
   const [isTestingAudio, setIsTestingAudio] = useState<boolean>(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const micProcessorRef = useRef<VoxyNeuralAudioProcessor | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
   // App Update
@@ -105,10 +104,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [updateFeedback, setUpdateFeedback] = useState<string | null>(null);
 
   useEffect(() => {
-    ipcRenderer?.invoke(IpcChannels.GET_BACKGROUND_MODE)
+    ipcRenderer
+      ?.invoke(IpcChannels.GET_BACKGROUND_MODE)
       .then((enabled: boolean) => setRunInBackground(enabled !== false))
       .catch(() => undefined);
-    ipcRenderer?.invoke(IpcChannels.GET_AUTO_LAUNCH)
+    ipcRenderer
+      ?.invoke(IpcChannels.GET_AUTO_LAUNCH)
       .then((enabled: boolean) => setAutoLaunch(enabled !== false))
       .catch(() => undefined);
   }, []);
@@ -118,16 +119,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const loadDevices = async () => {
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
-        setAudioInputs(devices.filter((d) => d.kind === 'audioinput'));
-        setAudioOutputs(devices.filter((d) => d.kind === 'audiooutput'));
+        setAudioInputs(devices.filter((d) => d.kind === "audioinput"));
+        setAudioOutputs(devices.filter((d) => d.kind === "audiooutput"));
       } catch (err) {
-        console.error('Erro ao listar dispositivos:', err);
+        console.error("Erro ao listar dispositivos:", err);
       }
     };
     loadDevices();
-    navigator.mediaDevices.addEventListener('devicechange', loadDevices);
+    navigator.mediaDevices.addEventListener("devicechange", loadDevices);
     return () => {
-      navigator.mediaDevices.removeEventListener('devicechange', loadDevices);
+      navigator.mediaDevices.removeEventListener("devicechange", loadDevices);
     };
   }, [isOpen]);
 
@@ -141,58 +142,80 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   }, [isOpen, activeTab, selectedInput]);
 
   const stopMicMonitoring = () => {
-    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-    if (mediaStreamRef.current) mediaStreamRef.current.getTracks().forEach((t) => t.stop());
-    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+    if (animationFrameRef.current)
+      cancelAnimationFrame(animationFrameRef.current);
+    if (micProcessorRef.current) {
+      void micProcessorRef.current.destroy();
+      micProcessorRef.current = null;
+    }
+    if (mediaStreamRef.current)
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+    if (audioContextRef.current && audioContextRef.current.state !== "closed") {
       audioContextRef.current.close().catch(() => undefined);
     }
     setAudioLevel(0);
-    setDbLevel('-48.0 dB');
+    setDbLevel("-48.0 dB");
   };
 
   const startMicMonitoring = async () => {
     try {
       stopMicMonitoring();
       const constraints: MediaStreamConstraints = {
-        audio: selectedInput ? { deviceId: { exact: selectedInput } } : true,
+        audio: {
+          ...(selectedInput ? { deviceId: { exact: selectedInput } } : {}),
+          echoCancellation,
+          noiseSuppression,
+          autoGainControl,
+          sampleRate: 48000,
+          channelCount: 1,
+        },
         video: false,
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       mediaStreamRef.current = stream;
 
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      const ctx = new AudioCtx();
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext;
+      const ctx = new AudioCtx({ sampleRate: 48000 });
       audioContextRef.current = ctx;
 
-      const source = ctx.createMediaStreamSource(stream);
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.5;
-      source.connect(analyser);
+      const rawTrack = stream.getAudioTracks()[0];
+      const processor = new VoxyNeuralAudioProcessor();
+      micProcessorRef.current = processor;
+      const processedNode = await processor.connectToContext(ctx, rawTrack);
 
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.4;
+      processedNode.connect(analyser);
+
+      const timeData = new Float32Array(analyser.fftSize);
 
       const updateMeter = () => {
         if (!mediaStreamRef.current) return;
-        analyser.getByteFrequencyData(dataArray);
-        let sum = 0;
-        for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
-        const average = sum / bufferLength;
-        const normalized = Math.min(100, Math.round((average / 128) * 100));
+        analyser.getFloatTimeDomainData(timeData);
+        let sumSq = 0;
+        for (let i = 0; i < timeData.length; i++) {
+          sumSq += timeData[i] * timeData[i];
+        }
+        const rms = Math.sqrt(sumSq / timeData.length);
+        const rmsDb = rms > 1e-6 ? 20 * Math.log10(rms) : -60;
+        const clampedDb = Math.max(-48, Math.min(0, rmsDb));
+        const normalized = Math.round(((clampedDb + 48) / 48) * 100);
         setAudioLevel(normalized);
 
         if (normalized <= 2) {
-          setDbLevel('-48.0 dB');
+          setDbLevel("-48.0 dB");
         } else {
-          const calcDb = -48 + (normalized / 100) * 48;
-          setDbLevel(`${calcDb.toFixed(1)} dB`);
+          setDbLevel(`${clampedDb.toFixed(1)} dB`);
         }
         animationFrameRef.current = requestAnimationFrame(updateMeter);
       };
       updateMeter();
     } catch (err) {
-      console.warn('Microfone não acessível para monitoramento:', err);
+      console.warn("Microfone não acessível para monitoramento:", err);
     }
   };
 
@@ -207,15 +230,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     try {
       setCheckingUpdate(true);
       const res = await ipcRenderer.invoke(IpcChannels.CHECK_FOR_UPDATES);
-      if (res?.status === 'windows_store') return;
-      if (res?.status === 'ok') {
+      if (res?.status === "windows_store") return;
+      if (res?.status === "ok") {
         const remoteVer = res.updateInfo?.version;
-        setUpdateFeedback(remoteVer && remoteVer !== APP_VERSION.replace('v', '') ? t('settings.updateFound', { version: remoteVer }) : t('settings.latestVersion'));
+        setUpdateFeedback(
+          remoteVer && remoteVer !== APP_VERSION.replace("v", "")
+            ? t("settings.updateFound", { version: remoteVer })
+            : t("settings.latestVersion"),
+        );
       } else {
-        setUpdateFeedback(t('settings.devMode'));
+        setUpdateFeedback(t("settings.devMode"));
       }
     } catch {
-      setUpdateFeedback(t('settings.updateFailed'));
+      setUpdateFeedback(t("settings.updateFailed"));
     } finally {
       setCheckingUpdate(false);
       setTimeout(() => setUpdateFeedback(null), 4000);
@@ -223,16 +250,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleRestoreDefaults = () => {
-    setInputSensitivity(72);
-    setOutputVolume(85);
-    setNoiseSuppression(true);
-    setEchoCancellation(true);
-    setAutoGainControl(true);
-    localStorage.setItem(StorageKeys.INPUT_SENSITIVITY, '72');
-    localStorage.setItem(StorageKeys.OUTPUT_VOLUME, '85');
-    localStorage.setItem(StorageKeys.NOISE_SUPPRESSION, 'true');
-    localStorage.setItem(StorageKeys.ECHO_CANCELLATION, 'true');
-    localStorage.setItem(StorageKeys.AUTO_GAIN, 'true');
+    restoreVoiceDefaults();
   };
 
   if (!isOpen) return null;
@@ -250,11 +268,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <Mic size={20} />
             </div>
             <div>
-              <div className={styles.headerTitle}>{t('settings.title')}</div>
-              <div className={styles.headerSubtitle}>{t('settings.subtitle', { version: APP_VERSION })}</div>
+              <div className={styles.headerTitle}>{t("settings.title")}</div>
+              <div className={styles.headerSubtitle}>
+                {t("settings.subtitle", { version: APP_VERSION })}
+              </div>
             </div>
           </div>
-          <button className={styles.closeBtn} onClick={onClose} aria-label={t('common.close')}>
+          <button
+            className={styles.closeBtn}
+            onClick={onClose}
+            aria-label={t("common.close")}
+          >
             <X size={18} />
           </button>
         </div>
@@ -265,57 +289,57 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className={styles.sidebar}>
             <div className={styles.sidebarNav}>
               <button
-                className={`${styles.tabBtn} ${activeTab === SettingsTabEnum.ACCOUNT ? styles.tabBtnActive : ''}`}
+                className={`${styles.tabBtn} ${activeTab === SettingsTabEnum.ACCOUNT ? styles.tabBtnActive : ""}`}
                 onClick={() => setActiveTab(SettingsTabEnum.ACCOUNT)}
               >
                 <User size={16} />
-                <span>{t('settings.myAccount')}</span>
+                <span>{t("settings.myAccount")}</span>
               </button>
 
               <button
-                className={`${styles.tabBtn} ${activeTab === SettingsTabEnum.VOICE ? styles.tabBtnActive : ''}`}
+                className={`${styles.tabBtn} ${activeTab === SettingsTabEnum.VOICE ? styles.tabBtnActive : ""}`}
                 onClick={() => setActiveTab(SettingsTabEnum.VOICE)}
               >
                 <Mic size={16} />
-                <span>{t('settings.voiceAndVideo')}</span>
+                <span>{t("settings.voiceAndVideo")}</span>
               </button>
               <button
-                className={`${styles.tabBtn} ${activeTab === SettingsTabEnum.APPEARANCE ? styles.tabBtnActive : ''}`}
+                className={`${styles.tabBtn} ${activeTab === SettingsTabEnum.APPEARANCE ? styles.tabBtnActive : ""}`}
                 onClick={() => setActiveTab(SettingsTabEnum.APPEARANCE)}
               >
                 <Palette size={16} />
-                <span>{t('settings.appearance')}</span>
+                <span>{t("settings.appearance")}</span>
               </button>
               <button
-                className={`${styles.tabBtn} ${activeTab === SettingsTabEnum.NOTIFICATIONS ? styles.tabBtnActive : ''}`}
+                className={`${styles.tabBtn} ${activeTab === SettingsTabEnum.NOTIFICATIONS ? styles.tabBtnActive : ""}`}
                 onClick={() => setActiveTab(SettingsTabEnum.NOTIFICATIONS)}
               >
                 <Bell size={16} />
-                <span>{t('settings.notifications')}</span>
+                <span>{t("settings.notifications")}</span>
               </button>
               <button
-                className={`${styles.tabBtn} ${activeTab === SettingsTabEnum.PRIVACY ? styles.tabBtnActive : ''}`}
+                className={`${styles.tabBtn} ${activeTab === SettingsTabEnum.PRIVACY ? styles.tabBtnActive : ""}`}
                 onClick={() => setActiveTab(SettingsTabEnum.PRIVACY)}
               >
                 <Shield size={16} />
-                <span>{t('settings.privacy')}</span>
+                <span>{t("settings.privacy")}</span>
               </button>
               <button
-                className={`${styles.tabBtn} ${activeTab === SettingsTabEnum.KEYBINDS ? styles.tabBtnActive : ''}`}
+                className={`${styles.tabBtn} ${activeTab === SettingsTabEnum.KEYBINDS ? styles.tabBtnActive : ""}`}
                 onClick={() => setActiveTab(SettingsTabEnum.KEYBINDS)}
               >
                 <Keyboard size={16} />
-                <span>{t('settings.keybinds')}</span>
+                <span>{t("settings.keybinds")}</span>
               </button>
             </div>
 
             <div className={styles.sidebarFooter}>
               <div className={styles.dspIndicator}>
                 <span className={styles.dspDot} />
-                <span>{t('settings.dspInfo')}</span>
+                <span>{t("settings.dspInfo")}</span>
               </div>
               <div className={styles.versionPill}>
-                <span>{t('settings.appVersion')}</span>
+                <span>{t("settings.appVersion")}</span>
                 <span className={styles.versionTag}>{APP_VERSION}</span>
               </div>
               <Button
@@ -325,9 +349,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 fullWidth
                 onClick={handleCheckUpdate}
                 disabled={checkingUpdate}
-                leftIcon={<RefreshCw size={12} className={checkingUpdate ? styles.spinIcon : ''} />}
+                leftIcon={
+                  <RefreshCw
+                    size={12}
+                    className={checkingUpdate ? styles.spinIcon : ""}
+                  />
+                }
               >
-                {updateFeedback || t('settings.checkUpdates')}
+                {updateFeedback || t("settings.checkUpdates")}
               </Button>
             </div>
           </div>
@@ -350,24 +379,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 selectedInput={selectedInput}
                 selectedOutput={selectedOutput}
                 onInputDeviceChange={(dev) => {
-                  setSelectedInput(dev);
-                  localStorage.setItem(StorageKeys.AUDIO_INPUT, dev);
+                  updateVoiceSettings({ selectedInput: dev });
                   onDeviceChange?.(dev, selectedOutput);
                 }}
                 onOutputDeviceChange={(dev) => {
-                  setSelectedOutput(dev);
-                  localStorage.setItem(StorageKeys.AUDIO_OUTPUT, dev);
+                  updateVoiceSettings({ selectedOutput: dev });
                   onDeviceChange?.(selectedInput, dev);
                 }}
                 inputSensitivity={inputSensitivity}
                 onInputSensitivityChange={(val) => {
-                  setInputSensitivity(val);
-                  localStorage.setItem(StorageKeys.INPUT_SENSITIVITY, val.toString());
+                  updateVoiceSettings({ inputSensitivity: val });
                 }}
                 outputVolume={outputVolume}
                 onOutputVolumeChange={(val) => {
-                  setOutputVolume(val);
-                  localStorage.setItem(StorageKeys.OUTPUT_VOLUME, val.toString());
+                  updateVoiceSettings({ outputVolume: val });
                 }}
                 dbLevel={dbLevel}
                 activeSegments={activeSegments}
@@ -376,21 +401,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 onPlayTestSound={handlePlayTestSound}
                 noiseSuppression={noiseSuppression}
                 onToggleNoiseSuppression={() => {
-                  const next = !noiseSuppression;
-                  setNoiseSuppression(next);
-                  localStorage.setItem(StorageKeys.NOISE_SUPPRESSION, next.toString());
+                  updateVoiceSettings({ noiseSuppression: !noiseSuppression });
                 }}
                 echoCancellation={echoCancellation}
                 onToggleEchoCancellation={() => {
-                  const next = !echoCancellation;
-                  setEchoCancellation(next);
-                  localStorage.setItem(StorageKeys.ECHO_CANCELLATION, next.toString());
+                  updateVoiceSettings({ echoCancellation: !echoCancellation });
                 }}
                 autoGainControl={autoGainControl}
                 onToggleAutoGainControl={() => {
-                  const next = !autoGainControl;
-                  setAutoGainControl(next);
-                  localStorage.setItem(StorageKeys.AUTO_GAIN, next.toString());
+                  updateVoiceSettings({ autoGainControl: !autoGainControl });
                 }}
                 onRestoreDefaults={handleRestoreDefaults}
               />
@@ -404,14 +423,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 onToggleRunInBackground={() => {
                   const next = !runInBackground;
                   setRunInBackground(next);
-                  localStorage.setItem(StorageKeys.RUN_IN_BACKGROUND, next.toString());
+                  localStorage.setItem(
+                    StorageKeys.RUN_IN_BACKGROUND,
+                    next.toString(),
+                  );
                   ipcRenderer?.send(IpcChannels.SET_BACKGROUND_MODE, next);
                 }}
                 autoLaunch={autoLaunch}
                 onToggleAutoLaunch={() => {
                   const next = !autoLaunch;
                   setAutoLaunch(next);
-                  localStorage.setItem(StorageKeys.AUTO_LAUNCH, next.toString());
+                  localStorage.setItem(
+                    StorageKeys.AUTO_LAUNCH,
+                    next.toString(),
+                  );
                   ipcRenderer?.send(IpcChannels.SET_AUTO_LAUNCH, next);
                 }}
               />
@@ -422,7 +447,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 onToggleGamePresence={() => {
                   const next = !gamePresence;
                   setGamePresence(next);
-                  localStorage.setItem(StorageKeys.GAME_PRESENCE, next.toString());
+                  localStorage.setItem(
+                    StorageKeys.GAME_PRESENCE,
+                    next.toString(),
+                  );
                 }}
               />
             )}
