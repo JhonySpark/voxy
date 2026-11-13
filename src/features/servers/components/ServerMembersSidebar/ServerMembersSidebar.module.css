@@ -194,6 +194,12 @@
   flex-shrink: 0;
 }
 
+.officerIcon {
+  color: #38bdf8;
+  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.65));
+  flex-shrink: 0;
+}
+
 .username {
   font-size: 0.7rem;
   color: #64748b;

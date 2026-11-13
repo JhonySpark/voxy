@@ -410,13 +410,19 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
             <span className={styles.displayName}>
               {member.user?.displayName || member.user?.username}
               {(member.role === 'OWNER' || member.role === 'ADMIN') && (
-                <span title={member.role === 'OWNER' ? t('server.serverLeader') : t('server.admin')} style={{ display: 'inline-flex', alignItems: 'center' }}>
+                <span
+                  title={member.role === 'OWNER' ? t('server.serverLeader') : t('server.admin')}
+                  style={{ display: 'inline-flex', alignItems: 'center' }}
+                >
                   <Crown size={14} className={styles.adminCrown} />
                 </span>
               )}
               {member.role === 'MODERATOR' && (
-                <span className={styles.badgeMod} title={t('server.roleOfficialTitle')}>
-                  <Award size={10} /> {t('server.roleOfficial')}
+                <span
+                  title={t('server.roleOfficialTitle')}
+                  style={{ display: 'inline-flex', alignItems: 'center' }}
+                >
+                  <Award size={14} className={styles.officerIcon} />
                 </span>
               )}
               {member.isMuted && (
