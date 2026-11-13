@@ -63,6 +63,37 @@ const PRESET_BAN_REASONS = [
 // Cache em memória por servidor (sobrevive ao desmontar a sidebar).
 // Permite exibir a lista instantaneamente e revalidar em segundo plano.
 export const membersCache = new Map<string, ServerMemberItem[]>();
+const inFlightMembersRequests = new Map<string, Promise<ServerMemberItem[]>>();
+
+export function fetchServerMembersShared(serverId: string): Promise<ServerMemberItem[]> {
+  const existing = inFlightMembersRequests.get(serverId);
+  if (existing) return existing;
+
+  const req = httpClient
+    .get<ServerMemberItem[]>(`/servers/${serverId}/members`)
+    .then((res) => {
+      if (Array.isArray(res)) {
+        membersCache.set(serverId, res);
+        window.dispatchEvent(
+          new CustomEvent('voxy:server-members-updated', {
+            detail: { serverId, members: res },
+          })
+        );
+        res.forEach((m) => {
+          if (m.user?.avatarUrl) preloadMedia(m.user.avatarUrl);
+          if (m.user?.bannerUrl) preloadMedia(m.user.bannerUrl);
+        });
+        return res;
+      }
+      return [];
+    })
+    .finally(() => {
+      inFlightMembersRequests.delete(serverId);
+    });
+
+  inFlightMembersRequests.set(serverId, req);
+  return req;
+}
 
 interface ServerMembersSidebarProps {
   serverId: string;
@@ -119,19 +150,8 @@ export const ServerMembersSidebar: React.FC<ServerMembersSidebarProps> = ({
   const fetchMembers = async () => {
     const requestedServerId = serverId;
     try {
-      const res = await httpClient.get<ServerMemberItem[]>(`/servers/${requestedServerId}/members`);
+      const res = await fetchServerMembersShared(requestedServerId);
       if (!Array.isArray(res)) return;
-
-      membersCache.set(requestedServerId, res);
-      window.dispatchEvent(
-        new CustomEvent('voxy:server-members-updated', {
-          detail: { serverId: requestedServerId, members: res },
-        })
-      );
-      res.forEach((m) => {
-        if (m.user?.avatarUrl) preloadMedia(m.user.avatarUrl);
-        if (m.user?.bannerUrl) preloadMedia(m.user.bannerUrl);
-      });
 
       // Ignora respostas de um servidor que já não está ativo
       if (currentServerIdRef.current === requestedServerId) {

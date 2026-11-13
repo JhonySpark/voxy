@@ -3,8 +3,36 @@ import { httpClient } from '../../../infrastructure/adapters/http/http-client.ad
 import { realtimeClient } from '../../../infrastructure/adapters/realtime/socket-realtime.adapter';
 import { ApiRoutes, RealtimeEvents, DashboardView } from '../../../core/enums';
 import type { ChatMessage } from '../components/ChatArea/ChatArea';
+import { seedAttachmentUrlCache } from '../components/AttachmentRenderer/AttachmentRenderer';
+import { preloadMedia } from '../../../core/utils/media.util';
 import { notificationService } from '../../../core/services/notification.service';
 import { isUserMentioned } from '../utils/mentionParser';
+
+function warmMessagesMedia(list?: ChatMessage[]) {
+  if (!Array.isArray(list) || list.length === 0) return;
+  // Pré-aquece o cache de URLs de todos os anexos e faz preload das imagens mais recentes
+  const recentSlice = list.slice(-20);
+  list.forEach((msg) => {
+    if (msg.sender?.avatarUrl) {
+      preloadMedia(msg.sender.avatarUrl);
+    }
+    msg.attachments?.forEach((att) => {
+      seedAttachmentUrlCache(att);
+    });
+    msg.replyTo?.attachments?.forEach((att) => {
+      seedAttachmentUrlCache(att);
+    });
+  });
+
+  recentSlice.forEach((msg) => {
+    msg.attachments?.forEach((att) => {
+      if (att.fileType === 'IMAGE') {
+        const imgUrl = att.thumbnailUrl || att.downloadUrl || att.url;
+        if (imgUrl) preloadMedia(imgUrl);
+      }
+    });
+  });
+}
 
 interface UseChatProps {
   myId: string;
@@ -18,7 +46,7 @@ interface UseChatProps {
     id: string;
     name: string;
     iconUrl?: string | null;
-    channels?: Array<{ id: string; name: string }>;
+    channels?: Array<{ id: string; name: string; type?: string }>;
   }>;
 }
 
@@ -43,6 +71,7 @@ export function useChat({
   // Cache em memória: chave ("dm_{friendId}" ou "channel_{channelId}") -> ChatMessage[]
   const messageCacheRef = useRef<Map<string, ChatMessage[]>>(new Map());
   const hasMoreMapRef = useRef<Map<string, boolean>>(new Map());
+  const inFlightChannelFetchesRef = useRef<Map<string, Promise<ChatMessage[]>>>(new Map());
 
   const activeViewRef = useRef(activeView);
   const activeFriendIdRef = useRef(activeFriendId);
@@ -137,6 +166,7 @@ export function useChat({
 
     try {
       const res = await httpClient.get<ChatMessage[]>(`${ApiRoutes.CHAT}/${friendId}`);
+      warmMessagesMedia(res);
       const mergedMessages = mergeWithPendingMessages(res, cached);
       const isIdentical = areMessagesEqual(cached, mergedMessages);
       messageCacheRef.current.set(cacheKey, mergedMessages);
@@ -162,6 +192,27 @@ export function useChat({
     }
   }, []);
 
+  const requestChannelMessagesDedup = useCallback((channelId: string): Promise<ChatMessage[]> => {
+    const existing = inFlightChannelFetchesRef.current.get(channelId);
+    if (existing) return existing;
+
+    const req = httpClient
+      .get<ChatMessage[]>(`${ApiRoutes.CHANNELS}/${channelId}/messages?limit=50`)
+      .then((res) => {
+        if (Array.isArray(res)) {
+          warmMessagesMedia(res);
+          return res;
+        }
+        return [];
+      })
+      .finally(() => {
+        inFlightChannelFetchesRef.current.delete(channelId);
+      });
+
+    inFlightChannelFetchesRef.current.set(channelId, req);
+    return req;
+  }, []);
+
   const fetchChannelMessages = useCallback(async (channelId: string) => {
     const cacheKey = `channel_${channelId}`;
     const cached = messageCacheRef.current.get(cacheKey);
@@ -179,7 +230,7 @@ export function useChat({
     }
 
     try {
-      const res = await httpClient.get<ChatMessage[]>(`${ApiRoutes.CHANNELS}/${channelId}/messages?limit=50`);
+      const res = await requestChannelMessagesDedup(channelId);
       const mergedMessages = mergeWithPendingMessages(res, cached);
       const isIdentical = areMessagesEqual(cached, mergedMessages);
       messageCacheRef.current.set(cacheKey, mergedMessages);
@@ -207,7 +258,52 @@ export function useChat({
         setIsLoadingMessages(false);
       }
     }
-  }, []);
+  }, [requestChannelMessagesDedup]);
+
+  // Pré-carrega em segundo plano o canal de texto principal de cada servidor assim que a lista de servidores é carregada.
+  // Assim, ao clicar em qualquer servidor, o chat de texto e as thumbnails abrem em 0ms instantaneamente!
+  useEffect(() => {
+    if (!servers || servers.length === 0) return;
+
+    let cancelled = false;
+    const channelsToPrefetch: string[] = [];
+
+    for (const srv of servers) {
+      const defaultTextChannel =
+        srv.channels?.find((ch) => !ch.type || ch.type === 'TEXT') || null;
+      if (
+        defaultTextChannel &&
+        !messageCacheRef.current.has(`channel_${defaultTextChannel.id}`)
+      ) {
+        channelsToPrefetch.push(defaultTextChannel.id);
+      }
+    }
+
+    if (channelsToPrefetch.length === 0) return;
+
+    const timer = setTimeout(async () => {
+      for (const chId of channelsToPrefetch) {
+        if (cancelled) break;
+        const cacheKey = `channel_${chId}`;
+        if (messageCacheRef.current.has(cacheKey)) continue;
+        try {
+          const res = await requestChannelMessagesDedup(chId);
+          if (cancelled) break;
+          if (!messageCacheRef.current.has(cacheKey)) {
+            messageCacheRef.current.set(cacheKey, res);
+            hasMoreMapRef.current.set(cacheKey, res.length === 50);
+          }
+        } catch {
+          // Ignora falhas silenciosas de prefetch em background
+        }
+      }
+    }, 150);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [servers, requestChannelMessagesDedup]);
 
   const loadMoreMessages = useCallback(async () => {
     if (activeViewRef.current !== DashboardView.SERVER || !activeChannelIdRef.current) return;
@@ -224,6 +320,7 @@ export function useChat({
       const older = await httpClient.get<ChatMessage[]>(
         `${ApiRoutes.CHANNELS}/${channelId}/messages?before=${oldestMessage.id}&limit=50`,
       );
+      warmMessagesMedia(older);
 
       const hasMore = Array.isArray(older) && older.length === 50;
       hasMoreMapRef.current.set(cacheKey, hasMore);
@@ -336,6 +433,7 @@ export function useChat({
   // Eventos de Chat em Tempo Real
   useEffect(() => {
     const onNewMessage = (msg: ChatMessage) => {
+      warmMessagesMedia([msg]);
       // Atualiza o cache da DM desse remetente se existir
       const cacheKey = `dm_${msg.senderId}`;
       const cached = messageCacheRef.current.get(cacheKey);
@@ -370,6 +468,7 @@ export function useChat({
     };
 
     const onMessageSent = (msg: ChatMessage) => {
+      warmMessagesMedia([msg]);
       // Atualiza o cache da DM do destinatário
       if (msg.receiverId) {
         const cacheKey = `dm_${msg.receiverId}`;
@@ -399,6 +498,7 @@ export function useChat({
     };
 
     const onNewChannelMessage = (msg: ChatMessage) => {
+      warmMessagesMedia([msg]);
       // Se for a própria mensagem enviada, reconcilia o tempMsg no estado e no cache
       if (msg.senderId === myIdRef.current) {
         if (msg.channelId) {

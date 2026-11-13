@@ -10,14 +10,29 @@ interface AttachmentRendererProps {
 
 // Cache em memória para URLs pré-assinadas temporárias durante a sessão
 const urlCache = new Map<string, { downloadUrl: string; thumbnailUrl?: string }>();
+const inFlightUrlRequests = new Map<string, Promise<{ downloadUrl: string; thumbnailUrl?: string } | null>>();
+
+export function seedAttachmentUrlCache(attachment?: ChatAttachment | null): void {
+  if (!attachment?.id) return;
+  const downloadUrl = attachment.downloadUrl || attachment.url;
+  if (downloadUrl) {
+    urlCache.set(attachment.id, {
+      downloadUrl,
+      thumbnailUrl: attachment.thumbnailUrl || downloadUrl,
+    });
+  }
+}
 
 export const AttachmentRenderer: React.FC<AttachmentRendererProps> = React.memo(({ attachment }) => {
   const [urls, setUrls] = useState<{ downloadUrl?: string; thumbnailUrl?: string }>(() => {
-    if (attachment.downloadUrl || attachment.url) {
-      return {
-        downloadUrl: attachment.downloadUrl || attachment.url,
-        thumbnailUrl: attachment.thumbnailUrl,
+    const directDownloadUrl = attachment.downloadUrl || attachment.url;
+    if (directDownloadUrl) {
+      const entry = {
+        downloadUrl: directDownloadUrl,
+        thumbnailUrl: attachment.thumbnailUrl || directDownloadUrl,
       };
+      urlCache.set(attachment.id, entry);
+      return entry;
     }
     const cached = urlCache.get(attachment.id);
     if (cached) {
@@ -25,6 +40,7 @@ export const AttachmentRenderer: React.FC<AttachmentRendererProps> = React.memo(
     }
     return {};
   });
+  const [imageLoaded, setImageLoaded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const estimatedDuration = Math.max(1, Math.round(attachment.fileSize / 4000));
   const [duration, setDuration] = useState<number>(estimatedDuration);
@@ -48,6 +64,19 @@ export const AttachmentRenderer: React.FC<AttachmentRendererProps> = React.memo(
   }, [duration, isPlaying]);
 
   useEffect(() => {
+    const directDownloadUrl = attachment.downloadUrl || attachment.url;
+    if (directDownloadUrl) {
+      const entry = {
+        downloadUrl: directDownloadUrl,
+        thumbnailUrl: attachment.thumbnailUrl || directDownloadUrl,
+      };
+      urlCache.set(attachment.id, entry);
+      if (urls.downloadUrl !== entry.downloadUrl || urls.thumbnailUrl !== entry.thumbnailUrl) {
+        setUrls(entry);
+      }
+      return;
+    }
+
     // Se já tivermos a URL em cache ou passada diretamente, usamos ela
     if (urls.downloadUrl) return;
 
@@ -59,10 +88,20 @@ export const AttachmentRenderer: React.FC<AttachmentRendererProps> = React.memo(
     let isMounted = true;
     const fetchSignedUrl = async () => {
       try {
-        const res = await api.get(`/storage/attachment/${attachment.id}/url`);
-        if (isMounted && res.data) {
-          urlCache.set(attachment.id, res.data);
-          setUrls(res.data);
+        let pending = inFlightUrlRequests.get(attachment.id);
+        if (!pending) {
+          pending = api
+            .get(`/storage/attachment/${attachment.id}/url`)
+            .then((res) => (res.data ? res.data : null))
+            .finally(() => {
+              inFlightUrlRequests.delete(attachment.id);
+            });
+          inFlightUrlRequests.set(attachment.id, pending);
+        }
+        const data = await pending;
+        if (isMounted && data) {
+          urlCache.set(attachment.id, data);
+          setUrls(data);
         }
       } catch (err) {
         console.error('Erro ao buscar URL do anexo:', err);
@@ -73,7 +112,7 @@ export const AttachmentRenderer: React.FC<AttachmentRendererProps> = React.memo(
     return () => {
       isMounted = false;
     };
-  }, [attachment.id, urls.downloadUrl]);
+  }, [attachment.id, attachment.downloadUrl, attachment.thumbnailUrl, attachment.url, urls.downloadUrl, urls.thumbnailUrl]);
 
   const formatFileSize = (bytes: number): string => {
     if (!bytes) return '';
@@ -148,16 +187,22 @@ export const AttachmentRenderer: React.FC<AttachmentRendererProps> = React.memo(
     const displaySrc = urls.thumbnailUrl || urls.downloadUrl;
     return (
       <div className={styles.attachmentContainer}>
-        <div className={styles.imageWrapper} onClick={() => setShowLightbox(true)}>
+        <div
+          className={`${styles.imageWrapper} ${!imageLoaded ? styles.imageSkeleton : ''}`}
+          onClick={() => setShowLightbox(true)}
+        >
           {displaySrc ? (
             <img
               src={displaySrc}
               alt={attachment.fileName}
-              className={styles.chatImage}
+              className={`${styles.chatImage} ${imageLoaded ? styles.chatImageLoaded : styles.chatImageLoading}`}
               loading="eager"
+              decoding="async"
+              onLoad={() => setImageLoaded(true)}
+              onError={() => setImageLoaded(true)}
             />
           ) : (
-            <div style={{ padding: '1rem', color: '#94a3b8', fontSize: '0.8rem' }}>
+            <div className={styles.imagePlaceholderText}>
               Carregando imagem...
             </div>
           )}

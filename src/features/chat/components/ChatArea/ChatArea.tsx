@@ -21,8 +21,11 @@ import { getMediaUrl } from '../../../../core/utils/media.util';
 import { useToast } from '../../../../components/common/Toast/ToastContext';
 import { useDialog } from '../../../../components/common/Dialog/DialogContext';
 import { formatMessageWithMentions, isUserMentioned } from '../../utils/mentionParser';
-import { membersCache, type ServerMemberItem } from '../../../servers/components/ServerMembersSidebar/ServerMembersSidebar';
-import { httpClient } from '../../../../infrastructure/adapters/http/http-client.adapter';
+import {
+  membersCache,
+  fetchServerMembersShared,
+  type ServerMemberItem,
+} from '../../../servers/components/ServerMembersSidebar/ServerMembersSidebar';
 
 export interface ChatAttachment {
   id: string;
@@ -215,11 +218,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     }
 
     let isCancelled = false;
-    httpClient
-      .get<ServerMemberItem[]>(`/servers/${activeServerId}/members`)
+    fetchServerMembersShared(activeServerId)
       .then((res) => {
         if (isCancelled || !Array.isArray(res)) return;
-        membersCache.set(activeServerId, res);
         setChannelMembers(res);
       })
       .catch((err) => {
