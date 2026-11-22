@@ -536,13 +536,16 @@ const VoiceRoomInner: React.FC<
   useEffect(() => {
     const realParticipants = participants.filter((p) => !p.identity.endsWith('#screen'));
 
-    onParticipantsChangeRef.current(
-      realParticipants.map((p) => ({
-        id: p.identity,
-        username: p.name || p.identity,
-        isMuted: p.isLocal ? isMuted : !p.isMicrophoneEnabled,
-      }))
-    );
+    const isLocalConnected = room?.state === ConnectionState.Connected;
+    if (isLocalConnected) {
+      onParticipantsChangeRef.current(
+        realParticipants.map((p) => ({
+          id: p.identity,
+          username: p.name || p.identity,
+          isMuted: p.isLocal ? isMuted : !p.isMicrophoneEnabled,
+        }))
+      );
+    }
 
     if (!isInitialLoad.current && prevParticipantsCount.current > 0) {
       if (realParticipants.length > prevParticipantsCount.current) {
@@ -562,7 +565,7 @@ const VoiceRoomInner: React.FC<
 
     prevParticipantsCount.current = realParticipants.length;
     isInitialLoad.current = false;
-  }, [participants, isMuted, localParticipant]);
+  }, [participants, isMuted, localParticipant, room]);
 
   // Escuta palestrantes ativos para feedback de fala
   useEffect(() => {
